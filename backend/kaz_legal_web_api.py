@@ -7,7 +7,7 @@ import re
 app = Flask(__name__, static_folder='kaz-legal-bot', static_url_path='')
 
 # 🧠 Настройка Gemini API
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyARuRalUhi5503-8I2PiCiIlv6QBEQ_0Wg')
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
