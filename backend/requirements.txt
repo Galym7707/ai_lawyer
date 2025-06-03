@@ -3,3 +3,4 @@ google-generativeai
 feedparser
 python-dotenv
 requests
+flask-cors
