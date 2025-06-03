@@ -12,7 +12,7 @@ submitBtn.addEventListener('click', async () => {
   responseBox.innerHTML = '⏳ Обрабатываем ваш запрос...';
 
   try {
-    const res = await fetch('/ask', {
+    const res = await fetch('https://ai-lawyer.up.railway.app/ask', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
