@@ -3,8 +3,10 @@ import google.generativeai as genai
 import os
 import json
 import re
+from flask_cors import CORS
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
+CORS(app, origins=["https://ai-lawyer-tau.vercel.app"])
 
 # 🧠 Настройка Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
