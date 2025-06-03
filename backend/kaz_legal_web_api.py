@@ -181,19 +181,35 @@ def determine_source_by_content(content):
 
     source_mapping = {
         'уголовный кодекс': 'https://adilet.zan.kz/rus/docs/K1400000226',
+        'уголовн': 'https://adilet.zan.kz/rus/docs/K1400000226',
+
         'кодекс об административных правонарушениях': 'https://adilet.zan.kz/rus/docs/K1400000235',
+        'администрат': 'https://adilet.zan.kz/rus/docs/K1400000235',
+
         'социальный кодекс': 'https://adilet.zan.kz/rus/docs/K2300000224',
+        'социальн': 'https://adilet.zan.kz/rus/docs/K2300000224',
+
         'бюджетный кодекс': 'https://adilet.zan.kz/rus/docs/K2500000171',
+        'бюджетн': 'https://adilet.zan.kz/rus/docs/K2500000171',
+
         'гражданский кодекс': 'https://adilet.zan.kz/rus/docs/K990000409_',
+        'гражданск': 'https://adilet.zan.kz/rus/docs/K990000409_',
+
         'водный кодекс': 'https://adilet.zan.kz/rus/docs/K2500000178',
+        'водн': 'https://adilet.zan.kz/rus/docs/K2500000178',
+
         'гражданский процессуальный кодекс': 'https://adilet.zan.kz/rus/docs/K1500000377',
+        'процессуальн': 'https://adilet.zan.kz/rus/docs/K1500000377',
+
         'трудовой кодекс': 'https://adilet.zan.kz/rus/docs/K1500000414',
-        'семейный кодекс': 'https://adilet.zan.kz/rus/docs/K1100000518'
+        'трудов': 'https://adilet.zan.kz/rus/docs/K1500000414',
+
+        'семейный кодекс': 'https://adilet.zan.kz/rus/docs/K1100000518',
+        'семейн': 'https://adilet.zan.kz/rus/docs/K1100000518'
     }
 
-    # Ищем только точные названия кодексов
-    for phrase, url in source_mapping.items():
-        if phrase in content_lower:
+    for keyword, url in source_mapping.items():
+        if keyword in content_lower:
             return url
 
     return "https://adilet.zan.kz"
