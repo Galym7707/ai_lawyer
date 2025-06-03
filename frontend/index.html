@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kaz Legal Bot — AI Юрист Казахстана</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Law_scale_icon.svg/1024px-Law_scale_icon.svg.png" />
+</head>
+<body>
+  <header>
+    <h1>Kaz Legal Bot</h1>
+    <nav>
+      <a href="#about">О проекте</a>
+      <a href="#help">Юридическая помощь</a>
+      <a href="#contact">Обратная связь</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="about">
+      <h2>🧠 Об AI-помощнике</h2>
+      <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах.</p>
+      <p>🎯 <strong>Что умеет бот:</strong></p>
+      <ul>
+        <li>Объясняет законы простыми словами</li>
+        <li>Помогает с трудовыми спорами</li>
+        <li>Консультирует по жилищным вопросам</li>
+        <li>Предлагает шаблоны заявлений</li>
+      </ul>
+      <p>📚 Ответы основаны на законодательстве РК из <a href="https://adilet.zan.kz" target="_blank">adilet.zan.kz</a>.</p>
+    </section>
+
+    <section id="help">
+      <h2>📜 Задайте свой вопрос</h2>
+      <textarea id="userQuestion" placeholder="Например: Меня уволили без предупреждения, что делать?"></textarea>
+      <button id="submitBtn">Получить ответ</button>
+      <div id="response" class="response-box"></div>
+    </section>
+
+    <section id="contact">
+      <h2>📬 Обратная связь</h2>
+      <p>Проект от <b>Kaz Legal Bot</b>. Для связи: <a href="mailto:help@kazlegal.ai">help@kazlegal.ai</a></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 Kaz Legal Bot. Ответы основаны на открытых источниках законодательства РК.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
