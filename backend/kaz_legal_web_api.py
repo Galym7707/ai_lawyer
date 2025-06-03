@@ -4,7 +4,7 @@ import os
 import json
 import re
 
-app = Flask(__name__, static_folder='kaz-legal-bot', static_url_path='')
+app = Flask(__name__, static_folder='../frontend', static_url_path='')
 
 # 🧠 Настройка Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
