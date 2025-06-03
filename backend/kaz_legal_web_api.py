@@ -178,26 +178,26 @@ def calculate_relevance(question, expanded_terms, title, text, combined_text):
 # 🎨 Определение источника по содержанию
 def determine_source_by_content(content):
     content_lower = content.lower()
-    
+
     source_mapping = {
-        'уголовн': 'https://adilet.zan.kz/rus/docs/K1400000226',
-        'администрат': 'https://adilet.zan.kz/rus/docs/K1400000235',
-        'социальн': 'https://adilet.zan.kz/rus/docs/K2300000224',
-        'экологич': 'https://adilet.zan.kz/rus/docs/K2100000400',
-        'гражданск': 'https://adilet.zan.kz/rus/docs/K990000409_',
-        'водн': 'https://adilet.zan.kz/rus/docs/K2500000178',
-        'процессуальн': 'https://adilet.zan.kz/rus/docs/K1500000377',
-        'предпринимательск': 'https://adilet.zan.kz/rus/docs/K1500000375',
-        'бюджетн': 'https://adilet.zan.kz/rus/docs/K2500000171',
-        'трудов': 'https://adilet.zan.kz/rus/docs/K1500000414',
-        'семейн': 'https://adilet.zan.kz/rus/docs/K1100000518'
+        'уголовный кодекс': 'https://adilet.zan.kz/rus/docs/K1400000226',
+        'кодекс об административных правонарушениях': 'https://adilet.zan.kz/rus/docs/K1400000235',
+        'социальный кодекс': 'https://adilet.zan.kz/rus/docs/K2300000224',
+        'бюджетный кодекс': 'https://adilet.zan.kz/rus/docs/K2500000171',
+        'гражданский кодекс': 'https://adilet.zan.kz/rus/docs/K990000409_',
+        'водный кодекс': 'https://adilet.zan.kz/rus/docs/K2500000178',
+        'гражданский процессуальный кодекс': 'https://adilet.zan.kz/rus/docs/K1500000377',
+        'трудовой кодекс': 'https://adilet.zan.kz/rus/docs/K1500000414',
+        'семейный кодекс': 'https://adilet.zan.kz/rus/docs/K1100000518'
     }
-    
-    for keyword, url in source_mapping.items():
-        if keyword in content_lower:
+
+    # Ищем только точные названия кодексов
+    for phrase, url in source_mapping.items():
+        if phrase in content_lower:
             return url
-    
+
     return "https://adilet.zan.kz"
+    
 
 # 🔍 Контекстный анализ
 def calculate_context_boost(question, content):
