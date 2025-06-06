@@ -12,21 +12,7 @@ CORS(app, origins=["https://ai-lawyer-tau.vercel.app"])
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
-
-# 📚 Подгружаем законы
-try:
-    with open("laws/kazakh_laws.json", "r", encoding="utf-8") as f:
-        LAW_DB = json.load(f)
-    print(f"✅ База данных загружена успешно! Найдено записей: {len(LAW_DB)}")
-    
-    # Показываем структуру первой записи для отладки
-    if LAW_DB and len(LAW_DB) > 0:
-        first_entry = LAW_DB[0] if isinstance(LAW_DB, list) else list(LAW_DB.values())[0]
-        print(f"📋 Пример записи: {list(first_entry.keys()) if isinstance(first_entry, dict) else 'Неправильная структура'}")
-        
-except Exception as e:
-    print(f"❌ Ошибка загрузки базы законов: {e}")
-    LAW_DB = []
+LAW_DB = []
 
 # 🧠 Расширенный словарь синонимов и морфологии
 LEGAL_SYNONYMS = {
@@ -64,7 +50,14 @@ LEGAL_SYNONYMS = {
     
     # Административное право
     'штраф': ['администрат', 'взыскан', 'наказан', 'нарушен', 'санкци'],
-    'права': ['правомочи', 'полномочи', 'свобод', 'гарант', 'защит']
+    'права': ['правомочи', 'полномочи', 'свобод', 'гарант', 'защит'],
+
+    # Образование и защита детей
+    'учитель': ['учител', 'преподавател', 'педагог', 'учительниц', 'препод'],
+    'ученик': ['учащ', 'школьн', 'слушател', 'студент', 'воспитан'],
+    'школа': ['школ', 'училищ', 'лицей', 'гимназ', 'колледж', 'образоват', 'учебн'],
+    'насилие': ['насили', 'жесток', 'принужден', 'агресси', 'избиен', 'домашн', 'насильствен'],
+    'побои': ['побо', 'избиен', 'рукоприкладств', 'удар', 'телесн', 'насильств']
 }
 
 # 📘 Улучшенный поиск релевантных статей
@@ -92,53 +85,26 @@ def find_laws_by_keywords(question, max_results=5):
     
     print(f"🔎 Расширенные термины поиска: {list(expanded_terms)[:10]}...")
 
-    # Проверяем, является ли LAW_DB списком или словарем
-    if isinstance(LAW_DB, list):
-        # Если это список
-        for i, entry in enumerate(LAW_DB):
-            # Проверяем, что entry является словарем
-            if not isinstance(entry, dict):
-                # Если это список, попробуем преобразовать
-                if isinstance(entry, list) and len(entry) >= 2:
-                    entry = {
-                        "title": str(entry[0]) if len(entry) > 0 else "Без названия",
-                        "text": str(entry[1]) if len(entry) > 1 else "",
-                        "source": determine_source_by_content(str(entry[0]) + " " + str(entry[1]))
-                    }
-                else:
-                    continue
-            
-            text = entry.get("text", "").lower()
-            title = entry.get("title", "").lower()
-            combined_text = f"{title} {text}"
-            
-            relevance = calculate_relevance(question_lower, expanded_terms, title, text, combined_text)
-            
-            if relevance > 0:
-                entry_copy = entry.copy()
-                entry_copy["relevance"] = relevance
-                # Добавляем точную ссылку на источник
-                entry_copy["source"] = determine_source_by_content(combined_text)
-                results.append(entry_copy)
-                print(f"✅ Найдена статья: {title[:50]}... (релевантность: {relevance})")
-    else:
-        # Если это словарь (как в старой версии)
-        for entry_key, entry in LAW_DB.items():
-            if not isinstance(entry, dict):
-                continue
-                
-            text = entry.get("text", "").lower()
-            title = entry.get("title", "").lower()
-            combined_text = f"{title} {text}"
-            
-            relevance = calculate_relevance(question_lower, expanded_terms, title, text, combined_text)
-            
-            if relevance > 0:
-                entry_copy = entry.copy()
-                entry_copy["relevance"] = relevance
-                entry_copy["source"] = determine_source_by_content(combined_text)
-                results.append(entry_copy)
+    # LAW_DB содержит список записей вида {"title", "text", "source"}
+    for entry in LAW_DB:
+        if not isinstance(entry, dict):
+            continue
 
+        text = entry.get("text", "").lower()
+        title = entry.get("title", "").lower()
+        combined_text = f"{title} {text}"
+
+        relevance = calculate_relevance(question_lower, expanded_terms, title, text, combined_text)
+
+        if relevance > 0:
+            entry_copy = entry.copy()
+            entry_copy["relevance"] = relevance
+            if not entry_copy.get("source"):
+                entry_copy["source"] = determine_source_by_content(combined_text)
+                results.append(entry_copy)
+            results.append(entry_copy)
+            print(f"✅ Найдена статья: {title[:50]}... (релевантность: {relevance})")
+            
     results.sort(key=lambda x: x["relevance"], reverse=True)
     print(f"📋 Найдено статей: {len(results)}")
     return results[:max_results]
@@ -214,7 +180,56 @@ def determine_source_by_content(content):
 
     return "https://adilet.zan.kz"
     
+# 📑 Предобработка законов по статьям и главам
+def preprocess_laws(raw_db):
+    records = []
+    heading_pattern = re.compile(r'^(статья|глава|раздел|подраздел|параграф|article|chapter|section)', re.IGNORECASE)
 
+    for code_name, items in raw_db.items():
+        source = determine_source_by_content(code_name)
+        current_title = None
+        buffer = []
+
+        for line in items:
+            line = line.strip()
+            if heading_pattern.match(line):
+                if current_title:
+                    records.append({
+                        "title": f"{code_name}: {current_title}",
+                        "text": " ".join(buffer).strip(),
+                        "source": source,
+                    })
+                    buffer = []
+                current_title = line
+            else:
+                buffer.append(line)
+
+        if current_title:
+            records.append({
+                "title": f"{code_name}: {current_title}",
+                "text": " ".join(buffer).strip(),
+                "source": source,
+            })
+
+    return records
+
+
+def load_law_db():
+    global LAW_DB
+    try:
+        with open("laws/kazakh_laws.json", "r", encoding="utf-8") as f:
+            raw_db = json.load(f)
+        LAW_DB = preprocess_laws(raw_db)
+        print(f"✅ База данных загружена успешно! Найдено статей: {len(LAW_DB)}")
+        if LAW_DB:
+            print(f"📋 Пример записи: {list(LAW_DB[0].keys())}")
+    except Exception as e:
+        print(f"❌ Ошибка загрузки базы законов: {e}")
+        LAW_DB = []
+
+# Загружаем базу при инициализации модуля
+load_law_db()
+    
 # 🔍 Контекстный анализ
 def calculate_context_boost(question, content):
     boost = 0
@@ -446,4 +461,5 @@ def static_files(path):
     return send_from_directory(app.static_folder, path)
 
 if __name__ == '__main__':
+    load_law_db()
     app.run(host='0.0.0.0', port=8080)
