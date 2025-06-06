@@ -128,12 +128,21 @@ def calculate_relevance(question, expanded_terms, title, text, combined_text):
             relevance += 3
     
     # 4. Морфологический поиск (частичные совпадения)
+    #    Используем регулярное выражение с границами слов для избегания
+    #    совпадений внутри несвязанных слов
     question_words = question.split()
     for q_word in question_words:
         if len(q_word) >= 3:
+            q_stem = q_word[:3]
+            q_pattern = r"\b" + re.escape(q_stem) + r"\w*"
             for term in expanded_terms:
-                if q_word[:3] in term or term[:3] in q_word:
+                if re.search(q_pattern, term):
                     relevance += 1
+                else:
+                    t_stem = term[:3]
+                    t_pattern = r"\b" + re.escape(t_stem) + r"\w*"
+                    if re.search(t_pattern, q_word):
+                        relevance += 1
     
     # 5. Контекстный поиск (поиск связанных понятий)
     context_boost = calculate_context_boost(question, combined_text)
@@ -155,8 +164,9 @@ def determine_source_by_content(content):
         'социальный кодекс': 'https://adilet.zan.kz/rus/docs/K2300000224',
         'социальн': 'https://adilet.zan.kz/rus/docs/K2300000224',
 
-        'бюджетный кодекс': 'https://adilet.zan.kz/rus/docs/K2500000171',
-        'бюджетн': 'https://adilet.zan.kz/rus/docs/K2500000171',
+        # Экологическое законодательство
+        'экологический кодекс': 'https://adilet.zan.kz/rus/docs/K2100000400',
+        'экологич': 'https://adilet.zan.kz/rus/docs/K2100000400',
 
         'гражданский кодекс': 'https://adilet.zan.kz/rus/docs/K990000409_',
         'гражданск': 'https://adilet.zan.kz/rus/docs/K990000409_',
@@ -167,11 +177,29 @@ def determine_source_by_content(content):
         'гражданский процессуальный кодекс': 'https://adilet.zan.kz/rus/docs/K1500000377',
         'процессуальн': 'https://adilet.zan.kz/rus/docs/K1500000377',
 
+        # Предпринимательство
+        'предпринимательский кодекс': 'https://adilet.zan.kz/rus/docs/K1500000375',
+        'предпринимательск': 'https://adilet.zan.kz/rus/docs/K1500000375',
+
+        # Бюджетное законодательство
+        'бюджетный кодекс': 'https://adilet.zan.kz/rus/docs/K2500000171',
+        'бюджетн': 'https://adilet.zan.kz/rus/docs/K2500000171',
+
+        # Трудовые отношения
         'трудовой кодекс': 'https://adilet.zan.kz/rus/docs/K1500000414',
         'трудов': 'https://adilet.zan.kz/rus/docs/K1500000414',
 
+        # Семья и брак
         'семейный кодекс': 'https://adilet.zan.kz/rus/docs/K1100000518',
-        'семейн': 'https://adilet.zan.kz/rus/docs/K1100000518'
+        'семейн': 'https://adilet.zan.kz/rus/docs/K1100000518',
+
+        # Налогообложение
+        'налоговый кодекс': 'https://adilet.zan.kz/rus/docs/K1700000120',
+        'налогов': 'https://adilet.zan.kz/rus/docs/K1700000120',
+
+        # Земельные отношения
+        'земельный кодекс': 'https://adilet.zan.kz/rus/docs/K030000442_',
+        'земельн': 'https://adilet.zan.kz/rus/docs/K030000442_'
     }
 
     for keyword, url in source_mapping.items():
