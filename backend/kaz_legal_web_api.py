@@ -490,4 +490,6 @@ def static_files(path):
 
 if __name__ == '__main__':
     load_law_db()
-    app.run(host='0.0.0.0', port=8080)
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
+
