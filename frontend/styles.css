@@ -1,229 +1,143 @@
-/* 🌙 Тёмная тема Kaz Legal Bot */
-body {
-  background-color: #121212;
-  color: #e0e0e0;
-  font-family: 'Segoe UI', sans-serif;
-  margin: 0;
-  padding: 0;
+/* Kaz Legal Bot - Единая Тёмная Тема (Версия 2.0) */
+
+/* --- ОБЩИЕ СТИЛИ И ПЕРЕМЕННЫЕ --- */
+:root {
+    --bg-primary: #121212;      /* Основной фон */
+    --bg-secondary: #1e1e1e;   /* Фон для карточек и полей */
+    --bg-header: #1f1f1f;       /* Фон хедера */
+    --text-primary: #e0e0e0;   /* Основной текст */
+    --text-secondary: #b0b0b0; /* Второстепенный текст */
+    --accent-primary: #00bcd4;  /* Основной акцент (бирюзовый) */
+    --accent-secondary: #00e676;/* Доп. акцент (зеленый) */
+    --border-color: #333;      /* Цвет границ */
 }
 
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+/* --- ХЕДЕР И НАВИГАЦИЯ --- */
 header {
-  background-color: #1f1f1f;
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    background-color: var(--bg-header);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
 }
 
 header h1 {
-  font-size: 1.5rem;
-  color: #00bcd4;
-  margin: 0;
+    font-size: 1.5rem;
+    color: var(--accent-primary);
+    margin: 0;
 }
 
 nav a {
-  color: #e0e0e0;
-  margin-left: 1rem;
-  text-decoration: none;
-  font-weight: 500;
+    color: var(--text-primary);
+    margin-left: 1rem;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
 }
 
 nav a:hover {
-  color: #00e0ff;
+    color: var(--accent-secondary);
 }
 
+/* --- ОСНОВНОЕ СОДЕРЖИМОЕ --- */
 main {
-  padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
-ul {
-  margin: 1rem 0;
-  padding-left: 1.5rem;
-}
-
-li {
-  margin: 0.5rem 0;
-  color: #b0b0b0;
-}
-
-p strong {
-  color: #00bcd4;
+main section {
+    margin-bottom: 2.5rem;
 }
 
 h2 {
-  color: #00bcd4;
-  margin-top: 2rem;
+    color: var(--accent-primary);
+    margin-top: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
 }
 
-textarea {
-  width: 100%;
-  height: 120px;
-  padding: 1rem;
-  font-size: 1rem;
-  border-radius: 8px;
-  border: none;
-  background-color: #1e1e1e;
-  color: #fff;
-  margin-top: 1rem;
-  resize: vertical;
+ul {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
 }
 
-button {
-  margin-top: 1rem;
-  padding: 0.75rem 1.5rem;
-  background-color: #00bcd4;
-  border: none;
-  color: white;
-  font-size: 1rem;
-  font-weight: bold;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+li {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
 }
 
-button:hover {
-  background-color: #009cb3;
-}
-
-.response-box {
-  background-color: #1e1e1e;
-  color: #d2ffd2;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-  border-left: 4px solid #00e676;
-  border-radius: 8px;
-  line-height: 1.6;
-  font-size: 1rem;
-}
-
-.response-box strong {
-  color: #00e676;
-  font-weight: 600;
-}
-
-.response-box em {
-  color: #81c784;
-  font-style: italic;
-}
-
-.response-box code {
-  background-color: #2a2a2a;
-  color: #ffb74d;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.9rem;
-}
-
-.response-box .bullet {
-  color: #00bcd4;
-  margin-right: 8px;
-}
-
-.response-box .number {
-  color: #00e676;
-  margin-right: 8px;
-}
-
-.response-box .list-item {
-  margin: 8px 0;
-  padding-left: 1rem;
-}
-
-.response-box h1, .response-box h2, .response-box h3 {
-  color: #00e676;
-  margin: 1rem 0 0.5rem 0;
-}
-
-.response-box a {
-  color: #64b5f6;
-  text-decoration: underline;
-}
-
-.response-box a:hover {
-  color: #90caf9;
-}
-
-footer {
-  text-align: center;
-  padding: 1rem;
-  background-color: #1f1f1f;
-  color: #888;
-  font-size: 0.9rem;
-  margin-top: 2rem;
-}
-
-/* --- Стили для подсказки (tooltip) --- */
-
-/* Контейнер для элемента с подсказкой */
-.tooltip-container {
-  position: relative; /* Это нужно, чтобы позиционировать текст подсказки относительно этого элемента */
-  display: inline-block; /* Чтобы элемент вел себя как текст, но имел размеры */
-  cursor: help; /* Меняет курсор на знак вопроса при наведении */
-  border-bottom: 1px dotted black; /* Необязательно: подчеркивает, что элемент интерактивный */
-}
-
-/* Сам текст подсказки (изначально скрыт) */
-.tooltip-container .tooltip-text {
-  visibility: hidden; /* Изначально невидим */
-  width: 240px; /* Ширина подсказки */
-  background-color: #333; /* Темный фон */
-  color: #fff; /* Белый текст */
-  text-align: center;
-  border-radius: 6px;
-  padding: 8px;
-  
-  /* Позиционирование над элементом */
-  position: absolute;
-  z-index: 1;
-  bottom: 140%; /* Располагаем над родительским элементом */
-  left: 50%;
-  margin-left: -120px; /* Сдвигаем влево на половину ширины, чтобы отцентрировать */
-  
-  /* Плавное появление */
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-/* Маленькая стрелочка под подсказкой для красоты */
-.tooltip-container .tooltip-text::after {
-  content: "";
-  position: absolute;
-  top: 100%; /* На нижней границе подсказки */
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: #333 transparent transparent transparent;
-}
-
-/* Показываем подсказку при наведении на контейнер */
-.tooltip-container:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-}
-
-/* Добавляем внутренние отступы и исправляем перенос слов */
-.response-box {
-    padding: 20px;
-    border: 1px solid #ddd;
+/* --- ФОРМА ВВОДА ВОПРОСА --- */
+textarea#userQuestion {
+    width: 100%;
+    height: 120px;
+    padding: 1rem;
+    font-size: 1rem;
     border-radius: 8px;
-    background-color: #f9f9f9;
-    margin-top: 20px;
-    line-height: 1.6;
-    /* Это свойство не даст тексту "вырываться" из блока */
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    margin-top: 1rem;
+    resize: vertical;
+    box-sizing: border-box; /* Чтобы padding не ломал ширину */
+}
+
+textarea#userQuestion:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+button#submitBtn {
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--accent-primary);
+    border: none;
+    color: #121212; /* Темный текст на светлой кнопке */
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button#submitBtn:hover {
+    background-color: var(--accent-secondary);
+}
+
+button#submitBtn:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+}
+
+/* --- БЛОК С ОТВЕТОМ ОТ ИИ --- */
+.response-box {
+    background-color: var(--bg-secondary);
+    padding: 20px;
+    margin-top: 1.5rem;
+    border-left: 4px solid var(--accent-secondary);
+    border-radius: 8px;
     overflow-wrap: break-word;
     word-break: break-word;
 }
 
-/* Стили для абзацев внутри ответа */
 .response-box p {
     margin-bottom: 1em;
 }
 
-/* Красивые отступы для списков */
+.response-box strong {
+    color: var(--accent-secondary);
+}
+
 .response-box .list-item {
     padding-left: 10px;
     margin-bottom: 0.5em;
@@ -234,89 +148,82 @@ footer {
 .response-box .list-item .bullet,
 .response-box .list-item .number {
     margin-right: 10px;
+    color: var(--accent-primary);
 }
 
-
-/* --- УЛУЧШЕНИЕ: Стили для блока "Релевантные статьи" --- */
-
+/* --- БЛОК "РЕЛЕВАНТНЫЕ СТАТЬИ" --- */
 .laws-container {
     margin-top: 20px;
     padding: 20px;
     border-radius: 10px;
-    background-color: #e8f4fd; /* Светло-голубой фон */
-    border-left: 4px solid #0066cc;
+    background-color: rgba(0, 188, 212, 0.05); /* Легкий бирюзовый фон */
+    border-left: 4px solid var(--accent-primary);
 }
 
 .laws-header {
-    color: #0066cc;
+    color: var(--accent-primary);
     margin-top: 0;
     margin-bottom: 20px;
 }
 
 .law-card {
-    background: white;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     margin-bottom: 15px;
     padding: 15px 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-    transition: box-shadow 0.2s ease-in-out;
+    transition: border-color 0.2s ease-in-out;
 }
 
 .law-card:hover {
-    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-}
-
-.card-header {
-    margin-bottom: 10px;
+    border-color: var(--accent-primary);
 }
 
 .card-title {
-    color: #0066cc;
+    color: var(--accent-primary);
     margin: 0;
     font-size: 1.1em;
 }
 
 .card-meta {
-    background-color: #f8f9fa;
+    background-color: #2a2a2a;
     padding: 8px 12px;
     border-radius: 4px;
     margin: 10px 0;
     font-size: 0.9em;
-    color: #495057;
+    color: var(--text-secondary);
 }
 
 .card-body p {
     margin: 0;
-    color: #555;
-    line-height: 1.5;
+    color: var(--text-primary);
 }
 
-/* --- Главное исправление для футера карточки --- */
 .card-footer {
     display: flex;
-    justify-content: space-between; /* Элементы по разным сторонам */
+    justify-content: space-between;
     align-items: center;
     margin-top: 15px;
     padding-top: 10px;
-    border-top: 1px solid #eee;
-    flex-wrap: wrap; /* Позволяет переносить элементы, если нет места */
-    gap: 10px; /* Расстояние между элементами при переносе */
+    border-top: 1px solid var(--border-color);
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .card-source {
-    color: #6c757d;
+    color: var(--text-secondary);
     font-size: 0.85em;
 }
 
 .footer-actions {
     display: flex;
     align-items: center;
-    gap: 15px; /* Расстояние между "Релевантность" и кнопкой */
+    gap: 15px;
 }
 
 .card-relevance {
-    background: #e4f8e9;
-    color: #28a745;
+    background: rgba(0, 230, 118, 0.1);
+    color: var(--accent-secondary);
     padding: 4px 10px;
     border-radius: 12px;
     font-size: 0.8em;
@@ -325,8 +232,8 @@ footer {
 }
 
 .card-link {
-    background-color: #007bff;
-    color: white;
+    background-color: var(--accent-primary);
+    color: #121212;
     padding: 6px 12px;
     border-radius: 4px;
     text-decoration: none;
@@ -336,35 +243,74 @@ footer {
 }
 
 .card-link:hover {
-    background-color: #0056b3;
+    background-color: var(--accent-secondary);
 }
 
 
-/* --- Стили для уведомлений --- */
-.notice {
-    padding: 15px;
-    border-radius: 8px;
-    margin: 10px 0;
-    border-left: 4px solid;
-}
-.warning {
-    background: #fff3cd;
-    border-color: #ffc107;
-    color: #856404;
+/* --- СТИЛИ ДЛЯ ПОДСКАЗКИ (TOOLTIP) --- */
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+    cursor: help;
 }
 
+.tooltip-container .tooltip-text {
+    visibility: hidden;
+    width: 240px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1;
+    bottom: 140%;
+    left: 50%;
+    margin-left: -120px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+}
 
-@media screen and (max-width: 600px) {
-  main {
-    padding: 1rem;
-  }
+.tooltip-container .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
 
-  header h1 {
-    font-size: 1.2rem;
-  }
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
 
-  nav a {
-    margin-left: 0.5rem;
-    font-size: 0.9rem;
-  }
+
+/* --- АДАПТИВНЫЙ ДИЗАЙН ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ --- */
+@media (max-width: 600px) {
+    body {
+        font-size: 15px;
+    }
+
+    header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    main {
+        padding: 1rem;
+    }
+
+    .card-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .footer-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
 }
