@@ -266,51 +266,57 @@ def determine_code_name(content):
 # 📄 Форматируем статьи с подробными источниками (без изменений)
 def format_laws(laws):
     if not laws:
-        return "<br><div style='background: #fff3cd; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #ffc107;'>⚠️ <strong>По вашему запросу подходящих статей не найдено.</strong><br><small style='color: #856404;'>Попробуйте переформулировать вопрос или используйте другие ключевые слова.</small></div>"
+        # Используем классы для стилизации сообщения об ошибке
+        return "<br><div class='notice warning'>⚠️ <strong>По вашему запросу подходящих статей не найдено.</strong><br><small>Попробуйте переформулировать вопрос или используйте другие ключевые слова.</small></div>"
 
-    output = "<br><div style='background: #e8f4fd; padding: 20px; border-radius: 10px; margin: 15px 0; border-left: 4px solid #0066cc;'>"
-    output += "<h3 style='color: #0066cc; margin-top: 0;'>📚 Релевантные статьи законодательства РК</h3>"
+    # Контейнер для всех карточек законов
+    output = "<br><div class='laws-container'>"
+    output += "<h3 class='laws-header'>📚 Релевантные статьи законодательства РК</h3>"
 
     for i, law in enumerate(laws, 1):
         title = law.get('title', 'Без названия')
         text = law.get('text', 'Текст недоступен')
-        source = law.get('source') or determine_source_by_content(title) # Используем новый полный словарь
+        source = law.get('source') or determine_source_by_content(title)
         relevance = law.get('relevance', 0)
         article_info = extract_article_info(title)
-        code_name = determine_code_name(title) # Используем новый полный словарь
+        code_name = determine_code_name(title)
         preview = text[:400] + "..." if len(text) > 400 else text
 
-        output += f"<div style='background: white; margin: 15px 0; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>"
-        output += f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;'>"
-        output += f"<h4 style='color: #0066cc; margin: 0; flex: 1;'>{i}. {title}</h4>"
-        output += f"</div>"
+        # Карточка для отдельной статьи
+        output += "<div class='law-card'>"
+        
+        # Заголовок карточки
+        output += "<div class='card-header'>"
+        output += f"<h4 class='card-title'>{i}. {title}</h4>"
+        output += "</div>"
         
         if article_info:
-            output += f"<div style='background: #f8f9fa; padding: 8px; border-radius: 4px; margin: 8px 0;'><strong style='color: #495057;'>📍 {article_info}</strong></div>"
+            output += f"<div class='card-meta'><strong>📍 {article_info}</strong></div>"
         
-        output += f"<div style='background: #fafbfc; padding: 10px; border-left: 3px solid #dee2e6; margin: 10px 0;'><p style='margin: 0; color: #555; line-height: 1.5;'>{preview}</p></div>"
+        # Тело карточки с текстом
+        output += f"<div class='card-body'><p>{preview}</p></div>"
         
-        output += f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 12px;'>"
-        output += f"<span style='color: #6c757d; font-size: 13px;'><strong>Источник:</strong> {code_name}</span>"
+        # Подвал карточки
+        output += "<div class='card-footer'>"
+        output += f"<span class='card-source'><strong>Источник:</strong> {code_name}</span>"
+        
+        # Контейнер для правой части подвала (релевантность и кнопка)
+        output += "<div class='footer-actions'>"
         
         tooltip_html_text = "Это 'очки релевантности', а не проценты. Чем выше значение, тем больше статья соответствует вашему запросу. Очки начисляются за совпадения ключевых слов в заголовке и тексте статьи."
-        relevance_display = f"""
-        <div class="tooltip-container">
-            <span style='background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; white-space: nowrap;'>
-                📊 Релевантность: {relevance}
-            </span>
+        output += f"""
+        <div class="tooltip-container card-relevance">
+            <span>📊 {relevance}</span>
             <span class="tooltip-text">{tooltip_html_text}</span>
         </div>
         """
+        output += f"<a href='{source}' target='_blank' class='card-link'>🔗 Читать полностью</a>"
+        output += "</div>" # конец footer-actions
         
-        output += f"<div style='display: flex; align-items: center; gap: 15px;'>"
-        output += relevance_display
-        output += f"<a href='{source}' target='_blank' style='background: #007bff; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: 500;'>🔗 Читать полностью</a>"
-        output += f"</div>"
-        
-        output += f"</div></div>"
+        output += "</div>" # конец card-footer
+        output += "</div>" # конец law-card
 
-    output += "</div>"
+    output += "</div>" # конец laws-container
     return output
 
 def extract_article_info(title):
