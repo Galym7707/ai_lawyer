@@ -334,9 +334,28 @@ def format_laws(laws):
         
         output += f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 12px;'>"
         output += f"<span style='color: #6c757d; font-size: 13px;'><strong>Источник:</strong> {code_name}</span>"
+        
+        # --- НАЧАЛО БЛОКА С ПОДСКАЗКОЙ ---
+        tooltip_html_text = "Это 'очки релевантности', а не проценты. Чем выше значение, тем больше статья соответствует вашему запросу. Очки начисляются за совпадения ключевых слов в заголовке и тексте статьи."
+        
+        relevance_display = f"""
+        <div class="tooltip-container">
+          <span style='background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; white-space: nowrap;'>
+              📊 Релевантность: {relevance}
+          </span>
+          <span class="tooltip-text">{tooltip_html_text}</span>
+        </div>
+        """
+        # --- КОНЕЦ БЛОКА С ПОДСКАЗКОЙ ---
+        
+        # Здесь мы совмещаем вывод релевантности и кнопки "Читать полностью"
+        output += f"<div style='display: flex; align-items: center; gap: 15px;'>" # Добавляем контейнер для выравнивания
+        output += relevance_display
         output += f"<a href='{source}' target='_blank' style='background: #007bff; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: 500;'>🔗 Читать полностью</a>"
         output += f"</div>"
-        output += f"</div>"
+        
+        output += f"</div>" # Закрывающий div от flex-контейнера
+        output += f"</div>" # Закрывающий div от карточки статьи
 
     output += "</div>"
     return output
