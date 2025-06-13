@@ -205,6 +205,155 @@ footer {
   opacity: 1;
 }
 
+/* Добавляем внутренние отступы и исправляем перенос слов */
+.response-box {
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    margin-top: 20px;
+    line-height: 1.6;
+    /* Это свойство не даст тексту "вырываться" из блока */
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* Стили для абзацев внутри ответа */
+.response-box p {
+    margin-bottom: 1em;
+}
+
+/* Красивые отступы для списков */
+.response-box .list-item {
+    padding-left: 10px;
+    margin-bottom: 0.5em;
+    display: flex;
+    align-items: flex-start;
+}
+
+.response-box .list-item .bullet,
+.response-box .list-item .number {
+    margin-right: 10px;
+}
+
+
+/* --- УЛУЧШЕНИЕ: Стили для блока "Релевантные статьи" --- */
+
+.laws-container {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #e8f4fd; /* Светло-голубой фон */
+    border-left: 4px solid #0066cc;
+}
+
+.laws-header {
+    color: #0066cc;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.law-card {
+    background: white;
+    margin-bottom: 15px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.law-card:hover {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
+.card-header {
+    margin-bottom: 10px;
+}
+
+.card-title {
+    color: #0066cc;
+    margin: 0;
+    font-size: 1.1em;
+}
+
+.card-meta {
+    background-color: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin: 10px 0;
+    font-size: 0.9em;
+    color: #495057;
+}
+
+.card-body p {
+    margin: 0;
+    color: #555;
+    line-height: 1.5;
+}
+
+/* --- Главное исправление для футера карточки --- */
+.card-footer {
+    display: flex;
+    justify-content: space-between; /* Элементы по разным сторонам */
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    flex-wrap: wrap; /* Позволяет переносить элементы, если нет места */
+    gap: 10px; /* Расстояние между элементами при переносе */
+}
+
+.card-source {
+    color: #6c757d;
+    font-size: 0.85em;
+}
+
+.footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Расстояние между "Релевантность" и кнопкой */
+}
+
+.card-relevance {
+    background: #e4f8e9;
+    color: #28a745;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.card-link {
+    background-color: #007bff;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.85em;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.card-link:hover {
+    background-color: #0056b3;
+}
+
+
+/* --- Стили для уведомлений --- */
+.notice {
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    border-left: 4px solid;
+}
+.warning {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+
 @media screen and (max-width: 600px) {
   main {
     padding: 1rem;
