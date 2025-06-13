@@ -320,7 +320,7 @@ def format_laws(laws):
         output += f"<div style='background: white; margin: 15px 0; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>"
         output += f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;'>"
         output += f"<h4 style='color: #0066cc; margin: 0; flex: 1;'>{i}. {title}</h4>"
-        output += f"<span style='background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; white-space: nowrap; margin-left: 10px;'>📊 {relevance}%</span>"
+        output += f"<span style='...'>📊 Релевантность: {relevance}</span>"
         output += f"</div>"
         
         if article_info:
