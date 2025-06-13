@@ -101,7 +101,6 @@ def find_laws_by_keywords(question, max_results=5):
             entry_copy["relevance"] = relevance
             if not entry_copy.get("source"):
                 entry_copy["source"] = determine_source_by_content(combined_text)
-                results.append(entry_copy)
             results.append(entry_copy)
             print(f"✅ Найдена статья: {title[:50]}... (релевантность: {relevance})")
             
@@ -208,18 +207,32 @@ def determine_source_by_content(content):
 
     return "https://adilet.zan.kz"
     
-# 📑 Предобработка законов по статьям и главам
+# 📑 УЛУЧШЕННАЯ Предобработка законов по статьям и главам
 def preprocess_laws(raw_db):
     records = []
+    # Паттерн для поиска заголовков (статья, глава и т.д.)
     heading_pattern = re.compile(r'^(статья|глава|раздел|подраздел|параграф|article|chapter|section)', re.IGNORECASE)
 
-    for code_name, items in raw_db.items():
-        source = determine_source_by_content(code_name)
+    # raw_db - это СПИСОК словарей, например: [{"title": "Кодекс 1", "text": "..."}, ...]
+    # Итерируемся по каждому кодексу в списке
+    for code_entry in raw_db:
+        code_name = code_entry.get("title", "Без названия")
+        full_text = code_entry.get("text", "")
+        # Получаем источник из записи или определяем по названию
+        source = code_entry.get("source") or determine_source_by_content(code_name)
+        
+        # Разделяем текст кодекса на строки для обработки
+        items = full_text.splitlines()
+
         current_title = None
         buffer = []
 
         for line in items:
             line = line.strip()
+            if not line:
+                continue
+            
+            # Используем существующую логику для поиска заголовков и создания записей
             if heading_pattern.match(line):
                 if current_title:
                     records.append({
@@ -227,11 +240,12 @@ def preprocess_laws(raw_db):
                         "text": " ".join(buffer).strip(),
                         "source": source,
                     })
-                    buffer = []
+                buffer = []
                 current_title = line
             else:
                 buffer.append(line)
 
+        # Добавляем последнюю статью из буфера
         if current_title:
             records.append({
                 "title": f"{code_name}: {current_title}",
