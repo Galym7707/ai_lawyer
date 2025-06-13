@@ -1,210 +1,125 @@
 <!DOCTYPE html>
-<html lang="en" class="">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lunight - Experts at your side</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kaz Legal Bot — AI Юрист Казахстана</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Law_scale_icon.svg/1024px-Law_scale_icon.svg.png" />
 
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'brand-blue': '#2B328B',
-                        'brand-orange': '#F7A027',
-                        'brand-gray': { 100: '#F3F4F6', 200: '#E5E7EB', 400: '#9CA3AF', 500: '#6B7280', 800: '#1F2937' },
-                        'dark-card': '#4A5568',
-                        'dark-bg-card': 'rgba(255, 255, 255, 0.1)',
-                    },
-                    keyframes: {
-                        'pulse-glow': {
-                           '0%, 100%': { boxShadow: '0 0 15px rgba(247, 160, 39, 0.4)' },
-                           '50%': { boxShadow: '0 0 30px rgba(247, 160, 39, 0.8)' },
-                        }
-                    },
-                    animation: {
-                       'pulse-glow': 'pulse-glow 3s infinite ease-in-out',
-                    }
-                }
-            }
+    <style>
+        /* Стили для всплывающей подсказки (tooltip) */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            cursor: help;
         }
-    </script>
+
+        .tooltip-container .tooltip-text {
+            visibility: hidden;
+            width: 240px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 140%;
+            left: 50%;
+            margin-left: -120px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .tooltip-container .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Стили для индикатора загрузки (спиннера) */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-<body class="bg-white text-brand-gray-800 dark:bg-brand-blue dark:text-white">
-
-    <header class="py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center sticky top-0 left-0 right-0 z-50 border-b border-gray-200/20 dark:border-white/10 bg-white/80 dark:bg-brand-blue/80 backdrop-blur-sm">
-        <a href="#hero" class="text-2xl font-bold text-brand-gray-800 dark:text-white">
-            Lunight®
-        </a>
-        <div class="flex items-center space-x-2 sm:space-x-4">
-            <nav class="hidden md:flex items-center space-x-8" id="main-nav">
-                <a href="#services" class="text-gray-500 dark:text-gray-300 hover:text-black dark:hover:text-white smooth-transition" data-lang-key="nav_services"></a>
-                <a href="#portfolio" class="text-gray-500 dark:text-gray-300 hover:text-black dark:hover:text-white smooth-transition" data-lang-key="nav_portfolio"></a>
-                <a href="javascript:void(0);" class="open-tawk-chat text-gray-500 dark:text-gray-300 hover:text-black dark:hover:text-white smooth-transition" data-lang-key="nav_contact"></a>
-            </nav>
-            
-            <div class="relative group">
-                <button id="lang-switcher" class="flex items-center gap-2 p-2 font-semibold text-gray-600 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-white/20 smooth-transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9V3m0 18a9 9 0 009-9m-9 9a9 9 0 00-9-9" />
-                    </svg>
-                    <span id="lang-switcher-text"></span>
-                </button>
-                <div class="tooltip" data-lang-key="tooltip_lang"></div>
-            </div>
-
-            <button id="theme-toggle" class="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 smooth-transition">
-                <svg id="theme-toggle-dark-icon" class="h-5 w-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                <svg id="theme-toggle-light-icon" class="h-5 w-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM3 11a1 1 0 100-2H2a1 1 0 100 2h1z"></path></svg>
-            </button>
-            <a href="javascript:void(0);" class="open-tawk-chat bg-black dark:bg-white text-white dark:text-black px-5 py-2 rounded-full font-semibold text-sm hover:bg-gray-800 dark:hover:bg-gray-200 smooth-transition" data-lang-key="nav_contact_us"></a>
-        </div>
+<body>
+    <header>
+        <h1>Kaz Legal Bot</h1>
+        <nav>
+            <a href="#about">О проекте</a>
+            <a href="#help">Юридическая помощь</a>
+            <a href="#contact">Обратная связь</a>
+        </nav>
     </header>
 
     <main>
-        <section id="hero" class="min-h-screen flex flex-col justify-center items-center text-center px-4">
-            <div class="reveal">
-                <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-brand-gray-800 dark:text-white" data-lang-key="hero_title"></h1>
-                <p class="text-lg sm:text-xl md:text-2xl text-gray-500 dark:text-brand-orange mt-3 font-semibold" data-lang-key="hero_subtitle"></p>
-            </div>
+        <section id="about">
+            <h2>🧠 Об AI-помощнике</h2>
+            <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах, опираясь на действующее законодательство.</p>
+            
+            <p><strong>Важно:</strong> Помощник не выдумывает ответы. Его знания основаны на анализе <strong>официальных текстов более 12 кодексов Республики Казахстан</strong>, включая:</p>
+            <ul>
+                <li>Трудовой кодекс</li>
+                <li>Гражданский кодекс</li>
+                <li>Уголовный кодекс</li>
+                <li>Кодекс о браке и семье</li>
+                <li>Кодекс об административных правонарушениях</li>
+                <li>и другие, полученные с портала <a href="https://adilet.zan.kz" target="_blank">adilet.zan.kz</a>.</li>
+            </ul>
+            <p>Это обеспечивает точность и релевантность предоставляемой информации.</p>
         </section>
 
-        <section id="services" class="py-20 lg:py-32 px-4">
-            <div class="container mx-auto">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                    <div class="reveal bg-brand-gray-100 dark:bg-brand-orange p-8 rounded-2xl flex flex-col justify-between h-full hover:shadow-2xl hover:-translate-y-2 smooth-transition">
-                        <!-- ... -->
-                    </div>
-                    <div class="reveal bg-brand-gray-100 dark:bg-brand-orange p-8 rounded-2xl flex flex-col justify-between h-full hover:shadow-2xl hover:-translate-y-2 smooth-transition" style="transition-delay: 100ms;">
-                         <!-- ... -->
-                    </div>
-                    <div class="reveal bg-brand-gray-100 dark:bg-brand-orange p-8 rounded-2xl flex flex-col justify-between h-full hover:shadow-2xl hover:-translate-y-2 smooth-transition" style="transition-delay: 200ms;">
-                        <!-- ... -->
-                    </div>
-                </div>
+        <section id="help">
+            <h2>📜 Задайте свой вопрос</h2>
+            
+            <form id="chat-form">
+                <textarea id="userQuestion" placeholder="Например: Меня уволили без предупреждения, что делать?"></textarea>
+                <button type-="submit" id="submitBtn">Получить ответ</button>
+            </form>
+
+            <div id="spinner" style="display: none; text-align: center; padding: 20px;">
+                <p>ИИ-юрист анализирует ваш запрос...</p>
+                <div class="loader"></div>
             </div>
+
+            <div id="response" class="response-box"></div>
         </section>
 
-        <section id="portfolio" class="py-20 lg:py-32 px-4">
-            <div class="container mx-auto reveal">
-                <div class="text-center mb-12 md:mb-16">
-                     <h2 class="text-3xl md:text-4xl font-bold text-brand-gray-800 dark:text-brand-orange glow-text" data-lang-key="portfolio_title"></h2>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-                    <div class="portfolio-card reveal group" data-gallery-images="portfolio/mpox1.png,portfolio/mpox2.png,portfolio/mpox3.png,portfolio/mpox4.png">
-                        <img src="portfolio/mpox1.png" alt="MPOX Detector" class="portfolio-image">
-                        <div class="portfolio-overlay">
-                            <h3 class="text-2xl font-bold">MPOX Detector</h3>
-                            <p class="mt-2 text-gray-200" data-lang-key="portfolio_desc_mpox"></p>
-                            <a href="http://mpox-detector.up.railway.app" target="_blank" rel="noopener noreferrer" class="portfolio-button" data-lang-key="portfolio_view"></a>
-                        </div>
-                    </div>
-                    <div class="portfolio-card reveal group" style="transition-delay: 100ms;" data-gallery-images="portfolio/sami_art_studio1.png,portfolio/sami_art_studio2.png">
-                        <img src="portfolio/sami_art_studio1.png" alt="Sami Art Studio" class="portfolio-image">
-                        <div class="portfolio-overlay">
-                            <h3 class="text-2xl font-bold">Sami Art Studio</h3>
-                            <p class="mt-2 text-gray-200" data-lang-key="portfolio_desc_sami"></p>
-                             <a href="https://whitehercig.github.io/samiart" target="_blank" rel="noopener noreferrer" class="portfolio-button" data-lang-key="portfolio_view"></a>
-                        </div>
-                    </div>
-                    <div class="portfolio-card reveal group" style="transition-delay: 200ms;" data-gallery-images="portfolio/kaz_legal_bot1.png,portfolio/kaz_legal_bot2.png,portfolio/kaz_legal_bot3.png,portfolio/kaz_legal_bot4.png">
-                        <img src="portfolio/kaz_legal_bot1.png" alt="Kaz Legal Bot" class="portfolio-image">
-                        <div class="portfolio-overlay">
-                            <h3 class="text-2xl font-bold">Kaz Legal Bot</h3>
-                            <p class="mt-2 text-gray-200" data-lang-key="portfolio_desc_legal"></p>
-                             <a href="https://ai-lawyer-tau.vercel.app" target="_blank" rel="noopener noreferrer" class="portfolio-button" data-lang-key="portfolio_view"></a>
-                        </div>
-                    </div>
-                    <div class="portfolio-card reveal group" style="transition-delay: 300ms;" data-gallery-images="portfolio/rooflux_kz1.png,portfolio/rooflux_kz2.png,portfolio/rooflux_kz3.png">
-                        <img src="portfolio/rooflux_kz1.png" alt="Rooflux.kz" class="portfolio-image">
-                        <div class="portfolio-overlay">
-                            <h3 class="text-2xl font-bold">Rooflux.kz</h3>
-                            <p class="mt-2 text-gray-200" data-lang-key="portfolio_desc_rooflux"></p>
-                             <a href="https://rooflux.kz" target="_blank" rel="noopener noreferrer" class="portfolio-button" data-lang-key="portfolio_view"></a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        
-        <section id="testimonials" class="py-20 lg:py-32 px-4">
-            <div class="container mx-auto reveal">
-                <div class="text-center mb-12 md:mb-16"><h2 class="text-3xl md:text-4xl font-bold text-brand-gray-800 dark:text-white" data-lang-key="testimonials_title"></h2><p class="text-lg md:text-xl text-gray-500 dark:text-brand-orange mt-2 font-semibold" data-lang-key="testimonials_subtitle"></p></div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="testimonial-card bg-brand-gray-100 dark:bg-white p-8 rounded-2xl flex flex-col justify-between h-full">
-                        <div>
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-lg text-brand-gray-800 dark:text-brand-gray-800">Нурлан И.</span>
-                                <div class="star-rating"></div>
-                            </div>
-                            <p class="mt-4 text-gray-600 dark:text-brand-gray-800" data-lang-key="testimonial_1"></p>
-                            <p class="translation-note" data-lang-key="translation_note"></p>
-                        </div>
-                        <p class="mt-6 font-semibold text-sm text-gray-500 dark:text-gray-600">Владелец, Rooflux.kz</p>
-                    </div>
-                    <div class="testimonial-card bg-brand-gray-100 dark:bg-white p-8 rounded-2xl flex flex-col justify-between h-full">
-                        <div>
-                           <div class="flex items-center justify-between">
-                                <span class="font-bold text-lg text-brand-gray-800 dark:text-brand-gray-800">Айсулу М.</span>
-                                <div class="star-rating"></div>
-                            </div>
-                            <p class="mt-4 text-gray-600 dark:text-brand-gray-800" data-lang-key="testimonial_2"></p>
-                            <p class="translation-note" data-lang-key="translation_note"></p>
-                        </div>
-                        <p class="mt-6 font-semibold text-sm text-gray-500 dark:text-gray-600">Художник, Sami Art Studio</p>
-                    </div>
-                    <div class="testimonial-card bg-brand-gray-100 dark:bg-white p-8 rounded-2xl flex flex-col justify-between h-full">
-                         <div>
-                           <div class="flex items-center justify-between">
-                                <span class="font-bold text-lg text-brand-gray-800 dark:text-brand-gray-800">Марат О.</span>
-                                <div class="star-rating"></div>
-                            </div>
-                            <p class="mt-4 text-gray-600 dark:text-brand-gray-800" data-lang-key="testimonial_3"></p>
-                            <p class="translation-note" data-lang-key="translation_note"></p>
-                        </div>
-                        <p class="mt-6 font-semibold text-sm text-gray-500 dark:text-gray-600">Предприниматель</p>
-                    </div>
-                </div>
-            </div>
+        <section id="contact">
+            <h2>📬 Обратная связь</h2>
+            <p>Проект с открытым исходным кодом. Для связи: <a href="mailto:help@kazlegal.ai">help@kazlegal.ai</a></p>
         </section>
     </main>
 
-    <footer class="py-16 bg-white dark:bg-brand-blue border-t border-brand-gray-200 dark:border-white/10">
-        <!-- Footer content... -->
+    <footer>
+        <p>© 2025 Kaz Legal Bot. Ответы носят информационный характер и не являются официальной юридической консультацией.</p>
     </footer>
 
-    <!-- Модальное окно для галереи портфолио -->
-    <div id="gallery-modal" class="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 hidden opacity-0 smooth-transition">
-        <button id="gallery-close" class="absolute top-4 right-6 text-white text-5xl font-bold hover:text-gray-300">&times;</button>
-        <button id="gallery-prev" class="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black/30 p-2 rounded-full hover:bg-black/50">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <button id="gallery-next" class="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black/30 p-2 rounded-full hover:bg-black/50">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-        </button>
-        <img id="gallery-image" src="" alt="Portfolio image" class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg">
-    </div>
-
     <script src="script.js"></script>
-    
-    <script type="text/javascript">
-    var Tawk_API=Tawk_API||{};
-    (function(){
-    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-    s1.async=true;
-    s1.src='https://embed.tawk.to/684aee346afa6c19102b3486/1itib4vrf';
-    s1.charset='UTF-8';
-    s1.setAttribute('crossorigin','*');
-    s0.parentNode.insertBefore(s1,s0);
-    })();
-    </script>
 </body>
 </html>
