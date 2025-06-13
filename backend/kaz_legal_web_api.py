@@ -121,18 +121,32 @@ SOURCE_MAPPING = {
 }
 
 # --- Логика поиска и обработки ---
-def find_laws_by_keywords(question, max_results=5):
-    results = []; question_lower = question.lower(); question_words = set(re.findall(r'\b\w{3,}\b', question_lower))
-    if not LAW_DB: return []
+def find_laws_by_keywords(question, min_relevance=12):
+    results = []
+    question_lower = question.lower()
+    question_words = set(re.findall(r'\b\w{3,}\b', question_lower))
+    if not LAW_DB:
+        return []
+
     expanded_terms = set(question_words)
     for word in question_words:
         for key_term, synonyms in LEGAL_SYNONYMS.items():
-            if word in synonyms or word == key_term: expanded_terms.update(synonyms); expanded_terms.add(key_term)
+            if word in synonyms or word == key_term:
+                expanded_terms.update(synonyms)
+                expanded_terms.add(key_term)
+
     for entry in LAW_DB:
-        title_lower = entry.get("title", "").lower(); text_lower = entry.get("text", "").lower()
+        title_lower = entry.get("title", "").lower()
+        text_lower = entry.get("text", "").lower()
         relevance = calculate_relevance(expanded_terms, title_lower, text_lower)
-        if relevance > 0: entry_copy = entry.copy(); entry_copy["relevance"] = relevance; results.append(entry_copy)
-    results.sort(key=lambda x: x["relevance"], reverse=True); return results[:max_results]
+        if relevance >= min_relevance:
+            entry_copy = entry.copy()
+            entry_copy["relevance"] = relevance
+            results.append(entry_copy)
+
+    results.sort(key=lambda x: x["relevance"], reverse=True)
+    return results
+
 
 def calculate_relevance(expanded_terms, title_lower, text_lower):
     relevance = 0;
@@ -247,16 +261,19 @@ PROMPT_TEMPLATE = """
 Твоя задача:
 
 1. **Чётко объясни, что говорит закон.** Если действия работодателя/арендодателя/госоргана незаконны — укажи, почему.
-2. **Приведи пошаговый план действий**, что делать человеку (написать заявление, подать жалобу, обратиться в суд и т.д.)
-3. **Если нужно — дай шаблон текста обращения** (например, претензии работодателю).
-4. **Излагай просто, ясно и без канцелярита.** Люди не знают юридических терминов — пиши понятно.
+2. Объясни по делу, какие законы регулируют этот случай.
+3. Определи, нарушены ли права человека, и если да — ка
+4. **Приведи пошаговый план действий**, что делать человеку (написать заявление, подать жалобу, обратиться в суд и т.д.)
+5. **Если нужно — дай шаблон текста обращения** (например, претензии работодателю).
+6. **Излагай просто, ясно и без канцелярита.** Люди не знают юридических терминов — пиши понятно.
 
-Оформи ответ красиво:
+Оформи красиво и понятно:
+- Используй заголовки (**Что произошло?**, **Что говорит закон?**, **Что делать?**, **Пример жалобы**)
+- Для действий — нумерованные или маркированные списки.
+- Не используй канцелярит и сложные термины.
+- Не представляйся и не пиши, что ты ИИ — просто помоги.
 
-- Используй **заголовки** (например: **Что произошло?**, **Что говорит закон?**, **Что делать?**, **Шаблон заявления**)
-- Для шагов используй нумерованные или маркированные списки.
-- Никаких «я — искусственный интеллект», просто перейди сразу к делу.
-
+Отвечай как доброжелательный юрист, который хочет реально помочь человеку. Ответ должен быть понятен даже школьнику.
 **ВАЖНО:** Начинай ответ сразу по существу, без лишних вступлений и самопредставлений. Сразу переходи к сути вопроса пользователя.
 """
 
