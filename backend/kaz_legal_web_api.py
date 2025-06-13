@@ -353,22 +353,45 @@ PROMPT_TEMPLATE = """
 {question}
 """
 
+# 🎨 УЛУЧШЕННАЯ Конвертация Markdown в HTML с поддержкой абзацев
 def convert_markdown_to_html(text):
+    # 1. Сначала делаем базовые замены для жирного текста, курсива и кода
     text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
     text = re.sub(r'\*(.*?)\*', r'<em>\1</em>', text)
     text = re.sub(r'`(.*?)`', r'<code>\1</code>', text)
-    text = re.sub(r'^• ', '<span class="bullet">🔸</span> ', text, flags=re.MULTILINE)
-    text = re.sub(r'^\* ', '<span class="bullet">🔸</span> ', text, flags=re.MULTILINE)
-    text = re.sub(r'^- ', '<span class="bullet">🔸</span> ', text, flags=re.MULTILINE)
-    text = re.sub(r'^(\d+)\. ', r'<strong class="number">\1.</strong> ', text, flags=re.MULTILINE)
-    lines = text.split('\n')
-    formatted = []
-    for line in lines:
-        if '<span class="bullet">' in line or '<strong class="number">' in line:
-            formatted.append(f'<div class="list-item">{line}</div>')
+
+    # 2. Разделяем весь текст на блоки по пустым строкам (это наши абзацы)
+    paragraphs = text.split('\n\n')
+    html_output = []
+
+    for para in paragraphs:
+        # Убираем лишние пробелы по краям абзаца
+        para = para.strip()
+        if not para:
+            continue
+
+        lines = para.split('\n')
+        
+        # 3. Проверяем, является ли блок списком
+        first_line = lines[0].strip()
+        is_list = re.match(r'^[•*-] |^\d+\. ', first_line)
+
+        if is_list:
+            # Если это список, обрабатываем каждую строку как элемент списка
+            list_items = []
+            for line in lines:
+                line = re.sub(r'^[•*-] ', '<span class="bullet">🔸</span> ', line.strip())
+                line = re.sub(r'^(\d+)\. ', r'<strong class="number">\1.</strong> ', line.strip())
+                list_items.append(f'<div class="list-item">{line}</div>')
+            html_output.append("".join(list_items))
         else:
-            formatted.append(line)
-    return '\n'.join(formatted)
+            # 4. Если это обычный текст (например, наш шаблон),
+            # мы соединяем строки с помощью <br> и оборачиваем всё в тег <p>
+            # Это сохранит все переносы строк внутри шаблона.
+            html_output.append(f"<p>{'<br>'.join(lines)}</p>")
+
+    # Собираем все обработанные блоки в единый HTML
+    return "".join(html_output)
 
 # --- Эндпоинт /ask с потоковой передачей ---
 @app.route("/ask", methods=["POST"])
