@@ -104,14 +104,13 @@ SOURCE_MAPPING = {
 
 
 # --- Логика поиска и обработки ---
-def find_laws_by_keywords(question, min_relevance=12):
+def find_laws_by_keywords(question, min_relevance=12, max_results=8):
     results = []
     question_lower = question.lower()
     question_words = set(re.findall(r'\b\w{3,}\b', question_lower))
     if not LAW_DB:
         return []
 
-    # Определим приоритет кодексов
     priority_codes = []
     if any(w in question_lower for w in ['увольн', 'работ', 'работодат', 'труд', 'зарплат']):
         priority_codes.append('трудов')
@@ -121,6 +120,8 @@ def find_laws_by_keywords(question, min_relevance=12):
         priority_codes.append('социальн')
     elif any(w in question_lower for w in ['развод', 'алименты']):
         priority_codes.append('семейн')
+    elif any(w in question_lower for w in ['ученик', 'учитель', 'школ', 'удар', 'насили']):
+        priority_codes.extend(['уголовн', 'образован', 'административн'])
 
     expanded_terms = set(question_words)
     for word in question_words:
@@ -134,7 +135,6 @@ def find_laws_by_keywords(question, min_relevance=12):
         text_lower = entry.get("text", "").lower()
         relevance = calculate_relevance(expanded_terms, title_lower, text_lower)
 
-        # Повышаем приоритет кодексов
         if any(code in title_lower for code in priority_codes):
             relevance += 10
 
@@ -144,7 +144,7 @@ def find_laws_by_keywords(question, min_relevance=12):
             results.append(entry_copy)
 
     results.sort(key=lambda x: x["relevance"], reverse=True)
-    return results
+    return results[:max_results]
 
 
 def calculate_relevance(expanded_terms, title_lower, text_lower):
@@ -194,18 +194,38 @@ def determine_code_name(content):
         if re.search(r'\b' + re.escape(keyword) + r'\b', content_lower): return url
     return "Законодательство РК"
 
-def format_laws(laws):
-    if not laws: return "<div class='notice warning'>⚠️ <strong>По вашему запросу подходящих статей не найдено.</strong><br><small>Попробуйте переформулировать вопрос.</small></div>"
+def format_laws(laws, shown_limit=8):
+    if not laws:
+        return "<div class='notice warning'>⚠️ <strong>По вашему запросу подходящих статей не найдено.</strong><br><small>Попробуйте переформулировать вопрос.</small></div>"
+
     output = "<div class='laws-container'><h3 class='laws-header'>📚 Релевантные статьи законодательства РК</h3>"
-    for i, law in enumerate(laws, 1):
-        title = law.get('title', 'Без названия'); text = law.get('text', 'Текст недоступен'); source = law.get('source') or determine_source_by_content(title); relevance = law.get('relevance', 0); article_info = extract_article_info(title); code_name = determine_code_name(title); preview = text[:400] + "..." if len(text) > 400 else text
+    
+    total_found = len(laws)
+    limited_laws = laws[:shown_limit]
+
+    if total_found > shown_limit:
+        output += f"<div class='notice tip'>🔎 Найдено {total_found} релевантных статей. Ниже показаны только <strong>{shown_limit}</strong> наиболее важных.</div>"
+
+    for i, law in enumerate(limited_laws, 1):
+        title = law.get('title', 'Без названия')
+        text = law.get('text', 'Текст недоступен')
+        source = law.get('source') or determine_source_by_content(title)
+        relevance = law.get('relevance', 0)
+        article_info = extract_article_info(title)
+        code_name = determine_code_name(title)
+        preview = text[:400] + "..." if len(text) > 400 else text
+
         output += f"<div class='law-card'><div class='card-header'><h4 class='card-title'>{i}. {title}</h4></div>"
-        if article_info: output += f"<div class='card-meta'><strong>📍 {article_info}</strong></div>"
+        if article_info:
+            output += f"<div class='card-meta'><strong>📍 {article_info}</strong></div>"
         output += f"<div class='card-body'><p>{preview}</p></div>"
         output += f"<div class='card-footer'><span class='card-source'><strong>Источник:</strong> {code_name}</span><div class='footer-actions'>"
-        tooltip_html_text = "Это 'очки релевантности'..."; output += f"""<div class="tooltip-container card-relevance"><span>📊 {relevance}</span><span class="tooltip-text">{tooltip_html_text}</span></div>"""
+        output += f"""<div class="tooltip-container card-relevance"><span>📊 {relevance}</span><span class="tooltip-text">Это 'очки релевантности' — чем выше, тем точнее статья связана с вашим вопросом.</span></div>"""
         output += f"<a href='{source}' target='_blank' class='card-link'>🔗 Читать полностью</a></div></div></div>"
-    output += "</div>"; return output
+
+    output += "</div>"
+    return output
+
 
 def extract_article_info(title):
     patterns = [r'статья\s*(\d+)', r'ст\.\s*(\d+)', r'глава\s*(\d+)', r'гл\.\s*(\d+)', r'параграф\s*(\d+)', r'пункт\s*(\d+)', r'п\.\s*(\d+)', r'раздел\s*([IVX]+|\d+)', r'подраздел\s*(\d+)']
