@@ -120,7 +120,6 @@ SOURCE_MAPPING = {
     'недра': 'https://adilet.zan.kz/rus/docs/K1700000125',
 }
 
-
 # --- Логика поиска и обработки ---
 def find_laws_by_keywords(question, max_results=5):
     results = []; question_lower = question.lower(); question_words = set(re.findall(r'\b\w{3,}\b', question_lower))
@@ -227,9 +226,27 @@ def convert_full_markdown_to_html(text):
             html_output.append(f"<p>{para.replace('\n', '<br>')}</p>")
     return "".join(html_output)
 
-PROMPT_TEMPLATE = "Ты казахстанский юрист... (ваш промпт)"
+# --- ИСПРАВЛЕНИЕ: Финальная, самая надежная инструкция для ИИ ---
+PROMPT_TEMPLATE = """
+**Твоя роль:** Ты — опытный казахстанский юрист-консультант. Твоя главная задача — давать четкие, полезные и понятные ответы на вопросы обычных людей, основываясь на законодательстве РК. Говори просто, без сложных юридических терминов.
 
-# --- ФИНАЛЬНАЯ ВЕРСИЯ: Маршрут для стриминга текста ИИ ---
+**Ситуация пользователя:**
+---
+{question}
+---
+
+**Твоя задача:**
+1.  **Проанализируй ситуацию пользователя**, изложенную выше.
+2.  **Дай прямой и конкретный ответ** по существу вопроса. Объясни права человека и предложи пошаговый план действий.
+3.  **Структурируй ответ:** используй заголовки (**жирным**), списки (• или нумерованные) для ясности.
+4.  Если можешь, **приведи пример простого шаблона** (заявления, претензии) в конце ответа, если это уместно.
+
+**ВАЖНО:** Начинай ответ сразу по существу, без лишних вступлений и самопредставлений. Сразу переходи к сути вопроса пользователя.
+"""
+
+# --- Финальная архитектура с двумя маршрутами ---
+
+# Маршрут №1: ТОЛЬКО для стриминга текста от ИИ
 @app.route("/ask", methods=["POST"])
 def ask_streaming():
     data = request.json
@@ -238,20 +255,18 @@ def ask_streaming():
 
     def generate_text():
         try:
-            full_text = ""
             prompt = PROMPT_TEMPLATE.format(question=question)
             stream = model.generate_content(prompt, stream=True)
             for chunk in stream:
                 if chunk.text:
-                    full_text += chunk.text
                     yield chunk.text # Отправляем чистый текст на фронтенд
         except Exception as e:
             print(f"❌ Ошибка в стриме /ask: {e}")
             yield "Ошибка генерации ответа ИИ."
             
-    return Response(stream_with_context(generate_text()), mimetype='text/plain')
+    return Response(stream_with_context(generate_text()), mimetype='text/plain; charset=utf-8')
 
-# --- ФИНАЛЬНАЯ ВЕРСИЯ: Маршрут для поиска законов и форматирования полного ответа ---
+# Маршрут №2: ТОЛЬКО для поиска законов и финального форматирования
 @app.route("/process-full-text", methods=["POST"])
 def process_full_text():
     data = request.json
@@ -261,10 +276,10 @@ def process_full_text():
         return jsonify({"error": "Отсутствует вопрос или текст ИИ"}), 400
     
     try:
-        # Форматируем полный текст ответа ИИ
+        # Форматируем полный текст ответа ИИ в красивый HTML
         formatted_ai_html = convert_full_markdown_to_html(full_ai_text)
         
-        # Ищем законы
+        # Ищем законы по оригинальному вопросу
         laws_found = find_laws_by_keywords(question)
         law_section_html = format_laws(laws_found)
 
