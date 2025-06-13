@@ -155,6 +155,56 @@ footer {
   margin-top: 2rem;
 }
 
+/* --- Стили для подсказки (tooltip) --- */
+
+/* Контейнер для элемента с подсказкой */
+.tooltip-container {
+  position: relative; /* Это нужно, чтобы позиционировать текст подсказки относительно этого элемента */
+  display: inline-block; /* Чтобы элемент вел себя как текст, но имел размеры */
+  cursor: help; /* Меняет курсор на знак вопроса при наведении */
+  border-bottom: 1px dotted black; /* Необязательно: подчеркивает, что элемент интерактивный */
+}
+
+/* Сам текст подсказки (изначально скрыт) */
+.tooltip-container .tooltip-text {
+  visibility: hidden; /* Изначально невидим */
+  width: 240px; /* Ширина подсказки */
+  background-color: #333; /* Темный фон */
+  color: #fff; /* Белый текст */
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px;
+  
+  /* Позиционирование над элементом */
+  position: absolute;
+  z-index: 1;
+  bottom: 140%; /* Располагаем над родительским элементом */
+  left: 50%;
+  margin-left: -120px; /* Сдвигаем влево на половину ширины, чтобы отцентрировать */
+  
+  /* Плавное появление */
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Маленькая стрелочка под подсказкой для красоты */
+.tooltip-container .tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%; /* На нижней границе подсказки */
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+}
+
+/* Показываем подсказку при наведении на контейнер */
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
 @media screen and (max-width: 600px) {
   main {
     padding: 1rem;
