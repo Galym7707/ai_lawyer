@@ -67,58 +67,41 @@ LEGAL_SYNONYMS = {
 SOURCE_MAPPING = {
     'Уголовный кодекс': 'https://adilet.zan.kz/rus/docs/K1400000226',
     'уголовн': 'https://adilet.zan.kz/rus/docs/K1400000226',
-    'Уголовно-процессуальный кодекс': 'https://adilet.zan.kz/rus/docs/K1400000231',
-    'Уголовно-исполнительный кодекс': 'https://adilet.zan.kz/rus/docs/K1400000234',
 
-    'Кодекс об административных правонарушениях': 'https://adilet.zan.kz/rus/docs/K1400000235',
+    'Об административных правонарушениях': 'https://adilet.zan.kz/rus/docs/K1400000235',
     'административн': 'https://adilet.zan.kz/rus/docs/K1400000235',
 
     'Гражданский кодекс': 'https://adilet.zan.kz/rus/docs/K940001000_',
     'гражданск': 'https://adilet.zan.kz/rus/docs/K940001000_',
+
     'Гражданский процессуальный кодекс': 'https://adilet.zan.kz/rus/docs/K1500000377',
     'процессуальн': 'https://adilet.zan.kz/rus/docs/K1500000377',
 
     'Трудовой кодекс': 'https://adilet.zan.kz/rus/docs/K1500000414',
     'трудов': 'https://adilet.zan.kz/rus/docs/K1500000414',
-    
+
     'Предпринимательский кодекс': 'https://adilet.zan.kz/rus/docs/K1500000375',
     'предпринимательск': 'https://adilet.zan.kz/rus/docs/K1500000375',
 
     'Социальный кодекс': 'https://adilet.zan.kz/rus/docs/K2300000224',
     'социальн': 'https://adilet.zan.kz/rus/docs/K2300000224',
 
-    'Кодекс о браке (супружестве) и семье': 'https://adilet.zan.kz/rus/docs/K1100000518',
-    'семейн': 'https://adilet.zan.kz/rus/docs/K1100000518',
-    'брачн': 'https://adilet.zan.kz/rus/docs/K1100000518',
-
-    'Кодекс о здоровье народа и системе здравоохранения': 'https://adilet.zan.kz/rus/docs/K2000000360',
-    'здоровь': 'https://adilet.zan.kz/rus/docs/K2000000360',
-    'медицин': 'https://adilet.zan.kz/rus/docs/K2000000360',
-
     'Экологический кодекс': 'https://adilet.zan.kz/rus/docs/K2100000400',
     'экологич': 'https://adilet.zan.kz/rus/docs/K2100000400',
-    
-    'Налоговый кодекс': 'https://adilet.zan.kz/rus/docs/K1700000120',
-    'налогов': 'https://adilet.zan.kz/rus/docs/K1700000120',
 
     'Бюджетный кодекс': 'https://adilet.zan.kz/rus/docs/K080000095_',
     'бюджетн': 'https://adilet.zan.kz/rus/docs/K080000095_',
 
-    'Таможенный кодекс': 'https://adilet.zan.kz/rus/docs/K1700000123',
-    'таможен': 'https://adilet.zan.kz/rus/docs/K1700000123',
-
-    'Земельный кодекс': 'https://adilet.zan.kz/rus/docs/K030000442_',
-    'земельн': 'https://adilet.zan.kz/rus/docs/K030000442_',
-
-    'Лесной кодекс': 'https://adilet.zan.kz/rus/docs/K030000473_',
-    'лесн': 'https://adilet.zan.kz/rus/docs/K030000473_',
-
     'Водный кодекс': 'https://adilet.zan.kz/rus/docs/K1600000049',
     'водн': 'https://adilet.zan.kz/rus/docs/K1600000049',
 
-    'Кодекс о недрах и недропользовании': 'https://adilet.zan.kz/rus/docs/K1700000125',
-    'недра': 'https://adilet.zan.kz/rus/docs/K1700000125',
+    'О жилищных отношениях': 'https://adilet.zan.kz/rus/docs/Z970000254_',
+    'жилищ': 'https://adilet.zan.kz/rus/docs/Z970000254_',
+
+    'Об образовании': 'https://adilet.zan.kz/rus/docs/Z070000319_',
+    'образован': 'https://adilet.zan.kz/rus/docs/Z070000319_',
 }
+
 
 # --- Логика поиска и обработки ---
 def find_laws_by_keywords(question, min_relevance=12):
