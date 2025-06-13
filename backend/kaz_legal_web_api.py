@@ -128,6 +128,17 @@ def find_laws_by_keywords(question, min_relevance=12):
     if not LAW_DB:
         return []
 
+    # Определим приоритет кодексов
+    priority_codes = []
+    if any(w in question_lower for w in ['увольн', 'работ', 'работодат', 'труд', 'зарплат']):
+        priority_codes.append('трудов')
+    elif any(w in question_lower for w in ['жилье', 'аренда', 'квартира', 'высел']):
+        priority_codes.append('жилищ')
+    elif any(w in question_lower for w in ['пенсия', 'пособие', 'декрет']):
+        priority_codes.append('социальн')
+    elif any(w in question_lower for w in ['развод', 'алименты']):
+        priority_codes.append('семейн')
+
     expanded_terms = set(question_words)
     for word in question_words:
         for key_term, synonyms in LEGAL_SYNONYMS.items():
@@ -139,6 +150,11 @@ def find_laws_by_keywords(question, min_relevance=12):
         title_lower = entry.get("title", "").lower()
         text_lower = entry.get("text", "").lower()
         relevance = calculate_relevance(expanded_terms, title_lower, text_lower)
+
+        # Повышаем приоритет кодексов
+        if any(code in title_lower for code in priority_codes):
+            relevance += 10
+
         if relevance >= min_relevance:
             entry_copy = entry.copy()
             entry_copy["relevance"] = relevance
