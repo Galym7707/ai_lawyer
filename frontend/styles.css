@@ -54,6 +54,9 @@ main {
     padding: 2rem;
     max-width: 800px;
     margin: 0 auto;
+    /* --- ДОБАВЬТЕ ЭТИ ДВЕ СТРОКИ --- */
+    display: flex;
+    flex-direction: column;
 }
 
 main section {
