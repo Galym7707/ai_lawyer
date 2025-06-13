@@ -1,86 +1,76 @@
-// Убедимся, что скрипт запускается после полной загрузки страницы
-document.addEventListener('DOMContentLoaded', () => {
+// frontend/script.js (Версия 3.0 - Финальная, с пост-обработкой)
 
-    // Находим элементы в HTML по их ID
-    const submitBtn = document.getElementById('submitBtn');
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('chat-form');
     const userQuestionInput = document.getElementById('userQuestion');
     const responseBox = document.getElementById('response');
     const spinner = document.getElementById('spinner');
-
-    // Получаем форму, чтобы обрабатывать отправку и по нажатию Enter
-    const form = submitBtn.form;
-    if (!form) {
-        console.error('Кнопка отправки должна быть внутри тега <form>');
-        return;
-    }
-
-    // Вешаем обработчик на событие "submit" формы
+    
     form.addEventListener('submit', async (e) => {
-        // Предотвращаем стандартную перезагрузку страницы при отправке формы
         e.preventDefault();
-
         const question = userQuestionInput.value.trim();
-        if (!question) {
-            responseBox.innerHTML = '<p style="color: #ffc107;">❗ Пожалуйста, введите ваш вопрос.</p>';
-            return;
-        }
+        if (!question) return;
 
-        // --- Обновляем интерфейс перед запросом ---
-        if (spinner) spinner.style.display = 'block'; // Показываем спиннер
-        responseBox.innerHTML = ''; // Очищаем предыдущий ответ
-        submitBtn.disabled = true; // Делаем кнопку неактивной
-        userQuestionInput.disabled = true; // И поле ввода тоже
+        // --- Подготовка UI ---
+        if (spinner) spinner.style.display = 'block';
+        responseBox.innerHTML = ''; // Полная очистка
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        userQuestionInput.disabled = true;
+
+        let fullAiText = ""; // Переменная для накопления полного текста от ИИ
 
         try {
-            // --- Отправляем запрос на ваш бэкенд ---
-            // URL взят из вашего оригинального скрипта
-            const response = await fetch('https://ai-lawyer.up.railway.app/ask', {
+            // --- ЭТАП 1: Получаем "живой" текст ответа от ИИ ---
+            const streamResponse = await fetch('https://ai-lawyer.up.railway.app/ask', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ question }),
             });
 
-            if (!response.ok) {
-                // Если сервер вернул ошибку (например, 500)
-                const errorText = await response.text();
-                throw new Error(errorText || `Ошибка сервера: ${response.status}`);
-            }
-
-            // --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Обработка потокового ответа ---
-            const reader = response.body.getReader();
+            if (!streamResponse.ok) throw new Error(`Ошибка сервера при стриминге: ${streamResponse.status}`);
+            
+            const reader = streamResponse.body.getReader();
             const decoder = new TextDecoder('utf-8');
             
-            // Скрываем спиннер, как только получили первый кусочек данных
-            if (spinner) spinner.style.display = 'none';
+            if (spinner) spinner.style.display = 'none'; // Прячем спиннер с первым же фрагментом
+            responseBox.style.whiteSpace = "pre-wrap"; // ВАЖНО: сохраняем переносы строк для сырого текста
 
-            // Читаем поток по частям, пока он не закончится
             while (true) {
                 const { done, value } = await reader.read();
-                if (done) {
-                    break; // Поток завершен
-                }
+                if (done) break;
                 
-                // Декодируем полученный фрагмент данных (это уже готовый HTML)
-                const chunk = decoder.decode(value, { stream: true });
-                // Добавляем его в блок ответа
-                responseBox.innerHTML += chunk;
-
-                // Автоматически прокручиваем вниз по мере поступления ответа
-                responseBox.scrollTop = responseBox.scrollHeight;
+                const textChunk = decoder.decode(value, { stream: true });
+                fullAiText += textChunk; // Накапливаем текст
+                responseBox.textContent = fullAiText; // Отображаем как простой текст
             }
+            
+            // --- ЭТАП 2: Отправляем полный текст на финальную обработку ---
+            responseBox.style.whiteSpace = "normal"; // Возвращаем обычный режим отображения
+            responseBox.innerHTML = '<div id="spinner-final" style="text-align:center; padding: 20px;"><p>Форматирование и поиск статей...</p><div class="loader"></div></div>';
 
-        } catch (err) {
-            // Обрабатываем ошибки сети или ошибки сервера
-            if (spinner) spinner.style.display = 'none'; // Прячем спиннер в случае ошибки
-            responseBox.innerHTML = `<p style="color: #dc3545;">🚫 <strong>Произошла ошибка:</strong> ${err.message}</p>`;
+
+            const processResponse = await fetch('https://ai-lawyer.up.railway.app/process-full-text', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ question: question, full_ai_text: fullAiText }),
+            });
+
+            if (!processResponse.ok) throw new Error(`Ошибка сервера при обработке: ${processResponse.status}`);
+
+            const data = await processResponse.json();
+            
+            // Заменяем временный текст на финальный, красиво отформатированный HTML
+            responseBox.innerHTML = data.html;
+
+        } catch (error) {
+            if (spinner) spinner.style.display = 'none';
+            responseBox.innerHTML = `<p style="color:red;">🚫 Произошла критическая ошибка: ${error.message}</p>`;
         } finally {
-            // --- Возвращаем интерфейс в исходное состояние ---
-            submitBtn.disabled = false; // Снова делаем кнопку активной
+            // --- Возвращаем UI в исходное состояние ---
+            submitBtn.disabled = false;
             userQuestionInput.disabled = false;
-            userQuestionInput.value = ''; // Очищаем поле ввода
-            userQuestionInput.focus(); // Ставим курсор обратно в поле ввода
+            userQuestionInput.focus();
         }
     });
 });
