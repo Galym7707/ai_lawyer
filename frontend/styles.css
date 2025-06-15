@@ -1,17 +1,18 @@
-/* Kaz Legal Bot - Единая Тёмная Тема (Версия 2.0) */
+/* Kaz Legal Bot - Единая Тёмная Тема (Версия 2.1) */
 
 /* --- ОБЩИЕ СТИЛИ И ПЕРЕМЕННЫЕ --- */
 :root {
-    --bg-primary: #121212;      /* Основной фон */
-    --bg-secondary: #1e1e1e;   /* Фон для карточек и полей */
-    --bg-header: #1f1f1f;       /* Фон хедера */
-    --text-primary: #e0e0e0;   /* Основной текст */
-    --text-secondary: #b0b0b0; /* Второстепенный текст */
-    --accent-primary: #00bcd4;  /* Основной акцент (бирюзовый) */
-    --accent-secondary: #00e676;/* Доп. акцент (зеленый) */
-    --border-color: #333;      /* Цвет границ */
+    --bg-primary: #121212;
+    --bg-secondary: #1e1e1e;
+    --bg-header: #1f1f1f;
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --accent-primary: #00bcd4;
+    --accent-secondary: #00e676;
+    --border-color: #333;
 }
 
+/* --- ОСНОВНОЙ ФОН И ТЕКСТ --- */
 body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
@@ -37,6 +38,11 @@ header h1 {
     margin: 0;
 }
 
+nav {
+    display: flex;
+    align-items: center;
+}
+
 nav a {
     color: var(--text-primary);
     margin-left: 1rem;
@@ -54,7 +60,6 @@ main {
     padding: 2rem;
     max-width: 800px;
     margin: 0 auto;
-    /* --- ДОБАВЬТЕ ЭТИ ДВЕ СТРОКИ --- */
     display: flex;
     flex-direction: column;
 }
@@ -92,7 +97,7 @@ textarea#userQuestion {
     color: var(--text-primary);
     margin-top: 1rem;
     resize: vertical;
-    box-sizing: border-box; /* Чтобы padding не ломал ширину */
+    box-sizing: border-box;
 }
 
 textarea#userQuestion:focus {
@@ -105,7 +110,7 @@ button#submitBtn {
     padding: 0.75rem 1.5rem;
     background-color: var(--accent-primary);
     border: none;
-    color: #121212; /* Темный текст на светлой кнопке */
+    color: #121212;
     font-size: 1rem;
     font-weight: bold;
     border-radius: 6px;
@@ -120,6 +125,23 @@ button#submitBtn:hover {
 button#submitBtn:disabled {
     background-color: #555;
     cursor: not-allowed;
+}
+
+/* --- КНОПКА "НОВЫЙ РАЗГОВОР" --- */
+#new-conversation {
+    background: var(--accent-primary);
+    color: #121212;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin: 18px auto 0;
+    display: block;
+}
+#new-conversation:hover {
+    background: var(--accent-secondary);
 }
 
 /* --- БЛОК С ОТВЕТОМ ОТ ИИ --- */
@@ -159,7 +181,7 @@ button#submitBtn:disabled {
     margin-top: 20px;
     padding: 20px;
     border-radius: 10px;
-    background-color: rgba(0, 188, 212, 0.05); /* Легкий бирюзовый фон */
+    background-color: rgba(0, 188, 212, 0.05);
     border-left: 4px solid var(--accent-primary);
 }
 
@@ -249,8 +271,44 @@ button#submitBtn:disabled {
     background-color: var(--accent-secondary);
 }
 
+/* --- ИСТОРИЯ ЧАТА (Вопрос-Ответ) --- */
+.msg {
+    padding: 12px 18px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    margin-top: 10px;
+    max-width: 95%;
+    word-break: break-word;
+}
+.user-msg {
+    background: #232b34;
+    text-align: right;
+    margin-left: auto;
+    border-right: 4px solid var(--accent-primary);
+}
+.bot-msg {
+    background: #1d262b;
+    border-left: 4px solid var(--accent-secondary);
+    text-align: left;
+    margin-right: auto;
+}
 
-/* --- СТИЛИ ДЛЯ ПОДСКАЗКИ (TOOLTIP) --- */
+/* --- ПОДСКАЗКИ, ПРИМЕРЫ, TOOLTIP --- */
+.examples {
+    margin-top: 18px;
+    color: var(--text-secondary);
+    font-size: 0.96em;
+}
+
+.examples ul {
+    margin: 0.4em 0 0 1.5em;
+    padding: 0;
+}
+.examples li {
+    margin: 2px 0;
+    color: var(--text-secondary);
+}
+
 .tooltip-container {
     position: relative;
     display: inline-block;
@@ -291,29 +349,63 @@ button#submitBtn:disabled {
     opacity: 1;
 }
 
+/* --- ФУТЕР --- */
+footer {
+    background: var(--bg-header);
+    padding: 16px 0;
+    width: 100%;
+    border-top: 1px solid var(--border-color);
+    margin-top: 40px;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    color: var(--text-secondary);
+}
 
 /* --- АДАПТИВНЫЙ ДИЗАЙН ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ --- */
 @media (max-width: 600px) {
     body {
         font-size: 15px;
     }
-
     header {
         flex-direction: column;
         gap: 10px;
     }
-
     main {
-        padding: 1rem;
+        padding: 8px;
     }
-
     .card-footer {
         flex-direction: column;
         align-items: flex-start;
     }
-
     .footer-actions {
         width: 100%;
         justify-content: space-between;
+    }
+    header nav {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    .footer-content {
+        font-size: 14px;
+        padding: 10px 0;
+    }
+    .msg, .response-box, .law-card, .laws-container {
+        font-size: 0.98em;
+        padding: 12px;
+    }
+    textarea#userQuestion {
+        min-height: 80px;
+        font-size: 15px;
+    }
+    button#submitBtn, #new-conversation {
+        font-size: 15px;
+        padding: 9px 14px;
     }
 }
