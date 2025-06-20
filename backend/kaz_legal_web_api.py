@@ -263,6 +263,18 @@ def format_laws(laws, shown_limit=5):
     output += "</div>"
     return output
 
+def extract_text_from_file(filepath):
+    if filepath.endswith(".docx"):
+        import docx
+        doc = docx.Document(filepath)
+        return "\n".join([p.text for p in doc.paragraphs])
+    elif filepath.endswith(".pdf"):
+        from PyPDF2 import PdfReader
+        reader = PdfReader(filepath)
+        return "\n".join([page.extract_text() for page in reader.pages])
+    else:
+        return ""
+
 
 def extract_article_info(title):
     patterns = [r'статья\s*(\d+)', r'ст\.\s*(\d+)', r'глава\s*(\d+)', r'гл\.\s*(\d+)', r'параграф\s*(\d+)', r'пункт\s*(\d+)', r'п\.\s*(\d+)', r'раздел\s*([IVX]+|\d+)', r'подраздел\s*(\d+)']
@@ -401,6 +413,26 @@ def index():
 @app.route("/<path:path>")
 def static_files(path):
     return send_from_directory(app.static_folder, path)
+
+@app.route("/analyze-file", methods=["POST"])
+def analyze_file():
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "Файл не получен"}), 400
+
+    # Временное сохранение и чтение
+    filepath = os.path.join("/tmp", file.filename)
+    file.save(filepath)
+
+    text = extract_text_from_file(filepath)  # Эта функция будет разной для docx/pdf
+    os.remove(filepath)
+
+    # Применяем промпт
+    prompt = FILE_ANALYSIS_PROMPT.format(text=text[:8000])  # Ограничим объем
+    response = model.generate_content(prompt)
+
+    return jsonify({"analysis": response.text})
+
 
 if __name__ == '__main__':
     load_law_db()
