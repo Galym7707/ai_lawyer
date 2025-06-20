@@ -74,3 +74,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+document.getElementById("file-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const responseBox = document.getElementById("response");
+    const spinner = document.getElementById("fileSpinner");
+    const submitBtn = document.getElementById("fileSubmitBtn");
+
+    // Подготовка интерфейса
+    responseBox.innerHTML = "";
+    spinner.style.display = "block";
+    submitBtn.disabled = true;
+    fileInput.disabled = true;
+
+    try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("https://ai-lawyer.up.railway.app/analyze-file", {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
+
+        const data = await res.json();
+        responseBox.innerHTML = `<div class="response-box"><p>${data.analysis.replace(/\n/g, "<br>")}</p></div>`;
+    } catch (err) {
+        responseBox.innerHTML = `<p style="color:red;">🚫 Ошибка анализа файла: ${err.message}</p>`;
+    } finally {
+        spinner.style.display = "none";
+        submitBtn.disabled = false;
+        fileInput.disabled = false;
+        fileInput.value = null;
+    }
+});
