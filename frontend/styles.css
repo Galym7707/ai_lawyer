@@ -366,6 +366,113 @@ footer {
     color: var(--text-secondary);
 }
 
+/* --- ЗАГРУЗКА ФАЙЛА (DRAG AND DROP) --- */
+.upload-card {
+  background-color: var(--bg-secondary);
+  border: 2px dashed var(--accent-primary);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.drag-and-drop-area {
+  padding: 30px;
+  border-radius: 8px;
+  background-color: #1e1e1e;
+  border: 2px dashed var(--accent-primary);
+  transition: background-color 0.2s ease;
+}
+
+.drag-and-drop-area.highlight {
+  background-color: #263238;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: var(--accent-primary);
+  margin-bottom: 10px;
+}
+
+.drag-text {
+  font-size: 1.2em;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.or-text {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  margin: 10px 0;
+}
+
+.browse-button {
+  background-color: var(--accent-primary);
+  padding: 10px 20px;
+  color: #121212;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 12px 0;
+  display: inline-block;
+  transition: background-color 0.2s ease;
+}
+
+.browse-button:hover {
+  background-color: var(--accent-secondary);
+}
+
+.file-requirements {
+  color: var(--text-secondary);
+  font-size: 0.8em;
+  margin-top: 8px;
+}
+
+.upload-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.file-info {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.action-buttons .btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.clear-button {
+  background-color: #555;
+  color: #eee;
+}
+
+.clear-button:hover {
+  background-color: #777;
+}
+
+.analyze-button {
+  background-color: var(--accent-primary);
+  color: #121212;
+}
+
+.analyze-button:hover {
+  background-color: var(--accent-secondary);
+}
+
+.spinner {
+  margin-left: 8px;
+}
+
+
 /* --- АДАПТИВНЫЙ ДИЗАЙН ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ --- */
 @media (max-width: 600px) {
     body {
