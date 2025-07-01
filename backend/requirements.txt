@@ -4,3 +4,5 @@ feedparser
 python-dotenv
 requests
 flask-cors
+python-docx
+PyPDF2
