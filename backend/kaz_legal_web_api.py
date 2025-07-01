@@ -433,22 +433,24 @@ def static_files(path):
 
 @app.route("/analyze-file", methods=["POST"])
 def analyze_file():
-    file = request.files.get("file")
-    if not file:
-        return jsonify({"error": "Файл не получен"}), 400
+    try:
+        file = request.files.get("file")
+        if not file:
+            return jsonify({"error": "Файл не получен"}), 400
 
-    # Временное сохранение и чтение
-    filepath = os.path.join("/tmp", file.filename)
-    file.save(filepath)
+        filepath = os.path.join("/tmp", file.filename)
+        file.save(filepath)
 
-    text = extract_text_from_file(filepath)  # Эта функция будет разной для docx/pdf
-    os.remove(filepath)
+        text = extract_text_from_file(filepath)
+        os.remove(filepath)
 
-    # Применяем промпт
-    prompt = FILE_ANALYSIS_PROMPT.format(text=text[:8000])  # Ограничим объем
-    response = model.generate_content(prompt)
+        prompt = FILE_ANALYSIS_PROMPT.format(text=text[:8000])
+        response = model.generate_content(prompt)
 
-    return jsonify({"analysis": response.text})
+        return jsonify({"analysis": response.text})
+    except Exception as e:
+        print(f"❌ analyze_file error: {e}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
