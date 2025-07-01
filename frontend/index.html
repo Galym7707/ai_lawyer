@@ -104,10 +104,47 @@
 
             <hr>
             <h3>📎 Или загрузите документ</h3>
-            <form id="file-form">
-                <input type="file" id="fileInput" accept=".pdf,.docx" />
-                <button type="submit" id="fileSubmitBtn">Проанализировать файл</button>
+            <form id="file-form" enctype="multipart/form-data" class="upload-card">
+              <div class="drag-and-drop-area" id="drag-and-drop-area">
+                <div class="upload-icon">📁</div>
+                <div class="upload-content">
+                  <h3 class="drag-text">Перетащите файл сюда</h3>
+                  <p class="or-text"><span>или</span></p>
+                  <label for="fileInput" class="browse-button btn">
+                    <i class="fas fa-folder-open"></i> Выбрать файл
+                    <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
+                  </label>
+                  <p class="file-requirements">Поддерживаются DOCX, PDF, изображения. До 20 МБ.</p>
+                </div>
+              </div>
+            
+              <div class="upload-footer">
+                <div class="file-info">📄 <span id="file-chosen">Файл не выбран</span></div>
+                <div class="action-buttons">
+                  <button type="button" class="clear-button btn" id="clearBtn" disabled>❌ Очистить</button>
+                  <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>
+                    🔍 Проанализировать файл
+                    <span class="button-arrow">➡️</span>
+                    <span class="spinner" style="display:none;">⏳</span>
+                  </button>
+                </div>
+              </div>
             </form>
+
+
+            <div class="upload-footer">
+            <div class="file-info">📄 <span id="file-chosen">Файл не выбран</span></div>
+            <div class="action-buttons">
+              <button type="button" class="clear-button btn" id="clearBtn" disabled>❌ Очистить</button>
+              <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>
+                🔍 Проанализировать файл
+                <span class="button-arrow">➡️</span>
+                <span class="spinner" style="display:none;">⏳</span>
+              </button>
+            </div>
+            </div>
+            </form>
+
             <div id="fileSpinner" style="display: none; text-align: center; padding: 20px;">
                 <p>ИИ анализирует документ...</p>
                 <div class="loader"></div>
