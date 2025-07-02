@@ -1,4 +1,4 @@
-// frontend/script.js (Версия 3.0 - Финальная, с пост-обработкой)
+// frontend/script.js (Версия 3.1 - Исправленная и расширенная)
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- CHAT LOGIC ---
@@ -6,13 +6,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const userQuestionInput = document.getElementById('userQuestion');
     const responseBox = document.getElementById('response');
     const spinner = document.getElementById('spinner');
-    
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const question = userQuestionInput.value.trim();
         if (!question) return;
 
-        // --- Подготовка UI ---
         if (spinner) spinner.style.display = 'block';
         responseBox.innerHTML = '';
         const submitBtn = document.getElementById('submitBtn');
@@ -22,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let fullAiText = "";
 
         try {
-            // --- ЭТАП 1: Получаем "живой" текст ответа от ИИ ---
             const streamResponse = await fetch('https://ai-lawyer.up.railway.app/ask', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -30,10 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!streamResponse.ok) throw new Error(`Ошибка сервера при стриминге: ${streamResponse.status}`);
-            
+
             const reader = streamResponse.body.getReader();
             const decoder = new TextDecoder('utf-8');
-            
+
             if (spinner) spinner.style.display = 'none';
             responseBox.style.whiteSpace = "pre-wrap";
 
@@ -44,8 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fullAiText += textChunk;
                 responseBox.textContent = fullAiText;
             }
-            
-            // --- ЭТАП 2: Отправляем полный текст на финальную обработку ---
+
             responseBox.style.whiteSpace = "normal";
             responseBox.innerHTML = '<div id="spinner-final" style="text-align:center; padding: 20px;"><p>Форматирование и поиск статей...</p><div class="loader"></div></div>';
 
@@ -69,53 +66,57 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- DRAG & DROP FILE LOGIC ---
+    // --- DRAG & DROP FILE LOGIC + Лимит размера, поддержка расширений ---
     const dropArea = document.getElementById('drag-and-drop-area');
     const fileInput = document.getElementById('fileInput');
     const fileChosen = document.getElementById('file-chosen');
     const clearBtn = document.getElementById('clearBtn');
     const analyzeBtn = document.getElementById('fileSubmitBtn');
-    const fileSpinner = document.querySelector('.spinner'); // для файла (может быть отдельный спиннер)
+    const fileSpinner = document.querySelector('.spinner');
+    let selectedFile = null;
+    const MAX_SIZE = 1024 ** 3; // 1 GB
 
-    ['dragenter', 'dragover'].forEach(event => {
-        dropArea.addEventListener(event, e => {
-            e.preventDefault(); dropArea.classList.add('highlight');
-        });
-    });
-
-    ['dragleave', 'drop'].forEach(event => {
-        dropArea.addEventListener(event, e => {
-            e.preventDefault(); dropArea.classList.remove('highlight');
-        });
-    });
-
-    dropArea.addEventListener('drop', e => {
-        const file = e.dataTransfer.files[0];
-        fileInput.files = e.dataTransfer.files;
-        fileChosen.textContent = file.name;
-        analyzeBtn.disabled = false;
-        clearBtn.disabled = false;
-    });
-
-    fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        fileChosen.textContent = file ? file.name : 'Файл не выбран';
-        analyzeBtn.disabled = !file;
-        clearBtn.disabled = !file;
-    });
-
-    clearBtn.addEventListener('click', () => {
-        fileInput.value = '';
-        fileChosen.textContent = 'Файл не выбран';
-        analyzeBtn.disabled = true;
-        clearBtn.disabled = true;
-    });
-
-    // --- ОБНОВЛЁННЫЙ submit handler для file-form ---
-    document.getElementById("file-form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const file = fileInput.files[0];
+    function handleFile(file) {
         if (!file) return;
+        if (file.size > MAX_SIZE) {
+            alert("Максимальный размер – 1 ГБ");
+            clearSelectedFile();
+            return;
+        }
+        // Если нужны ограничения по расширениям — добавить тут
+        fileChosen.textContent = file.name;
+        clearBtn.disabled = false;
+        analyzeBtn.disabled = false;
+        selectedFile = file;
+    }
+
+    function clearSelectedFile() {
+        selectedFile = null;
+        fileInput.value = "";
+        fileChosen.textContent = "Файл не выбран";
+        clearBtn.disabled = true;
+        analyzeBtn.disabled = true;
+    }
+
+    ["dragenter", "dragover"].forEach(evt =>
+        dropArea.addEventListener(evt, e => { e.preventDefault(); dropArea.classList.add("drag-over"); })
+    );
+    ["dragleave", "drop"].forEach(evt =>
+        dropArea.addEventListener(evt, e => {
+            e.preventDefault();
+            dropArea.classList.remove("drag-over");
+            if (evt === "drop") handleFile(e.dataTransfer.files[0]);
+        })
+    );
+
+    fileInput.addEventListener("change", e => handleFile(e.target.files[0]));
+
+    clearBtn.addEventListener("click", clearSelectedFile);
+
+    // --- ОБНОВЛЁННЫЙ submit handler для file-form с проверкой analysis ---
+    document.getElementById("file-form").addEventListener("submit", async e => {
+        e.preventDefault();
+        if (!selectedFile) return;
 
         responseBox.innerHTML = "";
         fileSpinner.style.display = "inline-block";
@@ -124,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("file", selectedFile);
 
             const res = await fetch("https://ai-lawyer.up.railway.app/analyze-file", {
                 method: "POST",
@@ -134,7 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
             const data = await res.json();
 
-            // ⬇ Переформатирование как и у обычного ответа
+            if (!data.analysis) {
+                throw new Error(`Пустой ответ от сервера: ${JSON.stringify(data)}`);
+            }
+
+            // Отправляем на финальную обработку
             const htmlRes = await fetch("https://ai-lawyer.up.railway.app/process-full-text", {
                 method: "POST",
                 headers: {'Content-Type': 'application/json'},
@@ -150,9 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fileSpinner.style.display = "none";
             analyzeBtn.disabled = false;
             fileInput.disabled = false;
-            fileInput.value = null;
-            fileChosen.textContent = 'Файл не выбран';
-            clearBtn.disabled = true;
+            clearSelectedFile();
         }
     });
 });
