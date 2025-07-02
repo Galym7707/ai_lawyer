@@ -9,6 +9,8 @@ import re
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
+# лимит 1ГБ
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024
 CORS(app, origins=["https://ai-lawyer-tau.vercel.app"])
 
 # 🧠 Настройка Gemini API
