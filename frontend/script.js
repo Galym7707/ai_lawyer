@@ -134,10 +134,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
             const data = await res.json();
-
+        
             if (!data.analysis) {
                 throw new Error(`Пустой ответ от сервера: ${JSON.stringify(data)}`);
             }
+            
+            const htmlRes = await fetch("https://ai-lawyer.up.railway.app/process-full-text", {
+                method: "POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ question: "", full_ai_text: data.analysis })
+            });
 
             // Отправляем на финальную обработку
             const htmlRes = await fetch("https://ai-lawyer.up.railway.app/process-full-text", {
