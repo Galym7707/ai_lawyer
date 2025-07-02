@@ -6,3 +6,4 @@ requests
 flask-cors
 python-docx
 PyPDF2
+Pillow
