@@ -117,44 +117,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("file-form").addEventListener("submit", async e => {
         e.preventDefault();
         if (!selectedFile) return;
-
+    
         responseBox.innerHTML = "";
         fileSpinner.style.display = "inline-block";
         analyzeBtn.disabled = true;
         fileInput.disabled = true;
-
+    
         try {
             const formData = new FormData();
             formData.append("file", selectedFile);
-
+    
             const res = await fetch("https://ai-lawyer.up.railway.app/analyze-file", {
                 method: "POST",
                 body: formData,
             });
-
-            if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
+    
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || `Ошибка сервера: ${res.status}`);
+            }
             const data = await res.json();
-        
             if (!data.analysis) {
                 throw new Error(`Пустой ответ от сервера: ${JSON.stringify(data)}`);
             }
-            
-            const htmlRes = await fetch("https://ai-lawyer.up.railway.app/process-full-text", {
-                method: "POST",
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ question: "", full_ai_text: data.analysis })
-            });
-
+    
             // Отправляем на финальную обработку
             const htmlRes = await fetch("https://ai-lawyer.up.railway.app/process-full-text", {
                 method: "POST",
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ question: "", full_ai_text: data.analysis })
             });
-
+    
             const final = await htmlRes.json();
             responseBox.innerHTML = final.html;
-
+    
         } catch (err) {
             responseBox.innerHTML = `<p style="color:red;">🚫 Ошибка анализа файла: ${err.message}</p>`;
         } finally {
