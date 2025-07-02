@@ -446,8 +446,14 @@ def analyze_file():
         text = extract_text_from_file(filepath)
         os.remove(filepath)
 
+        if not text:
+            return jsonify({"error": "Не удалось извлечь текст из файла или файл пустой."}), 400
+
         prompt = FILE_ANALYSIS_PROMPT.format(text=text[:8000])
         response = model.generate_content(prompt)
+
+        if not hasattr(response, "text") or not response.text:
+            return jsonify({"error": "AI юрист не смог проанализировать файл или файл пустой."}), 400
 
         return jsonify({"analysis": response.text})
     except Exception as e:
