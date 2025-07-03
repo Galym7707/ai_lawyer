@@ -369,10 +369,11 @@ footer {
 /* --- ЗАГРУЗКА ФАЙЛА (DRAG AND DROP) --- */
 .upload-card {
   background-color: var(--bg-secondary);
-  border: 2px dashed var(--accent-primary);
-  padding: 20px;
+  border: 1px solid var(--border-color);
+  padding: 24px;
   border-radius: 12px;
   text-align: center;
+  box-shadow: 0 0 8px rgba(0,0,0,0.2);
   margin-top: 20px;
 }
 
@@ -380,16 +381,17 @@ footer {
   padding: 30px;
   border-radius: 8px;
   background-color: #1e1e1e;
-  border: 2px dashed var(--accent-primary);
+  border: 1px dashed var(--accent-primary);
   transition: background-color 0.2s ease;
 }
 
 .drag-and-drop-area.highlight {
   background-color: #263238;
+  border-style: solid;
 }
 
 .upload-icon {
-  font-size: 48px;
+  font-size: 44px;
   color: var(--accent-primary);
   margin-bottom: 10px;
 }
@@ -429,12 +431,8 @@ footer {
 }
 
 .upload-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12px;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .file-info {
@@ -471,6 +469,8 @@ footer {
 .spinner {
   margin-left: 8px;
 }
+
+
 
 
 /* --- АДАПТИВНЫЙ ДИЗАЙН ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ --- */
@@ -514,5 +514,14 @@ footer {
     button#submitBtn, #new-conversation {
         font-size: 15px;
         padding: 9px 14px;
+    }
+
+    .upload-card {
+        padding: 16px;
+    }
+
+    .action-buttons .btn {
+        width: 100%;
+        margin-bottom: 8px;
     }
 }
