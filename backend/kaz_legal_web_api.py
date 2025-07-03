@@ -1,4 +1,4 @@
-# kaz_legal_web_api.py (Версия 4.0 - Расширенные словари и полные источники)
+# kaz_legal_web_api.py (Версия 4.1 — расширенная поддержка вопроса к файлу, session_id everywhere)
 from memory import init_db, save_message, load_conversation
 init_db()
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
@@ -9,16 +9,14 @@ import re
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-# лимит 1ГБ
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB
 CORS(app, origins=["https://ai-lawyer-tau.vercel.app"])
 
-# 🧠 Настройка Gemini API
+# --- AI и база законов ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
-
-LAW_DB = [] 
+LAW_DB = []
 
 # --- УЛУЧШЕНИЕ: Максимально расширенный словарь синонимов ---
 LEGAL_SYNONYMS = {
@@ -372,56 +370,49 @@ def ask_streaming():
     data = request.json
     question = data.get("question", "").strip()
     session_id = data.get("session_id", "default")
-
     if not question:
-        return jsonify({"error": "Пустой вопрос"}), 400
+        return jsonify({"error": "Пустой вопрос", "session_id": session_id}), 400
 
     def generate_text():
         try:
-            # Загружаем историю
             history = load_conversation(session_id)
             prompt = PROMPT_TEMPLATE.format(question=question)
             history.append({"role": "user", "parts": [prompt]})
             stream = model.generate_content(history, stream=True)
-
             full_reply = ""
             for chunk in stream:
                 if chunk.text:
                     full_reply += chunk.text
                     yield chunk.text
-            
-            # Сохраняем сообщения
             save_message(session_id, "user", prompt)
             save_message(session_id, "model", full_reply)
         except Exception as e:
             print(f"❌ Ошибка в стриме /ask: {e}")
             yield "Ошибка генерации ответа ИИ."
+    return Response(stream_with_context(generate_text()), mimetype='text/plain; charset=utf-8', headers={"X-Session-Id": session_id})
 
-    return Response(stream_with_context(generate_text()), mimetype='text/plain; charset=utf-8')
-
-
-# Маршрут №2: ТОЛЬКО для поиска законов и финального форматирования
+# --- /process-full-text: финальная обработка и выдача статей ---
 @app.route("/process-full-text", methods=["POST"])
 def process_full_text():
     data = request.json
     full_ai_text = data.get("full_ai_text", "")
-    question = data.get("question", "").strip()  # можно оставить, но не проверяем
+    question = data.get("question", "").strip()
+    session_id = data.get("session_id", "default")
 
     if not full_ai_text:
-        return jsonify({"error": "Отсутствует текст ИИ"}), 400
+        return jsonify({"error": "Отсутствует текст ИИ", "session_id": session_id}), 400
 
     try:
         formatted_ai_html = convert_full_markdown_to_html(full_ai_text)
         laws_found = find_laws_by_keywords(question)
         law_section_html = format_laws(laws_found)
         final_html = formatted_ai_html + law_section_html
-        return jsonify({"html": final_html})
+        return jsonify({"html": final_html, "session_id": session_id})
     except Exception as e:
         print(f"❌ Ошибка в /process-full-text: {e}")
-        return jsonify({"error": "Ошибка при финальной обработке"}), 500
+        return jsonify({"error": "Ошибка при финальной обработке", "session_id": session_id}), 500
 
-
-# --- Статические маршруты ---
+# --- Главная страница и статика ---
 @app.route("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
@@ -430,33 +421,39 @@ def index():
 def static_files(path):
     return send_from_directory(app.static_folder, path)
 
+# --- /analyze-file: анализ файла + вопрос пользователя ---
 @app.route("/analyze-file", methods=["POST"])
 def analyze_file():
     try:
         file = request.files.get("file")
+        question = request.form.get("question", "").strip()
+        session_id = request.form.get("session_id", "default")
         if not file:
-            return jsonify({"error": "Файл не получен"}), 400
+            return jsonify({"error": "Файл не получен", "session_id": session_id}), 400
 
         filepath = os.path.join("/tmp", file.filename)
         file.save(filepath)
-
         text = extract_text_from_file(filepath)
         os.remove(filepath)
 
         if not text:
-            return jsonify({"error": "Не удалось извлечь текст из файла или файл пустой."}), 400
+            return jsonify({"error": "Не удалось извлечь текст из файла или файл пустой.", "session_id": session_id}), 400
 
+        # Формируем prompt с учетом вопроса, если он задан
         prompt = FILE_ANALYSIS_PROMPT.format(text=text[:8000])
+        if question:
+            prompt += f"\n\nВопрос клиента: {question}"
+
         response = model.generate_content(prompt)
 
         if not hasattr(response, "text") or not response.text:
-            return jsonify({"error": "AI юрист не смог проанализировать файл или файл пустой."}), 400
+            return jsonify({"error": "AI юрист не смог проанализировать файл или файл пустой.", "session_id": session_id}), 400
 
-        return jsonify({"analysis": response.text})
+        return jsonify({"analysis": response.text, "session_id": session_id})
     except Exception as e:
         print(f"❌ analyze_file error: {e}")
-        return jsonify({"error": f"Server error: {str(e)}"}), 500
-
+        session_id = request.form.get("session_id", "default")
+        return jsonify({"error": f"Server error: {str(e)}", "session_id": session_id}), 500
 
 if __name__ == '__main__':
     load_law_db()
