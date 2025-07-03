@@ -119,7 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedFile) return;
     
         responseBox.innerHTML = "";
-        fileSpinner.style.display = "inline-block";
+        fileSpinner.innerHTML = `
+          <p>ИИ-юрист анализирует ваш документ...</p>
+          <div class="loader"></div>
+        `;
+        fileSpinner.style.display = "block";
+
         analyzeBtn.disabled = true;
         fileInput.disabled = true;
     
