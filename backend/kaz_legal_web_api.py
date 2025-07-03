@@ -404,25 +404,22 @@ def ask_streaming():
 @app.route("/process-full-text", methods=["POST"])
 def process_full_text():
     data = request.json
-    question = data.get("question", "").strip()
     full_ai_text = data.get("full_ai_text", "")
-    if not question or not full_ai_text:
-        return jsonify({"error": "Отсутствует вопрос или текст ИИ"}), 400
-    
+    question = data.get("question", "").strip()  # можно оставить, но не проверяем
+
+    if not full_ai_text:
+        return jsonify({"error": "Отсутствует текст ИИ"}), 400
+
     try:
-        # Форматируем полный текст ответа ИИ в красивый HTML
         formatted_ai_html = convert_full_markdown_to_html(full_ai_text)
-        
-        # Ищем законы по оригинальному вопросу
         laws_found = find_laws_by_keywords(question)
         law_section_html = format_laws(laws_found)
-
-        # Собираем все вместе
         final_html = formatted_ai_html + law_section_html
         return jsonify({"html": final_html})
     except Exception as e:
         print(f"❌ Ошибка в /process-full-text: {e}")
         return jsonify({"error": "Ошибка при финальной обработке"}), 500
+
 
 # --- Статические маршруты ---
 @app.route("/")
