@@ -137,9 +137,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errorData.error || `Ошибка сервера: ${res.status}`);
             }
             const data = await res.json();
-            if (!data.analysis) {
-                throw new Error(`Пустой ответ от сервера: ${JSON.stringify(data)}`);
+            if (!data.analysis || typeof data.analysis !== 'string') {
+              throw new Error(`Ответ ИИ не содержит текст анализа.`);
             }
+
     
             // Отправляем на финальную обработку
             const htmlRes = await fetch("https://ai-lawyer.up.railway.app/process-full-text", {
