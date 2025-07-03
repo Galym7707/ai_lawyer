@@ -6,59 +6,6 @@
   <title>Kaz Legal Bot — AI Юрист Казахстана</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Law_scale_icon.svg/1024px-Law_scale_icon.svg.png" />
-
-  <style>
-    .tooltip-container {
-      position: relative;
-      display: inline-block;
-      cursor: help;
-    }
-    .tooltip-container .tooltip-text {
-      visibility: hidden;
-      width: 240px;
-      background-color: #333;
-      color: #fff;
-      text-align: center;
-      border-radius: 6px;
-      padding: 8px;
-      position: absolute;
-      z-index: 1;
-      bottom: 140%;
-      left: 50%;
-      margin-left: -120px;
-      opacity: 0;
-      transition: opacity 0.3s;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-    .tooltip-container .tooltip-text::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      margin-left: -5px;
-      border-width: 5px;
-      border-style: solid;
-      border-color: #333 transparent transparent transparent;
-    }
-    .tooltip-container:hover .tooltip-text {
-      visibility: visible;
-      opacity: 1;
-    }
-    .loader {
-      border: 4px solid #f3f3f3;
-      border-radius: 50%;
-      border-top: 4px solid #3498db;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
 </head>
 <body>
   <header>
@@ -103,7 +50,7 @@
               Выбрать файл
               <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
             </label>
-            <p class="file-requirements">Поддерживаются файлы размером до 1 ТБ.</p>
+            <p class="file-requirements">Поддерживаются PDF, DOCX, изображения до 1 ГБ.</p>
           </div>
         </div>
 
@@ -121,12 +68,12 @@
         </div>
       </form>
 
-      <div id="fileSpinner" style="display: none; text-align: center; padding: 20px;">
+      <div id="fileSpinner" style="display: none;">
         <p>ИИ-юрист анализирует ваш документ...</p>
         <div class="loader"></div>
       </div>
 
-      <div id="spinner" style="display: none; text-align: center; padding: 20px;">
+      <div id="spinner" style="display: none;">
         <p>ИИ-юрист анализирует ваш запрос...</p>
         <div class="loader"></div>
       </div>
@@ -150,4 +97,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
