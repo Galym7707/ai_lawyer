@@ -404,6 +404,29 @@ footer {
     letter-spacing: 0.01em;
 }
 
+.file-question-input {
+    width: 100%;
+    min-height: 64px;
+    max-height: 180px;
+    resize: vertical;
+    margin-top: 10px;
+    margin-bottom: 0;
+    padding: 1rem;
+    background: linear-gradient(120deg, #171e22 60%, #19232b 100%);
+    border: 1.5px solid var(--accent-primary);
+    border-radius: 9px;
+    color: var(--text-primary);
+    font-size: 1.05em;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 10px 0 rgba(0,188,212,0.04);
+}
+.file-question-input:focus {
+    border-color: var(--accent-secondary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0,230,118,0.13);
+}
+
 /* --- АДАПТИВ ДЛЯ МОБИЛЬНЫХ --- */
 @media (max-width: 600px) {
     body {
