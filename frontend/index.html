@@ -11,6 +11,9 @@
   <header>
     <h1>Kaz Legal Bot</h1>
     <nav>
+      <p style="margin-top:10px;color:var(--accent-secondary);font-weight:500;">
+        ⚖️ Все юридические ответы формируются на основе законодательства Казахстана. ИИ-юрист не выдумывает законы, а использует только надёжные официальные источники, такие как <a href="https://adilet.zan.kz" target="_blank" style="color:var(--accent-primary);text-decoration:underline;">adilet.zan.kz</a>.
+      </p>
       <a href="#about">О проекте</a>
       <a href="#help">Юридическая помощь</a>
       <a href="#contact">Обратная связь</a>
@@ -40,6 +43,7 @@
 
       <hr>
       <h3>📎 Или загрузите документ</h3>
+      <h3>📎 Загрузите документ для анализа</h3>
       <form id="file-form" enctype="multipart/form-data" class="upload-card">
         <div class="drag-and-drop-area" id="drag-and-drop-area">
           <div class="upload-icon">📁</div>
@@ -50,20 +54,14 @@
               Выбрать файл
               <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
             </label>
-            <p class="file-requirements">Поддерживаются PDF, DOCX, изображения до 1 ГБ.</p>
+            <p class="file-requirements">Поддерживаются PDF, DOCX, изображения до 1&nbsp;ГБ.</p>
           </div>
         </div>
-
         <div class="upload-footer">
           <div class="file-info">📄 <span id="file-chosen">Файл не выбран</span></div>
-          <textarea id="fileQuestion" placeholder="Введите вопрос по загруженному документу (необязательно)"></textarea>
+          <textarea id="fileQuestion" class="file-question-input" placeholder="Добавьте свой вопрос или комментарий к файлу (необязательно)"></textarea>
           <div class="action-buttons">
             <button type="button" class="clear-button btn" id="clearBtn" disabled>Очистить</button>
-            <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>
-              Проанализировать файл
-              <span class="button-arrow">➡️</span>
-              <span class="spinner" style="display:none;">⏳</span>
-            </button>
           </div>
         </div>
       </form>
