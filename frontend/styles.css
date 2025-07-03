@@ -1,6 +1,6 @@
-/* Kaz Legal Bot - Единая Тёмная Тема (Версия 2.1) */
+/* Kaz Legal Bot - Единая Тёмная Тема (v2.2) */
 
-/* --- ОБЩИЕ СТИЛИ И ПЕРЕМЕННЫЕ --- */
+/* --- ПЕРЕМЕННЫЕ --- */
 :root {
     --bg-primary: #121212;
     --bg-secondary: #1e1e1e;
@@ -48,7 +48,7 @@ nav a {
     margin-left: 1rem;
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.2s ease;
+    transition: color 0.2s;
 }
 
 nav a:hover {
@@ -115,7 +115,7 @@ button#submitBtn {
     font-weight: bold;
     border-radius: 6px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s;
 }
 
 button#submitBtn:hover {
@@ -127,7 +127,7 @@ button#submitBtn:disabled {
     cursor: not-allowed;
 }
 
-/* --- КНОПКА "НОВЫЙ РАЗГОВОР" --- */
+/* --- КНОПКА "НОВЫЙ ДИАЛОГ" --- */
 #new-conversation {
     background: var(--accent-primary);
     color: #121212;
@@ -176,102 +176,7 @@ button#submitBtn:disabled {
     color: var(--accent-primary);
 }
 
-/* --- БЛОК "РЕЛЕВАНТНЫЕ СТАТЬИ" --- */
-.laws-container {
-    margin-top: 20px;
-    padding: 20px;
-    border-radius: 10px;
-    background-color: rgba(0, 188, 212, 0.05);
-    border-left: 4px solid var(--accent-primary);
-}
-
-.laws-header {
-    color: var(--accent-primary);
-    margin-top: 0;
-    margin-bottom: 20px;
-}
-
-.law-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    margin-bottom: 15px;
-    padding: 15px 20px;
-    border-radius: 8px;
-    transition: border-color 0.2s ease-in-out;
-}
-
-.law-card:hover {
-    border-color: var(--accent-primary);
-}
-
-.card-title {
-    color: var(--accent-primary);
-    margin: 0;
-    font-size: 1.1em;
-}
-
-.card-meta {
-    background-color: #2a2a2a;
-    padding: 8px 12px;
-    border-radius: 4px;
-    margin: 10px 0;
-    font-size: 0.9em;
-    color: var(--text-secondary);
-}
-
-.card-body p {
-    margin: 0;
-    color: var(--text-primary);
-}
-
-.card-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 15px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border-color);
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.card-source {
-    color: var(--text-secondary);
-    font-size: 0.85em;
-}
-
-.footer-actions {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.card-relevance {
-    background: rgba(0, 230, 118, 0.1);
-    color: var(--accent-secondary);
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.card-link {
-    background-color: var(--accent-primary);
-    color: #121212;
-    padding: 6px 12px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 0.85em;
-    font-weight: 500;
-    transition: background-color 0.2s ease;
-}
-
-.card-link:hover {
-    background-color: var(--accent-secondary);
-}
-
-/* --- ИСТОРИЯ ЧАТА (Вопрос-Ответ) --- */
+/* --- ИСТОРИЯ ЧАТА --- */
 .msg {
     padding: 12px 18px;
     border-radius: 8px;
@@ -293,22 +198,7 @@ button#submitBtn:disabled {
     margin-right: auto;
 }
 
-/* --- ПОДСКАЗКИ, ПРИМЕРЫ, TOOLTIP --- */
-.examples {
-    margin-top: 18px;
-    color: var(--text-secondary);
-    font-size: 0.96em;
-}
-
-.examples ul {
-    margin: 0.4em 0 0 1.5em;
-    padding: 0;
-}
-.examples li {
-    margin: 2px 0;
-    color: var(--text-secondary);
-}
-
+/* --- TOOLTIP --- */
 .tooltip-container {
     position: relative;
     display: inline-block;
@@ -331,6 +221,7 @@ button#submitBtn:disabled {
     opacity: 0;
     transition: opacity 0.3s;
     font-size: 12px;
+    line-height: 1.4;
 }
 
 .tooltip-container .tooltip-text::after {
@@ -368,117 +259,152 @@ footer {
 
 /* --- ЗАГРУЗКА ФАЙЛА (DRAG AND DROP) --- */
 .upload-card {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  padding: 24px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 0 8px rgba(0,0,0,0.2);
-  margin-top: 20px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 0 8px rgba(0,0,0,0.2);
+    margin-top: 20px;
 }
 
 .drag-and-drop-area {
-  padding: 30px;
-  border-radius: 8px;
-  background-color: #1e1e1e;
-  border: 1px dashed var(--accent-primary);
-  transition: background-color 0.2s ease;
+    padding: 30px;
+    border-radius: 8px;
+    background-color: #1e1e1e;
+    border: 1px dashed var(--accent-primary);
+    transition: background-color 0.2s;
 }
 
 .drag-and-drop-area.highlight {
-  background-color: #263238;
-  border-style: solid;
+    background-color: #263238;
+    border-style: solid;
 }
 
 .upload-icon {
-  font-size: 44px;
-  color: var(--accent-primary);
-  margin-bottom: 10px;
+    font-size: 44px;
+    color: var(--accent-primary);
+    margin-bottom: 10px;
 }
 
 .drag-text {
-  font-size: 1.2em;
-  color: var(--text-primary);
-  margin-bottom: 8px;
+    font-size: 1.2em;
+    color: var(--text-primary);
+    margin-bottom: 8px;
 }
 
 .or-text {
-  color: var(--text-secondary);
-  font-size: 0.9em;
-  margin: 10px 0;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    margin: 10px 0;
 }
 
 .browse-button {
-  background-color: var(--accent-primary);
-  padding: 10px 20px;
-  color: #121212;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  margin: 12px 0;
-  display: inline-block;
-  transition: background-color 0.2s ease;
+    background-color: var(--accent-primary);
+    padding: 10px 20px;
+    color: #121212;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 12px 0;
+    display: inline-block;
+    transition: background-color 0.2s;
 }
 
 .browse-button:hover {
-  background-color: var(--accent-secondary);
+    background-color: var(--accent-secondary);
 }
 
 .file-requirements {
-  color: var(--text-secondary);
-  font-size: 0.8em;
-  margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 0.8em;
+    margin-top: 8px;
 }
 
 .upload-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12px;
-  flex-wrap: wrap;
-  gap: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+    gap: 24px;
 }
 
-
 .file-info {
-  color: var(--text-secondary);
-  font-size: 0.9em;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 18px; /* ЯРКО выраженный отступ между кнопками */
 }
 
 .action-buttons .btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .clear-button {
-  background-color: #555;
-  color: #eee;
+    background-color: #555;
+    color: #eee;
 }
 
 .clear-button:hover {
-  background-color: #777;
+    background-color: #777;
 }
 
 .analyze-button {
-  background-color: var(--accent-primary);
-  color: #121212;
+    background-color: var(--accent-primary);
+    color: #121212;
 }
 
 .analyze-button:hover {
-  background-color: var(--accent-secondary);
+    background-color: var(--accent-secondary);
 }
 
 .spinner {
-  margin-left: 8px;
+    margin-left: 8px;
 }
 
+/* --- LOADER/СПИННЕР --- */
+.loader {
+    border: 4px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 4px solid var(--accent-primary);
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg);}
+    100% { transform: rotate(360deg);}
+}
 
+#fileSpinner, #spinner {
+    display: none;
+    text-align: center;
+    padding: 24px 10px;
+    background: rgba(30,32,36,0.95);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    color: #f4f4f4;
+    font-size: 1.1em;
+    max-width: 360px;
+    margin: 30px auto;
+}
 
+#fileSpinner p, #spinner p {
+    margin-bottom: 16px;
+    font-size: 1.06em;
+    letter-spacing: 0.01em;
+}
 
-/* --- АДАПТИВНЫЙ ДИЗАЙН ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ --- */
+/* --- АДАПТИВ ДЛЯ МОБИЛЬНЫХ --- */
 @media (max-width: 600px) {
     body {
         font-size: 15px;
@@ -520,13 +446,30 @@ footer {
         font-size: 15px;
         padding: 9px 14px;
     }
-
     .upload-card {
         padding: 16px;
     }
-
+    .upload-footer {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+    }
+    .action-buttons {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
     .action-buttons .btn {
         width: 100%;
-        margin-bottom: 8px;
+        margin-bottom: 0;
+    }
+    #fileSpinner, #spinner {
+        font-size: 1em;
+        padding: 18px 4px;
+        max-width: 98vw;
+    }
+    .loader {
+        width: 28px;
+        height: 28px;
     }
 }
