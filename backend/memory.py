@@ -17,10 +17,21 @@ def init_db():
 
 def save_message(session_id, role, content):
     with sqlite3.connect(DB_PATH) as conn:
-        index = conn.execute("SELECT COUNT(*) FROM memory WHERE session_id=?", (session_id,)).fetchone()[0]
-        conn.execute("INSERT INTO memory VALUES (?, ?, ?, ?)", (session_id, index, role, content))
+        index = conn.execute(
+            "SELECT COUNT(*) FROM memory WHERE session_id=?",
+            (session_id,)
+        ).fetchone()[0]
+        # Защита от дубликатов при повторном вызове
+        conn.execute(
+            "INSERT OR REPLACE INTO memory VALUES (?, ?, ?, ?)",
+            (session_id, index, role, content)
+        )
+        conn.commit()
 
 def load_conversation(session_id):
     with sqlite3.connect(DB_PATH) as conn:
-        rows = conn.execute("SELECT role, content FROM memory WHERE session_id=? ORDER BY message_index", (session_id,)).fetchall()
+        rows = conn.execute(
+            "SELECT role, content FROM memory WHERE session_id=? ORDER BY message_index",
+            (session_id,)
+        ).fetchall()
         return [{"role": role, "parts": [content]} for role, content in rows]
