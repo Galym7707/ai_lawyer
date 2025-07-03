@@ -73,51 +73,43 @@
   <main>
     <section id="about">
       <h2>🧠 Об AI-помощнике</h2>
-      <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах, опираясь на действующее законодательство.</p>
-      <p><strong>Важно:</strong> Помощник не выдумывает ответы. Его знания основаны на анализе <strong>официальных текстов более 12 кодексов Республики Казахстан</strong>, включая:</p>
+      <p><strong>Kaz Legal Bot</strong> — это юридический ассистент для граждан Казахстана. Он отвечает на вопросы исходя из действующих законов РК.</p>
       <ul>
         <li>Трудовой кодекс</li>
         <li>Гражданский кодекс</li>
         <li>Уголовный кодекс</li>
         <li>Кодекс о браке и семье</li>
-        <li>Кодекс об административных правонарушениях</li>
-        <li>и другие, полученные с портала <a href="https://adilet.zan.kz" target="_blank">adilet.zan.kz</a>.</li>
+        <li>И другие на <a href="https://adilet.zan.kz" target="_blank">adilet.zan.kz</a></li>
       </ul>
-      <p>Это обеспечивает точность и релевантность предоставляемой информации.</p>
     </section>
 
     <section id="help">
-      <h2>📜 Задайте свой вопрос</h2>
-
+      <h2>Юридическая помощь</h2>
       <form id="chat-form">
-        <textarea id="userQuestion" placeholder="Например: Меня уволили без предупреждения, что делать?"></textarea>
+        <textarea id="userQuestion" placeholder="Например: Меня уволили без предупреждения, что делать?" required></textarea>
         <button type="submit" id="submitBtn">Получить ответ</button>
       </form>
 
-      <hr>
-      <h3>📎 Или загрузите документ</h3>
+      <button id="new-conversation" type="button">Новый диалог</button>
+
+      <h3>Или загрузите документ</h3>
       <form id="file-form" enctype="multipart/form-data" class="upload-card">
         <div class="drag-and-drop-area" id="drag-and-drop-area">
-          <div class="upload-icon">📁</div>
-          <div class="upload-content">
-            <h3 class="drag-text">Перетащите файл сюда</h3>
-            <p class="or-text"><span>или</span></p>
-            <label for="fileInput" class="browse-button btn">
-              <i class="fas fa-folder-open"></i> Выбрать файл
-              <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
-            </label>
-            <p class="file-requirements">Поддерживаются файлы размером до 1 ТБ.</p>
-          </div>
+          <div class="upload-icon">📄</div>
+          <p class="drag-text">Перетащите файл сюда или выберите ниже</p>
+          <label for="fileInput" class="browse-button btn">
+            Выбрать файл
+            <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
+          </label>
+          <p class="file-requirements">Поддерживаются PDF, DOCX, изображения. До 1 ГБ.</p>
         </div>
 
         <div class="upload-footer">
-          <div class="file-info">📄 <span id="file-chosen">Файл не выбран</span></div>
+          <div class="file-info">Файл: <span id="file-chosen">Файл не выбран</span></div>
+          <textarea id="fileQuestion" placeholder="(Необязательно) Вопрос по документу..."></textarea>
           <div class="action-buttons">
-            <button type="button" class="clear-button btn" id="clearBtn" disabled>❌ Очистить</button>
-            <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>
-              🔍 Проанализировать файл
-              <span class="button-arrow">➡️</span>
-              <span class="spinner" style="display:none;">⏳</span>
+            <button type="button" class="clear-button btn" id="clearBtn" disabled>Очистить</button>
+            <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>Проанализировать файл <span class="spinner" style="display:none;">⏳</span>
             </button>
           </div>
         </div>
@@ -129,7 +121,7 @@
       </div>
 
       <div id="spinner" style="display: none; text-align: center; padding: 20px;">
-        <p>ИИ-юрист анализирует ваш запрос...</p>
+        <p>ИИ-юрист анализирует ваш вопрос...</p>
         <div class="loader"></div>
       </div>
 
@@ -138,7 +130,7 @@
 
     <section id="contact">
       <h2>📬 Обратная связь</h2>
-      <p>Проект с открытым исходным кодом. Для связи: <a href="mailto:galymtashtek@gmail.com">galymtashtek@gmail.com</a></p>
+      <p>Проект с открытым исходным кодом. Контакт: <a href="mailto:galymtashtek@gmail.com">galymtashtek@gmail.com</a></p>
     </section>
   </main>
 
