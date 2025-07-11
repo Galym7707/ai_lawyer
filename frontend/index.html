@@ -13,82 +13,104 @@
     <nav>
       <a href="#about">О проекте</a>
       <a href="#help">Юридическая помощь</a>
+      <a href="#history-section">История</a> <!-- Изменил id для ссылки на историю -->
       <a href="#contact">Обратная связь</a>
     </nav>
   </header>
 
   <main>
-    <section id="about">
-      <h2>🧠 Об AI-помощнике</h2>
-      <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах, опираясь на действующее законодательство (12 кодексов + ПДД РК).</p>
-      <ul>
-        <li>Трудовой кодекс</li>
-        <li>Гражданский кодекс</li>
-        <li>Уголовный кодекс</li>
-        <li>Кодекс о браке и семье</li>
-        <li>Кодекс об административных правонарушениях</li>
-        <p>и все остальные кодексы</p>
-      </ul>
-      <p style="margin-top:10px;color:var(--accent-secondary);font-weight:500;">
-        ⚖️ Все юридические ответы формируются на основе законодательства Казахстана. ИИ-юрист не выдумывает законы, а использует только надёжные официальные источники, такие как <a href="https://adilet.zan.kz" target="_blank" style="color:var(--accent-primary);text-decoration:underline;">adilet.zan.kz</a>.
-      </p>
-    </section>
+    <div class="app-container"> <!-- Новый контейнер для Flexbox-макета -->
+        <aside class="sidebar">
+            <h2>История чатов</h2>
+            <ul id="chat-list">
+                <!-- Здесь будут динамически загружаться чаты -->
+                <p>Загрузка истории...</p>
+            </ul>
+            <button id="start-new-conversation-sidebar" class="btn new-conversation-btn">➕ Новый чат</button>
+        </aside>
 
-    <section id="help">
-      <h2>📜 Задайте свой вопрос</h2>
+        <div class="main-content-area"> <!-- Основная область контента -->
+            <section id="about">
+                <h2>🧠 Об AI-помощнике</h2>
+                <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах, опираясь на действующее законодательство (12 кодексов + ПДД РК).</p>
+                <ul>
+                    <li>Трудовой кодекс</li>
+                    <li>Гражданский кодекс</li>
+                    <li>Уголовный кодекс</li>
+                    <li>Кодекс о браке и семье</li>
+                    <li>Кодекс об административных правонарушениях</li>
+                    <p>и все остальные кодексы</p>
+                </ul>
+                <p style="margin-top:10px;color:var(--accent-secondary);font-weight:500;">
+                    ⚖️ Все юридические ответы формируются на основе законодательства Казахстана. ИИ-юрист не выдумывает законы, а использует только надёжные официальные источники, такие как <a href="https://adilet.zan.kz" target="_blank" style="color:var(--accent-primary);text-decoration:underline;">adilet.zan.kz</a>.
+                </p>
+            </section>
 
-      <form id="chat-form">
-        <textarea id="userQuestion" placeholder="Например: Меня уволили без предупреждения, что делать?"></textarea>
-        <button type="submit" id="submitBtn">Получить ответ</button>
-      </form>
+            <section id="help">
+                <h2>📜 Задайте свой вопрос</h2>
 
-      <hr>
-      <h3>📎 Загрузите документ для анализа</h3>
-      <form id="file-form" enctype="multipart/form-data" class="upload-card">
-        <div class="drag-and-drop-area" id="drag-and-drop-area">
-          <div class="upload-icon">📁</div>
-          <div class="upload-content">
-            <h3 class="drag-text">Перетащите файл сюда</h3>
-            <p class="or-text"><span>или</span></p>
-            <label for="fileInput" class="browse-button btn">
-              Выбрать файл
-              <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
-            </label>
-            <p class="file-requirements">Поддерживаются PDF, DOCX, изображения до 1&nbsp;ГБ.</p>
-          </div>
-        </div>
-        <div class="upload-footer">
-          <div class="file-info">📄 <span id="file-chosen">Файл не выбран</span></div>
-          <textarea id="fileQuestion" class="file-question-input" placeholder="Добавьте свой вопрос или комментарий к файлу (необязательно)"></textarea>
-          <div class="action-buttons">
-            <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>
-              Проанализировать документ
-              <span class="button-arrow">➡️</span>
-              <span class="spinner" style="display:none;">⏳</span>
-            </button>
-            <button type="button" class="clear-button btn" id="clearBtn" disabled>Начать новый диалог</button>
-          </div>
-        </div>
-      </form>
+                <form id="chat-form">
+                    <textarea id="userQuestion" placeholder="Например: Меня уволили без предупреждения, что делать?"></textarea>
+                    <button type="submit" id="submitBtn">Получить ответ</button>
+                </form>
 
-      <div id="fileSpinner" style="display: none;">
-        <p>ИИ-юрист анализирует ваш документ...</p>
-        <div class="loader"></div>
-      </div>
+                <hr>
+                <h3>📎 Загрузите документ для анализа</h3>
+                <form id="file-form" enctype="multipart/form-data" class="upload-card">
+                    <div class="drag-and-drop-area" id="drag-and-drop-area">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-content">
+                            <h3 class="drag-text">Перетащите файл сюда</h3>
+                            <p class="or-text"><span>или</span></p>
+                            <label for="fileInput" class="browse-button btn">
+                                Выбрать файл
+                                <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
+                            </label>
+                            <p class="file-requirements">Поддерживаются PDF, DOCX, DOC, изображения до 1&nbsp;ГБ.</p>
+                        </div>
+                    </div>
+                    <div class="upload-footer">
+                        <div class="file-info">📄 <span id="file-chosen">Файл не выбран</span></div>
+                        <textarea id="fileQuestion" class="file-question-input" placeholder="Добавьте свой вопрос или комментарий к файлу (необязательно)"></textarea>
+                        <div class="action-buttons">
+                            <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>
+                                Проанализировать документ
+                                <span class="button-arrow">➡️</span>
+                                <span class="spinner" style="display:none;">⏳</span>
+                            </button>
+                            <button type="button" class="clear-button btn" id="clearBtn" disabled>Очистить файл</button>
+                        </div>
+                    </div>
+                </form>
 
-      <div id="spinner" style="display: none;">
-        <p>ИИ-юрист анализирует ваш запрос...</p>
-        <div class="loader"></div>
-      </div>
+                <div id="fileSpinner" style="display: none;">
+                    <p>ИИ-юрист анализирует ваш документ...</p>
+                    <div class="loader"></div>
+                </div>
 
-      <div id="response" class="response-box"></div>
-      <button id="new-conversation">🧹 Новый диалог</button>
-    </section>
+                <div id="spinner" style="display: none;">
+                    <p>ИИ-юрист анализирует ваш запрос...</p>
+                    <div class="loader"></div>
+                </div>
 
-    <section id="contact">
-      <h2>📬 Обратная связь</h2>
-      <p>Проект с открытым исходным кодом. Для связи: <a href="mailto:galymtashtek@gmail.com">galymtashtek@gmail.com</a></p>
-    </section>
+                <div id="response" class="response-box"></div>
+                <button id="new-conversation" class="btn new-conversation-btn">🧹 Начать новый диалог</button>
+            </section>
+
+            <section id="history-section"> <!-- Секция для истории, чтобы можно было на нее ссылаться из меню -->
+                <h2>⏳ История ваших диалогов</h2>
+                <div id="conversation-history-display" class="history-display-area">
+                    <!-- Здесь будут отображаться сообщения загруженной сессии -->
+                    <p>Выберите диалог из боковой панели или начните новый.</p>
+                </div>
+            </section>
+
+            <section id="contact">
+                <h2>📬 Обратная связь</h2>
+                <p>Проект с открытым исходным кодом. Для связи: <a href="mailto:galymtashtek@gmail.com">galymtashtek@gmail.com</a></p>
+            </section>
+        </div> <!-- Конец main-content-area -->
+    </div> <!-- Конец app-container -->
   </main>
 
   <footer>
