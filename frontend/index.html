@@ -1,109 +1,119 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kaz Legal Bot — AI Юрист Казахстана</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Law_scale_icon.svg/1024px-Law_scale_icon.svg.png" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kaz Legal Bot — AI Юрист Казахстана</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Law_scale_icon.svg/1024px-Law_scale_icon.svg.png" />
 </head>
 <body>
-  <header>
-    <h1>Kaz Legal Bot</h1>
-    <nav>
-      <a href="#about-link">О проекте</a>
-      <a href="#help-link">Юридическая помощь</a>
-      <a href="#contact-link">Обратная связь</a>
-    </nav>
-  </header>
+    <header>
+        <h1>Kaz Legal Bot</h1>
+        <nav>
+            <a href="#about-link">О проекте</a>
+            <a href="#help-link">Юридическая помощь</a>
+            <a href="#contact-link">Обратная связь</a>
+        </nav>
+    </header>
 
-  <main>
-    <div class="app-container">
-        <aside class="sidebar">
-            <h2>История чатов</h2>
-            <ul id="chat-list">
-                <p>Загрузка истории...</p>
-            </ul>
-            <button id="start-new-conversation-sidebar" class="btn new-conversation-btn">➕ Новый чат</button>
-        </aside>
+    <main>
+        <div class="app-container">
+            <aside class="sidebar">
+                <h2>История чатов</h2>
+                <ul id="chat-list">
+                    <p>Загрузка истории...</p>
+                </ul>
+                <button id="start-new-conversation-sidebar" class="btn new-conversation-btn">
+                    <i class="fas fa-plus"></i> Новый чат
+                </button>
+            </aside>
 
-        <div class="main-content-area">
-            <div id="initial-sections">
-                <section id="about" class="initial-section">
-                    <h2 id="about-link">🧠 Об AI-помощнике</h2>
-                    <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах, опираясь на действующее законодательство (12 кодексов + ПДД РК).</p>
-                    <ul>
-                        <li>Трудовой кодекс</li>
-                        <li>Гражданский кодекс</li>
-                        <li>Уголовный кодекс</li>
-                        <li>Кодекс о браке и семье</li>
-                        <li>Кодекс об административных правонарушениях</li>
-                        <p>и все остальные кодексы</p>
-                    </ul>
-                    <p style="margin-top:10px;color:var(--accent-secondary);font-weight:500;">
-                        ⚖️ Все юридические ответы формируются на основе законодательства Казахстана. ИИ-юрист не выдумывает законы, а использует только надёжные официальные источники, такие как <a href="https://adilet.zan.kz" target="_blank" style="color:var(--accent-primary);text-decoration:underline;">adilet.zan.kz</a>.
-                    </p>
-                </section>
+            <div class="main-content-area">
+                <div id="initial-sections">
+                    <section id="about" class="initial-section">
+                        <h2 id="about-link">🧠 Об AI-помощнике</h2>
+                        <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах, опираясь на действующее законодательство (12 кодексов + ПДД РК).</p>
+                        <ul>
+                            <li>Трудовой кодекс</li>
+                            <li>Гражданский кодекс</li>
+                            <li>Уголовный кодекс</li>
+                            <li>Кодекс о браке и семье</li>
+                            <li>Кодекс об административных правонарушениях</li>
+                            <li>и все остальные кодексы</li>
+                        </ul>
+                        <p style="margin-top:10px;color:var(--accent-secondary);font-weight:500;">
+                            ⚖️ Все юридические ответы формируются на основе законодательства Казахстана. ИИ-юрист не выдумывает законы, а использует только надёжные официальные источники, такие как <a href="https://adilet.zan.kz" target="_blank" style="color:var(--accent-primary);text-decoration:underline;">adilet.zan.kz</a>.
+                        </p>
+                    </section>
 
-                <section id="help" class="initial-section">
-                    <h2 id="help-link">📜 Задайте свой вопрос</h2>
-                    <form id="chat-form">
-                        <textarea id="userQuestion" placeholder="Например: Меня уволили без предупреждения, что делать?"></textarea>
-                        <button type="submit" id="submitBtn">Получить ответ</button>
-                    </form>
+                    <section id="help" class="initial-section">
+                        <h2 id="help-link">📜 Задайте свой вопрос</h2>
+                        <form id="chat-form">
+                            <textarea id="userQuestion" placeholder="Например: Меня уволили без предупреждения, что делать?"></textarea>
+                            <button type="submit" id="submitBtn">Получить ответ</button>
+                        </form>
 
-                    <hr>
-                    <h3>📎 Загрузите документ для анализа</h3>
-                    <form id="file-form" enctype="multipart/form-data" class="upload-card">
-                        <div class="drag-and-drop-area" id="drag-and-drop-area">
-                            <div class="upload-icon">📁</div>
-                            <div class="upload-content">
-                                <h3 class="drag-text">Перетащите файл сюда</h3>
-                                <p class="or-text"><span>или</span></p>
-                                <label for="fileInput" class="browse-button btn">
-                                    Выбрать файл
-                                    <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
-                                </label>
-                                <p class="file-requirements">Поддерживаются PDF, DOCX, DOC, изображения до 1&nbsp;ГБ.</p>
+                        <hr style="border-color: var(--border-color); margin: 2rem 0;">
+
+                        <h3>📎 Загрузите документ для анализа</h3>
+                        <form id="file-form" enctype="multipart/form-data" class="upload-card">
+                            <div class="drag-and-drop-area" id="drag-and-drop-area">
+                                <div class="upload-icon"><i class="fas fa-folder-open"></i></div>
+                                <div class="upload-content">
+                                    <h3 class="drag-text">Перетащите файл сюда</h3>
+                                    <p class="or-text"><span>или</span></p>
+                                    <label for="fileInput" class="browse-button btn">
+                                        Выбрать файл
+                                        <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
+                                    </label>
+                                    <p class="file-requirements">Поддерживаются PDF, DOCX, DOC, изображения до 1&nbsp;ГБ.</p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="upload-footer">
-                            <div class="file-info">📄 <span id="file-chosen">Файл не выбран</span></div>
-                            <textarea id="fileQuestion" class="file-question-input" placeholder="Добавьте свой вопрос или комментарий к файлу (необязательно)"></textarea>
-                            <div class="action-buttons">
-                                <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>
-                                    Проанализировать документ
-                                    <span class="button-arrow">➡️</span>
-                                    <span class="spinner" style="display:none;">⏳</span>
-                                </button>
-                                <button type="button" class="clear-button btn" id="clearBtn" disabled>Очистить файл</button>
+                            <div class="upload-footer">
+                                <div class="file-info">📄 <span id="file-chosen">Файл не выбран</span></div>
+                                <textarea id="fileQuestion" class="file-question-input" placeholder="Добавьте свой вопрос или комментарий к файлу (необязательно)"></textarea>
+                                <div class="action-buttons">
+                                    <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>
+                                        Проанализировать документ
+                                        <i class="fas fa-arrow-right"></i>
+                                        <span class="spinner" style="display:none;">⏳</span>
+                                    </button>
+                                    <button type="button" class="clear-button btn" id="clearBtn" disabled>Очистить файл</button>
+                                </div>
                             </div>
+                        </form>
+                    </section>
+                </div>
+
+                <div id="current-chat-container" style="display: none;">
+                    <div id="chat-messages-display">
+                        <div id="spinner" style="display: none;">
+                            <p>ИИ-юрист анализирует ваш запрос...</p>
+                            <div class="loader"></div>
                         </div>
-                    </form>
+                        <div id="fileSpinner" style="display: none;">
+                            <p>ИИ-юрист анализирует ваш документ...</p>
+                            <div class="loader"></div>
+                        </div>
+
+                    </div> <div class="chat-input-area">
+                        <input type="text" id="chat-input" placeholder="Задайте ваш вопрос или продолжите диалог..." class="chat-input">
+                        <button class="send-button" id="send-button"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div> <section id="contact" style="margin-top: 2rem;">
+                    <h2 id="contact-link">📬 Обратная связь</h2>
+                    <p>Проект с открытым исходным кодом. Для связи: <a href="mailto:galymtashtek@gmail.com">galymtashtek@gmail.com</a></p>
                 </section>
-            </div> <div id="current-chat-area" class="response-box" style="display: none;">
-                <div id="spinner" style="display: none;">
-                    <p>ИИ-юрист анализирует ваш запрос...</p>
-                    <div class="loader"></div>
-                </div>
-                <div id="fileSpinner" style="display: none;">
-                    <p>ИИ-юрист анализирует ваш документ...</p>
-                    <div class="loader"></div>
-                </div>
-                </div>
+            </div> </div> </main>
 
-            <section id="contact">
-                <h2 id="contact-link">📬 Обратная связь</h2>
-                <p>Проект с открытым исходным кодом. Для связи: <a href="mailto:galymtashtek@gmail.com">galymtashtek@gmail.com</a></p>
-            </section>
-        </div> </div> </main>
+    <footer>
+        <div class="footer-content">
+            <p>© 2025 Kaz Legal Bot</p>
+        </div>
+    </footer>
 
-  <footer>
-    <div class="footer-content">
-      <p>© 2025 Kaz Legal Bot</p>
-    </div>
-  </footer>
-
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
