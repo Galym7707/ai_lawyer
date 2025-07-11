@@ -1,8 +1,8 @@
-// frontend/script.js (Версия 4.2 - Динамический сбор информации, История чатов, Улучшения UX)
+// frontend/script.js (Версия 4.3 - История чатов, динамический сбор информации, улучшенный UX)
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- SESSION ID LOGIC ---
-    const SESSION_KEY = "kazlaw_session_id";
+    const SESSION_KEY = "kazlaw_current_session_id"; // Изменил ключ для ясности
     function generateSessionId() {
         return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
     }
@@ -15,47 +15,56 @@ document.addEventListener('DOMContentLoaded', () => {
         return id;
     }
     function setSessionId(id) {
-        if (id && id !== getSessionId()) localStorage.setItem(SESSION_KEY, id);
+        if (id) { // Убедимся, что ID не пустой
+            localStorage.setItem(SESSION_KEY, id);
+            currentSessionId = id; // Обновляем глобальную переменную
+        }
     }
 
     // --- DOM Elements ---
-    const form = document.getElementById('chat-form');
+    const chatForm = document.getElementById('chat-form');
     const userQuestionInput = document.getElementById('userQuestion');
-    const responseBox = document.getElementById('response');
+    const submitBtn = document.getElementById('submitBtn');
+    const responseBox = document.getElementById('response'); // Основная область для текущего чата
     const spinner = document.getElementById('spinner');
-    const newDialogBtn = document.getElementById('new-conversation');
+    const newDialogBtn = document.getElementById('new-conversation'); // Кнопка "Новый диалог" в основной секции
+
     const fileForm = document.getElementById('file-form');
     const fileInput = document.getElementById('fileInput');
     const fileChosen = document.getElementById('file-chosen');
-    const clearBtn = document.getElementById('clearBtn');
+    const clearBtn = document.getElementById('clearBtn'); // Кнопка "Очистить файл"
     const analyzeBtn = document.getElementById('fileSubmitBtn');
     const fileSpinner = document.getElementById('fileSpinner');
     const fileQuestionInput = document.getElementById('fileQuestion');
-    const conversationHistoryDiv = document.getElementById('conversation-history');
+    const dragAndDropArea = document.getElementById('drag-and-drop-area');
 
-    let selectedFile = null;
-    const MAX_SIZE = 1024 ** 3; // 1 GB
+    // Новые элементы для истории чатов
+    const chatList = document.getElementById('chat-list'); // Список в сайдбаре
+    const startNewConversationSidebarBtn = document.getElementById('start-new-conversation-sidebar'); // Кнопка "Новый чат" в сайдбаре
+    const conversationHistoryDisplay = document.getElementById('conversation-history-display'); // Область для просмотра старой истории
+
+    let currentSessionId = getSessionId(); // Инициализируем текущий ID сессии при загрузке
+
+    const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1 GB
 
     // --- INITIAL LOAD ---
-    // Загружаем историю при загрузке страницы
-    loadAndDisplayConversationHistory(getSessionId());
+    // Загружаем и отображаем историю чатов в сайдбаре при загрузке страницы
+    loadAndDisplayAllSessionsSummary();
 
     // --- CHAT LOGIC ---
-    form.addEventListener('submit', async (e) => {
+    chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const question = userQuestionInput.value.trim();
         if (!question) return;
 
-        spinner.style.display = 'block';
-        responseBox.innerHTML = '';
-        document.getElementById('submitBtn').disabled = true;
-        userQuestionInput.disabled = true;
-        
         // Добавляем вопрос пользователя в responseBox сразу
         addMessageToResponseBox('user', question);
-
+        userQuestionInput.value = ''; // Очищаем поле ввода
+        submitBtn.disabled = true;
+        userQuestionInput.disabled = true;
+        spinner.style.display = 'block';
+        
         let fullAiText = "";
-        let currentSessionId = getSessionId();
 
         try {
             const streamResponse = await fetch('https://ai-lawyer.up.railway.app/ask', {
@@ -76,12 +85,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const decoder = new TextDecoder('utf-8');
 
             spinner.style.display = 'none';
-            // responseBox.style.whiteSpace = "pre-wrap"; // Это может нарушить форматирование HTML, убрал
-
+            
             // Создаем div для ответа ИИ, чтобы потом обновить его HTML
             const aiMessageDiv = document.createElement('div');
             aiMessageDiv.classList.add('ai-message');
             responseBox.appendChild(aiMessageDiv);
+            responseBox.scrollTop = responseBox.scrollHeight; // Прокручиваем к последнему сообщению
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -89,10 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const textChunk = decoder.decode(value, { stream: true });
                 fullAiText += textChunk;
                 aiMessageDiv.textContent = fullAiText; // Обновляем текст в "сыром" виде
+                responseBox.scrollTop = responseBox.scrollHeight; // Прокручиваем при получении чанков
             }
 
             // Теперь отправляем полный текст на финальную обработку
             aiMessageDiv.innerHTML = '<div id="spinner-final" style="text-align:center; padding: 20px;"><p>Форматирование и поиск статей...</p><div class="loader"></div></div>';
+            responseBox.scrollTop = responseBox.scrollHeight; // Прокручиваем к спиннеру форматирования
 
             const processResponse = await fetch('https://ai-lawyer.up.railway.app/process-full-text', {
                 method: 'POST',
@@ -110,33 +121,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await processResponse.json();
             aiMessageDiv.innerHTML = data.html || ""; // Вставляем отформатированный HTML
 
-            // Сохраняем session_id, если сервер вернул новый (редко, но на всякий случай)
+            // Обновляем session_id, если сервер вернул новый (хотя обычно он не меняется в рамках сессии)
             if (data.session_id) setSessionId(data.session_id);
 
         } catch (error) {
             spinner.style.display = 'none';
-            responseBox.innerHTML = `<div class="ai-message error-message">🚫 Произошла критическая ошибка: ${error.message}</div>`;
+            responseBox.innerHTML += `<div class="ai-message error-message">🚫 Произошла критическая ошибка: ${error.message}</div>`; // Добавляем ошибку, а не заменяем
         } finally {
-            document.getElementById('submitBtn').disabled = false;
+            submitBtn.disabled = false;
             userQuestionInput.disabled = false;
-            userQuestionInput.value = ''; // Очищаем поле ввода
             userQuestionInput.focus();
-            loadAndDisplayConversationHistory(getSessionId()); // Обновляем историю после ответа
-            responseBox.scrollTop = responseBox.scrollHeight; // Прокручиваем к последнему ответу
+            loadAndDisplayAllSessionsSummary(); // Обновляем историю в сайдбаре после ответа
+            responseBox.scrollTop = responseBox.scrollHeight; // Финальная прокрутка
         }
     });
 
     // --- DRAG & DROP FILE LOGIC ---
-    const dropArea = document.getElementById('drag-and-drop-area');
-    
     function handleFile(file) {
         if (!file) return;
-        if (file.size > MAX_SIZE) {
+        if (file.size > MAX_FILE_SIZE) {
             alert("Максимальный размер файла – 1 ГБ");
             clearSelectedFile();
             return;
         }
-        // Проверка типа файла
         const allowedExtensions = ['.pdf', '.docx', '.doc', '.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tiff', '.gif'];
         const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
         if (!allowedExtensions.includes(fileExtension)) {
@@ -161,12 +168,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     ["dragenter", "dragover"].forEach(evt =>
-        dropArea.addEventListener(evt, e => { e.preventDefault(); dropArea.classList.add("drag-over"); })
+        dragAndDropArea.addEventListener(evt, e => { e.preventDefault(); dragAndDropArea.classList.add("highlight"); })
     );
     ["dragleave", "drop"].forEach(evt =>
-        dropArea.addEventListener(evt, e => {
+        dragAndDropArea.addEventListener(evt, e => {
             e.preventDefault();
-            dropArea.classList.remove("drag-over");
+            dragAndDropArea.classList.remove("highlight");
             if (evt === "drop") handleFile(e.dataTransfer.files[0]);
         })
     );
@@ -179,22 +186,18 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         if (!selectedFile) return;
 
-        responseBox.innerHTML = "";
         fileSpinner.style.display = "block";
-
         analyzeBtn.disabled = true;
         fileInput.disabled = true;
         fileQuestionInput.disabled = true;
 
-        let currentSessionId = getSessionId();
         const fileQuestion = fileQuestionInput.value.trim();
 
         // Добавляем информацию о загрузке файла в responseBox сразу
         addMessageToResponseBox('user', `Загружен файл: ${selectedFile.name}${fileQuestion ? '. Вопрос: ' + fileQuestion : ''}`);
-
+        responseBox.scrollTop = responseBox.scrollHeight;
 
         try {
-            // 1. Отправляем файл + вопрос + session_id
             const formData = new FormData();
             formData.append("file", selectedFile);
             if (fileQuestion) formData.append("question", fileQuestion);
@@ -203,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch("https://ai-lawyer.up.railway.app/analyze-file", {
                 method: "POST",
                 body: formData,
-                headers: { 'Session-Id': currentSessionId }
+                // Headers 'Content-Type': 'multipart/form-data' устанавливается автоматически для FormData
             });
 
             if (!res.ok) {
@@ -217,24 +220,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (data.session_id) setSessionId(data.session_id);
 
-            // Создаем div для ответа ИИ, чтобы потом обновить его HTML
+            // Создаем div для ответа ИИ
             const aiMessageDiv = document.createElement('div');
             aiMessageDiv.classList.add('ai-message');
             responseBox.appendChild(aiMessageDiv);
             aiMessageDiv.innerHTML = '<div id="spinner-final" style="text-align:center; padding: 20px;"><p>Форматирование и поиск статей...</p><div class="loader"></div></div>';
+            responseBox.scrollTop = responseBox.scrollHeight;
 
 
-            // 2. Финальная обработка (поиск статей)
+            // Финальная обработка (поиск статей)
             const htmlRes = await fetch("https://ai-lawyer.up.railway.app/process-full-text", {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json',
-                    'Session-Id': getSessionId()
+                    'Session-Id': currentSessionId
                 },
                 body: JSON.stringify({
                     question: fileQuestion || selectedFile.name, // Используем вопрос или имя файла для поиска статей
                     full_ai_text: data.analysis,
-                    session_id: getSessionId()
+                    session_id: currentSessionId
                 })
             });
 
@@ -244,28 +248,35 @@ document.addEventListener('DOMContentLoaded', () => {
             if (final.session_id) setSessionId(final.session_id);
 
         } catch (err) {
-            responseBox.innerHTML = `<div class="ai-message error-message">🚫 Ошибка анализа файла: ${err.message}</div>`;
+            responseBox.innerHTML += `<div class="ai-message error-message">🚫 Ошибка анализа файла: ${err.message}</div>`;
         } finally {
             fileSpinner.style.display = "none";
             analyzeBtn.disabled = false;
             fileInput.disabled = false;
             fileQuestionInput.disabled = false;
             clearSelectedFile();
-            loadAndDisplayConversationHistory(getSessionId()); // Обновляем историю после ответа
-            responseBox.scrollTop = responseBox.scrollHeight; // Прокручиваем к последнему ответу
+            loadAndDisplayAllSessionsSummary(); // Обновляем историю после ответа
+            responseBox.scrollTop = responseBox.scrollHeight;
         }
     });
 
-    // --- КНОПКА "НОВЫЙ ДИАЛОГ" ---
+    // --- КНОПКА "НАЧАТЬ НОВЫЙ ДИАЛОГ" (основная) ---
     newDialogBtn.addEventListener("click", async () => {
-        const currentSessionId = getSessionId();
-        // Удаляем историю из базы данных
+        await startNewConversation();
+    });
+
+    // --- КНОПКА "НОВЫЙ ЧАТ" (в сайдбаре) ---
+    startNewConversationSidebarBtn.addEventListener("click", async () => {
+        await startNewConversation();
+    });
+
+    // --- Функция для запуска нового диалога ---
+    async function startNewConversation() {
+        // Очищаем историю текущей сессии на сервере
         try {
             await fetch("https://ai-lawyer.up.railway.app/clear-history", {
                 method: "POST",
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: currentSessionId })
             });
         } catch (error) {
@@ -275,102 +286,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Генерируем новый session_id и очищаем все на клиенте
         setSessionId(generateSessionId());
-        responseBox.innerHTML = "";
-        userQuestionInput.value = "";
+        responseBox.innerHTML = ''; // Очищаем основную область ответов
+        userQuestionInput.value = '';
         userQuestionInput.disabled = false;
-        fileQuestionInput.value = "";
-        clearSelectedFile();
-        document.getElementById('submitBtn').disabled = false;
-        analyzeBtn.disabled = true;
+        fileQuestionInput.value = '';
+        clearSelectedFile(); // Очищает выбранный файл и связанные поля
+        submitBtn.disabled = false;
+        analyzeBtn.disabled = true; // Кнопка анализа файла должна быть disabled, пока файл не выбран
         if (spinner) spinner.style.display = 'none';
         if (fileSpinner) fileSpinner.style.display = 'none';
         userQuestionInput.focus();
-        loadAndDisplayConversationHistory(getSessionId()); // Обновляем историю после очистки
-    });
+        loadAndDisplayAllSessionsSummary(); // Обновляем список чатов в сайдбаре
+        updateActiveChatInList(currentSessionId); // Устанавливаем новый чат как активный
+        conversationHistoryDisplay.innerHTML = '<p>Выберите диалог из боковой панели или начните новый.</p>'; // Очищаем область просмотра старой истории
+    }
 
-    // --- Функция для добавления сообщений в responseBox ---
+    // --- Функция для добавления сообщений в responseBox (текущий чат) ---
     function addMessageToResponseBox(role, content) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add(role === 'user' ? 'user-message' : 'ai-message');
-        messageDiv.innerHTML = `<p>${content}</p>`; // Используем innerHTML для обработки потенциального HTML
+        // Для user-сообщений просто текст, для AI - потенциально HTML
+        messageDiv.innerHTML = role === 'user' ? `<p>${content}</p>` : content; 
         responseBox.appendChild(messageDiv);
         responseBox.scrollTop = responseBox.scrollHeight; // Прокручиваем вниз
     }
 
-    // --- Загрузка и отображение истории чатов ---
-    async function loadAndDisplayConversationHistory(sessionId) {
-        conversationHistoryDiv.innerHTML = '<p>Загрузка истории...</p>';
+    // --- Загрузка и отображение сводки всех сессий для сайдбара ---
+    async function loadAndDisplayAllSessionsSummary() {
+        chatList.innerHTML = '<p>Загрузка истории...</p>'; // Показываем загрузку
         try {
-            const response = await fetch(`https://ai-lawyer.up.railway.app/get-history?session_id=${sessionId}`);
+            const response = await fetch('https://ai-lawyer.up.railway.app/get-all-sessions-summary');
             if (!response.ok) {
-                throw new Error(`Ошибка загрузки истории: ${response.status}`);
+                throw new Error(`Ошибка загрузки сводки сессий: ${response.status}`);
             }
             const data = await response.json();
-            const history = data.history;
+            const sessions = data.sessions;
 
-            if (history && history.length > 0) {
-                conversationHistoryDiv.innerHTML = ''; // Очищаем "Загрузка истории..."
-                // Группируем сообщения в диалоги
-                let currentDialog = [];
-                for (let i = 0; i < history.length; i++) {
-                    const msg = history[i];
-                    if (msg.role === 'user' && currentDialog.length > 0) {
-                        renderDialog(currentDialog);
-                        currentDialog = [];
-                    }
-                    currentDialog.push(msg);
-                }
-                if (currentDialog.length > 0) {
-                    renderDialog(currentDialog);
-                }
+            chatList.innerHTML = ''; // Очищаем
+            if (sessions && sessions.length > 0) {
+                sessions.forEach(session => {
+                    const li = document.createElement('li');
+                    const button = document.createElement('button');
+                    button.textContent = session.title;
+                    button.dataset.sessionId = session.id;
+                    button.addEventListener('click', () => loadSpecificConversation(session.id));
+                    li.appendChild(button);
+                    chatList.appendChild(li);
+                });
             } else {
-                conversationHistoryDiv.innerHTML = '<p>Пока нет истории диалогов. Начните новую консультацию!</p>';
+                chatList.innerHTML = '<p>Пока нет истории диалогов.</p>';
             }
+            updateActiveChatInList(currentSessionId); // Выделяем активный чат
         } catch (error) {
-            console.error("Ошибка при загрузке истории:", error);
-            conversationHistoryDiv.innerHTML = `<p style="color:red;">Не удалось загрузить историю: ${error.message}</p>`;
+            console.error("Ошибка при загрузке сводки сессий:", error);
+            chatList.innerHTML = `<p style="color:red;">Не удалось загрузить историю: ${error.message}</p>`;
         }
     }
 
-    function renderDialog(dialog) {
-        const dialogCard = document.createElement('div');
-        dialogCard.classList.add('history-card');
-        
-        let dialogContentHtml = '';
-        dialog.forEach(msg => {
-            const class_name = msg.role === 'user' ? 'history-user-message' : 'history-ai-message';
-            dialogContentHtml += `<div class="${class_name}">${msg.role === 'user' ? '<strong>Вы:</strong>' : '<strong>ИИ-юрист:</strong>'} ${msg.content.substring(0, 150)}...</div>`; // Показываем часть сообщения
-        });
-
-        // Добавляем кнопку "Посмотреть полностью" или "Загрузить диалог"
-        const firstUserQuestion = dialog.find(msg => msg.role === 'user');
-        const dialogTitle = firstUserQuestion ? firstUserQuestion.content.substring(0, 70) + '...' : 'Диалог без вопроса';
-
-        dialogCard.innerHTML = `
-            <div class="history-card-header">
-                <h3>${dialogTitle}</h3>
-                <button class="load-dialog-btn btn" data-session-id="${getSessionId()}">Загрузить</button>
-            </div>
-            <div class="history-card-body">
-                ${dialogContentHtml}
-            </div>
-        `;
-        conversationHistoryDiv.appendChild(dialogCard);
-
-        // Обработчик для кнопки "Загрузить диалог"
-        dialogCard.querySelector('.load-dialog-btn').addEventListener('click', (e) => {
-            const currentSessionId = e.target.dataset.sessionId;
-            loadSpecificConversation(currentSessionId);
-            // Переходим к разделу "Юридическая помощь"
-            document.getElementById('help').scrollIntoView({ behavior: 'smooth' });
-        });
-    }
-
-    // Функция для загрузки конкретного диалога в текущий responseBox
+    // --- Функция для загрузки конкретного диалога в область просмотра истории ---
     async function loadSpecificConversation(sessionIdToLoad) {
-        setSessionId(sessionIdToLoad); // Устанавливаем эту сессию как текущую
-        responseBox.innerHTML = '<p>Загрузка диалога...</p>';
+        // Устанавливаем эту сессию как текущую
+        setSessionId(sessionIdToLoad);
+        updateActiveChatInList(sessionIdToLoad); // Выделяем ее в сайдбаре
+
+        // Очищаем основную область чата и показываем спиннер
+        responseBox.innerHTML = '';
+        conversationHistoryDisplay.innerHTML = '<p>Загрузка диалога...</p>';
         spinner.style.display = 'block';
+
         try {
             const response = await fetch(`https://ai-lawyer.up.railway.app/get-history?session_id=${sessionIdToLoad}`);
             if (!response.ok) {
@@ -379,34 +362,55 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             const history = data.history;
 
-            responseBox.innerHTML = ''; // Очищаем, чтобы вставить полный диалог
+            conversationHistoryDisplay.innerHTML = ''; // Очищаем область просмотра истории
+            responseBox.innerHTML = ''; // Очищаем текущий чат
 
-            for (const msg of history) {
-                if (msg.role === 'user') {
-                    addMessageToResponseBox('user', msg.content);
-                } else if (msg.role === 'model') {
-                    // Для ответов модели повторно вызываем process-full-text, чтобы получить форматированный HTML
-                    const processResponse = await fetch('https://ai-lawyer.up.railway.app/process-full-text', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Session-Id': sessionIdToLoad
-                        },
-                        body: JSON.stringify({ question: "", full_ai_text: msg.content, session_id: sessionIdToLoad }), // question тут может быть пустым
-                    });
-                    const processedData = await processResponse.json();
-                    const aiMessageDiv = document.createElement('div');
-                    aiMessageDiv.classList.add('ai-message');
-                    aiMessageDiv.innerHTML = processedData.html || processedData.error || "Ошибка загрузки ответа.";
-                    responseBox.appendChild(aiMessageDiv);
+            if (history && history.length > 0) {
+                for (const msg of history) {
+                    if (msg.role === 'user') {
+                        addMessageToResponseBox('user', msg.content);
+                    } else if (msg.role === 'model') {
+                        // Для ответов модели повторно вызываем process-full-text, чтобы получить форматированный HTML
+                        // Это важно, так как в БД хранится сырой текст, а нам нужен HTML
+                        const processResponse = await fetch('https://ai-lawyer.up.railway.app/process-full-text', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                question: msg.content.substring(0, 50), // Используем часть ответа как "вопрос" для поиска статей
+                                full_ai_text: msg.content,
+                                session_id: sessionIdToLoad
+                            }),
+                        });
+                        const processedData = await processResponse.json();
+                        addMessageToResponseBox('ai', processedData.html || processedData.error || "Ошибка загрузки ответа.");
+                    }
                 }
+            } else {
+                addMessageToResponseBox('ai', 'История для этой сессии пуста.');
             }
             responseBox.scrollTop = responseBox.scrollHeight; // Прокручиваем к последнему ответу
         } catch (error) {
             console.error("Ошибка при загрузке конкретного диалога:", error);
-            responseBox.innerHTML = `<p style="color:red;">Не удалось загрузить диалог: ${error.message}</p>`;
+            responseBox.innerHTML = `<div class="ai-message error-message">🚫 Не удалось загрузить диалог: ${error.message}</div>`;
         } finally {
             spinner.style.display = 'none';
         }
+    }
+
+    // --- Функция для выделения активного чата в сайдбаре ---
+    function updateActiveChatInList(activeId) {
+        const chatButtons = chatList.querySelectorAll('button');
+        chatButtons.forEach(button => {
+            if (button.dataset.sessionId === activeId) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
+    }
+
+    // При загрузке страницы, если есть текущая сессия, загружаем ее
+    if (currentSessionId) {
+        loadSpecificConversation(currentSessionId);
     }
 });
