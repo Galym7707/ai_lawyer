@@ -1,4 +1,4 @@
-/* Kaz Legal Bot - Единая Тёмная Тема (v2.3) */
+/* Kaz Legal Bot - Единая Тёмная Тема (v2.4) */
 
 /* --- ПЕРЕМЕННЫЕ --- */
 :root {
@@ -10,7 +10,7 @@
     --accent-primary: #00bcd4; /* Голубой */
     --accent-secondary: #00e676; /* Зеленый */
     --border-color: #333;
-    --sidebar-width: 280px; /* Увеличил ширину сайдбара */
+    --sidebar-width: 280px;
 }
 
 /* --- ОСНОВНОЙ ФОН И ТЕКСТ --- */
@@ -21,9 +21,9 @@ body {
     margin: 0;
     padding: 0;
     line-height: 1.6;
-    display: flex; /* Используем flexbox для body */
+    display: flex;
     flex-direction: column;
-    min-height: 100vh; /* Занимаем всю высоту viewport */
+    min-height: 100vh;
 }
 
 /* --- ХЕДЕР И НАВИГАЦИЯ --- */
@@ -34,7 +34,7 @@ header {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0; /* Чтобы хедер не сжимался */
+    flex-shrink: 0;
 }
 
 header h1 {
@@ -62,20 +62,20 @@ nav a:hover {
 
 /* --- ОСНОВНОЕ СОДЕРЖИМОЕ И САЙДБАР --- */
 main {
-    flex-grow: 1; /* Позволяет main занимать все доступное пространство */
-    display: flex; /* Flexbox для main, чтобы app-container был внутри */
-    justify-content: center; /* Центрируем app-container */
-    padding: 2rem 0; /* Вертикальные отступы для main */
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
 }
 
 .app-container {
     display: flex;
-    max-width: 1400px; /* Увеличил максимальную ширину для сайдбара */
+    max-width: 1400px;
     width: 100%;
     margin: 0 auto;
-    background-color: var(--bg-primary); /* Основной фон внутри контейнера */
+    background-color: var(--bg-primary);
     border-radius: 12px;
-    overflow: hidden; /* Для скругленных углов */
+    overflow: hidden;
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
@@ -88,7 +88,7 @@ main {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    overflow-y: auto; /* Прокрутка для истории чатов */
+    overflow-y: auto;
 }
 
 .sidebar h2 {
@@ -140,7 +140,7 @@ main {
     font-weight: bold;
 }
 
-.new-conversation-btn { /* Общий стиль для кнопок "Новый диалог" */
+.new-conversation-btn {
     background: var(--accent-secondary);
     color: #121212;
     border: none;
@@ -150,26 +150,38 @@ main {
     cursor: pointer;
     transition: background 0.15s;
     display: block;
-    width: 100%; /* Занимает всю ширину */
+    width: 100%;
     text-align: center;
 }
 .new-conversation-btn:hover {
-    background: #00c853; /* Более темный оттенок зелёного */
+    background: #00c853;
 }
 
 .main-content-area {
     flex-grow: 1;
     padding: 2rem;
+    display: flex; /* Используем flex для расположения секций */
+    flex-direction: column;
     overflow-y: auto; /* Прокрутка для основного контента */
 }
 
-.main-content-area section {
-    margin-bottom: 2.5rem;
+/* Стили для начальных секций (О проекте, Задайте вопрос) */
+#initial-sections {
+    display: flex; /* По умолчанию видимый */
+    flex-direction: column;
+    gap: 2.5rem; /* Отступ между секциями */
+    flex-grow: 1; /* Чтобы занимал доступное пространство */
 }
+
+.initial-section {
+    margin-bottom: 0; /* Убираем margin-bottom, так как gap управляет отступами */
+}
+
 
 h2 {
     color: var(--accent-primary);
-    margin-top: 2rem;
+    margin-top: 0; /* Убрал отступ, так как управляется gap и padding */
+    margin-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.5rem;
 }
@@ -187,7 +199,8 @@ li {
 /* --- ФОРМА ВВОДА ВОПРОСА --- */
 textarea#userQuestion {
     width: 100%;
-    height: 120px;
+    min-height: 120px; /* Изначальная высота */
+    max-height: 300px; /* Максимальная высота, чтобы не заполняла весь экран */
     padding: 1rem;
     font-size: 1rem;
     border-radius: 8px;
@@ -226,42 +239,73 @@ button#submitBtn:disabled {
     cursor: not-allowed;
 }
 
-/* --- БЛОК С ОТВЕТОМ ОТ ИИ --- */
-.response-box {
-    background-color: var(--bg-secondary);
-    padding: 20px;
-    margin-top: 1.5rem;
-    border-left: 4px solid var(--accent-secondary);
+/* --- БЛОК С ОТВЕТОМ ОТ ИИ (current-chat-area) --- */
+#current-chat-area {
+    display: none; /* По умолчанию скрыт */
+    flex-direction: column; /* Элементы внутри будут располагаться вертикально */
+    overflow-y: auto; /* Прокрутка для области чата */
+    flex-grow: 1; /* Занимает доступное пространство */
+    background-color: var(--bg-secondary); /* Фон для всей области чата */
     border-radius: 8px;
-    overflow-wrap: break-word;
-    word-break: break-word;
+    padding: 20px;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.2); /* Внутренняя тень */
 }
 
-.response-box p {
+/* Стили для отдельных сообщений в чате */
+.user-message, .ai-message {
+    padding: 12px 18px;
+    border-radius: 8px;
+    margin-bottom: 10px; /* Отступ между сообщениями */
+    margin-top: 10px;
+    max-width: 85%; /* Уменьшил ширину для лучшего вида */
+    word-break: break-word;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    /* Убрал border-left/right, т.к. они могут выглядеть как наложение */
+}
+.user-message {
+    background: #232b34;
+    text-align: right;
+    margin-left: auto; /* Прижимает к правому краю */
+    color: var(--text-primary);
+}
+.ai-message {
+    background: #1d262b;
+    text-align: left;
+    margin-right: auto; /* Прижимает к левому краю */
+    color: var(--text-primary);
+}
+.ai-message.error-message {
+    background-color: #301a1a;
+    color: #ff6666; /* Ярко-красный для ошибок */
+    border-left: 4px solid #ff6666;
+}
+
+/* Стили для контента внутри AI сообщения */
+.ai-message p {
     margin-bottom: 1em;
 }
 
-.response-box strong {
+.ai-message strong {
     color: var(--accent-secondary);
 }
 
-.response-box ul, .response-box ol {
+.ai-message ul, .ai-message ol {
     margin: 1em 0;
     padding-left: 1.5em;
 }
 
-.response-box li {
+.ai-message li {
     margin-bottom: 0.5em;
 }
 
-.response-box h3 {
+.ai-message h3 {
     color: var(--accent-primary);
     margin-top: 1.5em;
     margin-bottom: 0.8em;
     font-size: 1.2em;
 }
 
-.response-box blockquote {
+.ai-message blockquote {
     border-left: 4px solid var(--text-secondary);
     padding-left: 1em;
     margin: 1em 0;
@@ -269,55 +313,11 @@ button#submitBtn:disabled {
     font-style: italic;
 }
 
-/* --- Стили для сообщений в response-box (текущий чат) --- */
-.user-message, .ai-message {
-    padding: 12px 18px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    margin-top: 10px;
-    max-width: 95%;
-    word-break: break-word;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-.user-message {
-    background: #232b34;
-    text-align: right;
-    margin-left: auto;
-    border-right: 4px solid var(--accent-primary);
-}
-.ai-message {
-    background: #1d262b;
-    border-left: 4px solid var(--accent-secondary);
-    text-align: left;
-    margin-right: auto;
-}
-.ai-message.error-message {
-    border-left-color: red;
-    color: red;
-    background-color: #301a1a;
-}
-
-
-/* --- Стили для отображения истории (conversation-history-display) --- */
-.history-display-area {
-    background-color: var(--bg-secondary);
-    padding: 20px;
-    margin-top: 1.5rem;
-    border-left: 4px solid var(--accent-primary);
-    border-radius: 8px;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    min-height: 200px; /* Минимальная высота для области истории */
-}
-.history-display-area p {
-    color: var(--text-secondary);
-}
-
 
 /* --- LAW CARDS --- */
 .laws-container {
-    margin-top: 3rem;
-    padding-top: 2rem;
+    margin-top: 2rem; /* Уменьшил отступ */
+    padding-top: 1.5rem; /* Уменьшил отступ */
     border-top: 1px solid var(--border-color);
 }
 
@@ -329,7 +329,7 @@ button#submitBtn:disabled {
 }
 
 .law-card {
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-primary); /* Сделал фон карточек темнее, чтобы контрастировали */
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 1.5rem;
@@ -470,7 +470,7 @@ footer {
     padding: 16px 0;
     width: 100%;
     border-top: 1px solid var(--border-color);
-    margin-top: auto; /* Прижимает футер к низу */
+    margin-top: auto;
 }
 
 .footer-content {
@@ -561,7 +561,7 @@ footer {
 
 .action-buttons {
     display: flex;
-    gap: 18px; /* ЯРКО выраженный отступ между кнопками */
+    gap: 18px;
 }
 
 .action-buttons .btn {
@@ -610,7 +610,6 @@ footer {
 }
 
 #fileSpinner, #spinner {
-    display: none;
     text-align: center;
     padding: 24px 10px;
     background: rgba(30,32,36,0.95);
@@ -652,24 +651,24 @@ footer {
 }
 
 /* --- АДАПТИВ ДЛЯ МОБИЛЬНЫХ --- */
-@media (max-width: 800px) { /* Порог может быть скорректирован */
+@media (max-width: 800px) {
     .app-container {
         flex-direction: column;
         gap: 1.5rem;
-        padding: 0; /* Убираем padding у app-container на мобильных */
-        border-radius: 0; /* Убираем скругление углов на мобильных */
+        padding: 0;
+        border-radius: 0;
         box-shadow: none;
     }
     .sidebar {
         width: 100%;
-        max-height: 250px; /* Ограничьте высоту на мобильных */
+        max-height: 250px;
         overflow-y: auto;
         border-right: none;
-        border-bottom: 1px solid var(--border-color); /* Добавляем границу снизу */
+        border-bottom: 1px solid var(--border-color);
         border-radius: 0;
     }
     #chat-list {
-        display: flex; /* Сделать горизонтальным списком на мобильных */
+        display: flex;
         flex-wrap: wrap;
         gap: 8px;
     }
@@ -686,7 +685,7 @@ footer {
         margin-top: 1rem;
     }
     .main-content-area {
-        padding: 1rem; /* Отступы для основного контента на мобильных */
+        padding: 1rem;
     }
     body {
         font-size: 15px;
@@ -696,9 +695,9 @@ footer {
         gap: 10px;
     }
     main {
-        padding: 0; /* Убираем padding у main на мобильных */
+        padding: 0;
     }
-    .card-footer {
+    .law-card .card-footer {
         flex-direction: column;
         align-items: flex-start;
     }
@@ -716,7 +715,7 @@ footer {
         font-size: 14px;
         padding: 10px 0;
     }
-    .user-message, .ai-message, .response-box, .law-card, .laws-container {
+    .user-message, .ai-message {
         font-size: 0.98em;
         padding: 12px;
     }
