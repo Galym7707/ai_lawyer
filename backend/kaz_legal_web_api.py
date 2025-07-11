@@ -1,5 +1,5 @@
-# kaz_legal_web_api.py (Версия 4.3 — История чатов, динамический сбор информации, улучшенные промпты)
-from memory import init_db, save_message, load_conversation, delete_conversation # Импортируем delete_conversation
+# kaz_legal_web_api.py (Версия 4.4 — Улучшенный UX, строгая юрисдикция РК, приоритет уточняющих вопросов)
+from memory import init_db, save_message, load_conversation, delete_conversation
 init_db()
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 import google.generativeai as genai
@@ -7,8 +7,8 @@ import os
 import json
 import re
 from flask_cors import CORS
-import sqlite3 # Добавляем импорт sqlite3 для нового эндпоинта истории
-from memory import DB_PATH # Импортируем DB_PATH из memory.py
+import sqlite3
+from memory import DB_PATH
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB
@@ -17,12 +17,11 @@ CORS(app, origins=["https://ai-lawyer-tau.vercel.app"])
 # --- AI и база законов ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 genai.configure(api_key=GEMINI_API_KEY)
-# Увеличиваем лимит токенов для более сложных запросов и анализа документов
-model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "text/plain", "temperature": 0.7}) # Увеличим температуру для чуть более креативных ответов
+model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "text/plain", "temperature": 0.7})
 
 LAW_DB = []
 
-# --- УЛУЧШЕНИЕ: Максимально расширенный словарь синонимов ---
+# --- УЛУЧШЕНИЕ: Максимально расширенный словарь синонимов (с добавлением налоговых терминов) ---
 LEGAL_SYNONYMS = {
     # Трудовые отношения
     'увольнение': ['уволен', 'увольн', 'уволить', 'расторжение', 'расторгнуть', 'расторж', 'прекращение', 'прекращ', 'освобождение', 'освобожд', 'отстранение', 'отстранен', 'сокращение', 'сокращен', 'сокращ', 'дисциплинарное', 'взыскание'],
@@ -70,6 +69,15 @@ LEGAL_SYNONYMS = {
     'ЦОН': ['цон', 'государственные услуги', 'услуга', 'отказ в услуге', 'ошибка в данных', 'очередь'],
     'госорган': ['госорган', 'государственный орган', 'акимат', 'министерство', 'департамент'],
 
+    # Налоговое право (ДОБАВЛЕНО/РАСШИРЕНО)
+    'налог': ['налоги', 'налогообложение', 'налоговый', 'ипн', 'кпн', 'ндс', 'пеня', 'штраф', 'декларация', 'налоговая'],
+    'доход': ['доходы', 'заработок', 'прибыль', 'выручка', 'заработная плата', 'оклад'],
+    'вычет': ['вычеты', 'налоговый вычет', 'льгота', 'льготный', 'освобождение'],
+    'ЕНПФ': ['енпф', 'пенсионные отчисления', 'пенсионные накопления'],
+    'соцотчисления': ['социальные отчисления', 'соцотчисления', 'соцфонд', 'ОПВ', 'СО', 'ОСМС'],
+    'медстрахование': ['обязательное медицинское страхование', 'омс', 'осмс', 'взносы на осмс'],
+
+
     # Образование и защита детей
     'учитель': ['учител', 'преподаватель', 'препода', 'педагог', 'наставник', 'воспитатель'],
     'ученик': ['ученик', 'учащийся', 'учащ', 'школьник', 'школьн', 'студент', 'воспитанник', 'воспитан', 'обучающийся'],
@@ -95,7 +103,6 @@ LEGAL_SYNONYMS = {
 
     # Цифровая грамотность
     'egov': ['egov', 'электронное правительство', 'портал госуслуг', 'ЭЦП', 'цифровая подпись'],
-    'enpf': ['enpf', 'енпф', 'пенсионные накопления'],
     'kaspi': ['kaspi', 'каспий', 'платежи', 'мобильный банк'],
     'документ': ['документ', 'форма', 'бланк', 'заявление', 'образец'],
 
@@ -109,7 +116,7 @@ LEGAL_SYNONYMS = {
 }
 
 
-# --- УЛУЧШЕНИЕ: Полный и актуальный словарь источников ---
+# --- УЛУЧШЕНИЕ: Полный и актуальный словарь источников (с добавлением Налогового кодекса) ---
 SOURCE_MAPPING = {
     'Уголовный кодекс': 'https://adilet.zan.kz/rus/docs/K1400000226',
     'уголовн': 'https://adilet.zan.kz/rus/docs/K1400000226',
@@ -141,6 +148,12 @@ SOURCE_MAPPING = {
     'Водный кодекс': 'https://adilet.zan.kz/rus/docs/K1600000049',
     'водн': 'https://adilet.zan.kz/rus/docs/K1600000049',
 
+    'Налоговый кодекс': 'https://adilet.zan.kz/rus/docs/K1700000120', # ДОБАВЛЕНО
+    'налогов': 'https://adilet.zan.kz/rus/docs/K1700000120', # ДОБАВЛЕНО
+    'ипн': 'https://adilet.zan.kz/rus/docs/K1700000120', # ДОБАВЛЕНО
+    'ндс': 'https://adilet.zan.kz/rus/docs/K1700000120', # ДОБАВЛЕНО
+    'кпн': 'https://adilet.zan.kz/rus/docs/K1700000120', # ДОБАВЛЕНО
+
     'О жилищных отношениях': 'https://adilet.zan.kz/rus/docs/Z970000254_',
     'жилищ': 'https://adilet.zan.kz/rus/docs/Z970000254_',
 
@@ -170,26 +183,30 @@ def find_laws_by_keywords(question, min_relevance=12, max_results=8):
         return []
 
     priority_codes = []
+    # Обновленная логика приоритизации
     if any(w in question_lower for w in ['увольн', 'работ', 'работодат', 'труд', 'зарплат', 'отпуск', 'больничн']):
         priority_codes.append('трудов')
     if any(w in question_lower for w in ['жилье', 'аренда', 'квартира', 'высел', 'жкх', 'квартплата']):
         priority_codes.append('жилищ')
-    if any(w in question_lower for w in ['пенсия', 'пособие', 'декрет', 'инвалидн', 'льгот']):
+    if any(w in question_lower for w in ['пенсия', 'пособие', 'декрет', 'инвалидн', 'льгот', 'енпф', 'соцотчисления', 'медстрахование']):
         priority_codes.append('социальн')
     if any(w in question_lower for w in ['развод', 'алименты', 'опека', 'брак', 'семья']):
-        priority_codes.append('о браке и семье') # Изменено на более точный ключ
+        priority_codes.append('о браке и семье')
     if any(w in question_lower for w in ['ученик', 'учитель', 'школ', 'образован', 'насилие', 'ребенок', 'подросток']):
-        priority_codes.extend(['об образовании', 'уголовн', 'административн']) # Добавлено "об образовании"
+        priority_codes.extend(['об образовании', 'уголовн', 'административн'])
     if any(w in question_lower for w in ['штраф', 'полиция', 'прокуратура', 'цон', 'госорган', 'мвд']):
-        priority_codes.extend(['об административных правонарушениях', 'уголовн', 'о государственных услугах']) # Добавлено "о государственных услугах"
+        priority_codes.extend(['об административных правонарушениях', 'уголовн', 'о государственных услугах'])
     if any(w in question_lower for w in ['пдд', 'самокат', 'велосипед', 'дтп']):
         priority_codes.append('правила дорожного движения')
     if any(w in question_lower for w in ['потребитель', 'магазин', 'товар', 'услуга', 'возврат', 'претензия']):
         priority_codes.append('о защите прав потребителей')
-    if any(w in question_lower for w in ['документ', 'форма', 'бланк', 'egov', 'enpf', 'kaspi']):
-        priority_codes.append('гражданск') # Зачастую связано с гражданским правом и документооборотом
+    if any(w in question_lower for w in ['документ', 'форма', 'бланк', 'egov', 'kaspi']):
+        priority_codes.append('гражданск')
     if any(w in question_lower for w in ['пенсионер', 'сельчанин', 'мигрант', 'иностранец']):
-        priority_codes.append('социальн') # Наиболее частые проблемы этих групп связаны с социальным правом
+        priority_codes.append('социальн')
+    if any(w in question_lower for w in ['налог', 'налогообложение', 'ипн', 'ндс', 'кпн', 'доход', 'вычет', 'декларация']): # Налоговые запросы
+        priority_codes.append('налогов')
+
 
     expanded_terms = set(question_words)
     for word in question_words:
@@ -205,8 +222,8 @@ def find_laws_by_keywords(question, min_relevance=12, max_results=8):
 
         # УЛУЧШЕНИЕ: Более умная приоритизация кодексов
         for code_key in priority_codes:
-            if code_key in title_lower or any(s in title_lower for s in LEGAL_SYNONYMS.get(code_key, [])): # Проверяем и синонимы кодекса
-                relevance += 15 # Увеличиваем приоритет
+            if code_key in title_lower or any(s in title_lower for s in LEGAL_SYNONYMS.get(code_key, [])):
+                relevance += 15
 
         if relevance >= min_relevance:
             entry_copy = entry.copy()
@@ -229,7 +246,6 @@ def calculate_relevance(expanded_terms, title_lower, text_lower):
 def load_law_db():
     global LAW_DB
     try:
-        # ПРОВЕРКА СУЩЕСТВОВАНИЯ ПАПКИ LAWS
         if not os.path.exists("laws"):
             print("Папка 'laws' не найдена. Пожалуйста, убедитесь, что файл 'kazakh_laws.json' находится в папке 'laws' в корне проекта.")
             return
@@ -274,12 +290,12 @@ def determine_code_name(content):
         'трудов': 'ТК РК',
         'предпринимательск': 'ПК РК',
         'социальн': 'СК РК',
-        'о браке и семье': 'Кодекс о браке и семье РК', # Обновлено
+        'о браке и семье': 'Кодекс о браке и семье РК',
         'здоровь': 'Кодекс о здоровье РК',
         'экологич': 'ЭК РК',
-        'налогов': 'НК РК',
+        'налогов': 'НК РК', # ОБНОВЛЕНО
         'бюджетн': 'БК РК',
-        'таможен': 'ТК ЕАЭС', # Более точно
+        'таможен': 'ТК ЕАЭС',
         'земельн': 'ЗК РК',
         'лесн': 'ЛК РК',
         'водн': 'ВК РК',
@@ -287,9 +303,9 @@ def determine_code_name(content):
         'пдд': 'ПДД РК',
         'самокат': 'ПДД РК',
         'велосипед': 'ПДД РК',
-        'о защите прав потребителей': 'Закон о защите прав потребителей РК', # Обновлено
-        'о государственных услугах': 'Закон о государственных услугах РК', # Обновлено
-        'об образовании': 'Закон об образовании РК', # Обновлено
+        'о защите прав потребителей': 'Закон о защите прав потребителей РК',
+        'о государственных услугах': 'Закон о государственных услугах РК',
+        'об образовании': 'Закон об образовании РК',
     }
     for keyword, name in name_mapping.items():
         if re.search(r'\b' + re.escape(keyword) + r'\b', content_lower):
@@ -330,7 +346,6 @@ def format_laws(laws, shown_limit=5):
     return output
 
 def extract_text_from_file(filepath):
-    # Проверяем расширение файла и используем соответствующую библиотеку
     if filepath.endswith((".docx", ".doc")):
         try:
             import docx
@@ -351,10 +366,8 @@ def extract_text_from_file(filepath):
             print(f"Ошибка при чтении PDF: {e}")
             return ""
     elif filepath.endswith((".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp")):
-        # Для изображений используем Google Generative AI (Vision Model)
-        # Это потребует изменения в логике analyze_file
         print("Обработка изображений требует отдельной Vision API логики.")
-        return "" # Вернем пустую строку, так как текст извлекается не напрямую
+        return ""
     else:
         return ""
 
@@ -367,7 +380,6 @@ def extract_article_info(title):
         for match in matches:
             if 'статья' in pattern or 'ст.' in pattern: found_parts.append(f"Статья {match}")
             elif 'глава' in pattern or 'гл.' in pattern: found_parts.append(f"Глава {match}")
-            # Добавим обработку других заголовков
             elif 'раздел' in pattern: found_parts.append(f"Раздел {match}")
             elif 'подраздел' in pattern: found_parts.append(f"Подраздел {match}")
             elif 'параграф' in pattern: found_parts.append(f"Параграф {match}")
@@ -384,12 +396,10 @@ def convert_full_markdown_to_html(text):
         if not para:
             continue
 
-        # Обработка заголовков (начинаются с жирного текста и заканчиваются двоеточием, или просто **Заголовок**)
-        if re.match(r'\*\*.+?:?\*\*', para) or re.match(r'#+\s*.+', para): # Добавлена поддержка Markdown заголовков
+        if re.match(r'\*\*.+?:?\*\*', para) or re.match(r'#+\s*.+', para):
             para = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', para)
-            para = re.sub(r'#+\s*(.+)', r'\1', para) # Удаляем символы Markdown заголовков
+            para = re.sub(r'#+\s*(.+)', r'\1', para)
             html_output.append(f"<h3>{para}</h3>")
-        # Обработка списков с тире, маркерами или нумерацией
         elif re.match(r'^[•*-] ', para) or re.match(r'^\d+\. ', para):
             lines = para.split('\n')
             list_tag_start = "<ul>" if re.match(r'^[•*-] ', para) else "<ol>"
@@ -398,18 +408,15 @@ def convert_full_markdown_to_html(text):
             for line in lines:
                 line = line.strip()
                 if not line: continue
-                # Удаляем маркеры/номера и форматируем жирный текст
                 clean_line = re.sub(r'^[•*-]\s*', '', line)
                 clean_line = re.sub(r'^\d+\.\s*', '', clean_line)
                 clean_line = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', clean_line)
                 list_items.append(f"<li>{clean_line}</li>")
             html_output.append(list_tag_start + "".join(list_items) + list_tag_end)
-        # Цитаты
         elif re.match(r'^> ', para):
             quote_content = re.sub(r'^> ', '', para)
             quote_content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', quote_content)
             html_output.append(f"<blockquote>{quote_content}</blockquote>")
-        # Простой абзац
         else:
             para = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', para)
             html_output.append(f"<p>{para}</p>")
@@ -419,35 +426,33 @@ def convert_full_markdown_to_html(text):
 
 # --- ИСПРАВЛЕНИЕ: Финальная, самая надежная инструкция для ИИ ---
 PROMPT_TEMPLATE = """
-Ты — опытный и самый в мире лучший юрист-консультант, специализирующийся на законах Казахстана. К тебе обращаются обычные люди, чтобы узнать свои права и понять, как действовать.
+Ты — высококвалифицированный юрист-консультант, специализирующийся **ИСКЛЮЧИТЕЛЬНО на законодательстве Республики Казахстан**. Твоя главная задача — предоставлять точные, понятные и актуальные юридические консультации гражданам Казахстана.
 
-**Важная инструкция:**
-Если для максимально точного ответа на текущий вопрос пользователя требуется дополнительная личная информация (например, возраст, доход, семейное положение, стаж работы, детали документа, местоположение), **сначала задай конкретные уточняющие вопросы**. Объясни, зачем тебе эта информация. Как только получишь данные, продолжи консультацию.
+**КРАЙНЕ ВАЖНО: ОТВЕЧАЙ ТОЛЬКО НА ОСНОВЕ ЗАКОНОВ КАЗАХСТАНА. НИКОГДА НЕ УПОМИНАЙ ЗАКОНЫ ДРУГИХ СТРАН (например, России, РФ, НДФЛ и т.п.) и избегай любых отсылок к ним.**
 
-Пример, если нужна информация:
-"Для того чтобы я мог дать точный ответ по социальным выплатам, мне нужно знать:
-* Ваш возраст;
-* Семейное положение (есть ли дети, их возраст);
-* Уровень дохода.
-Пожалуйста, предоставьте эту информацию, и я смогу продолжить консультацию."
+**1. ПРИОРИТЕТ: ЗАПРОС ДОПОЛНИТЕЛЬНОЙ ИНФОРМАЦИИ.**
+Если для формирования исчерпывающего и точного ответа на текущий вопрос пользователя требуется любая личная или уточняющая информация (например, возраст, доход, семейное положение, стаж работы, конкретные даты, детали документа, местоположение), **ТЫ ДОЛЖЕН СНАЧАЛА ЗАДАТЬ ЭТИ УТОЧНЯЮЩИЕ ВОПРОСЫ**.
+**Объясни, почему тебе нужна эта информация.**
+**НЕ ДАВАЙ ПОЛНОГО ОТВЕТА, пока не получишь необходимые данные.**
+**Пример запроса дополнительной информации:**
+"Для того чтобы я мог дать точный ответ по вашей ситуации с налогами, мне нужно знать следующее:
+* Ваш ежемесячный доход (размер заработной платы);
+* Есть ли у вас иждивенцы (например, дети, их возраст);
+* Применяются ли к вам какие-либо налоговые вычеты (например, по ипотеке, образованию, лечению).
+Пожалуйста, предоставьте эту информацию, и я смогу рассчитать приблизительную сумму налога и дать конкретные рекомендации по законодательству Казахстана."
 
 Не запрашивай информацию, которая не требуется для текущего вопроса.
 
-**Ситуация пользователя:**
----
-{question}
----
+**2. ОТВЕТ НА ОСНОВЕ ЗАКОНОВ КАЗАХСТАНА (после получения всей необходимой информации):**
 
-**Твои действия (после получения всей необходимой информации):**
+* Объясни, **что говорит закон Казахстана** по этой ситуации. Ссылайся на статьи кодексов или законов РК.
+* Укажи, **нарушены ли права пользователя** в соответствии с законодательством РК, и какие конкретно.
+* Приведи **конкретные пошаговые инструкции**, которые человек может предпринять для решения своей проблемы (куда обратиться, какие документы подготовить, какие сроки).
+* Если уместно, **предложи шаблон заявления** или его ключевые пункты (например, в полицию, работодателю, в ЦОН, акимат, претензию продавцу).
+* Пиши **исключительно простыми словами**, избегай юридического жаргона. Ответ должен быть понятен даже школьнику.
+* Если законов по теме нет или ситуация явно вне юрисдикции РК (что крайне маловероятно, учитывая твою специализацию), так и напиши, но предложи общие рекомендации, если это возможно.
 
-1.  Объясни, **что говорит закон** по этой ситуации. Ссылайся на статьи кодексов или законов РК.
-2.  Укажи, **нарушены ли права пользователя**, и какие конкретно.
-3.  Приведи **конкретные шаги**, которые человек может предпринять для решения своей проблемы (куда обратиться, какие документы подготовить, какие сроки).
-4.  Если уместно, **предложи шаблон заявления** или его ключевые пункты (например, в полицию, работодателю, в ЦОН, акимат, претензию продавцу).
-5.  Пиши **простыми словами**, избегай юридического жаргона. Ответ должен быть понятен даже школьнику.
-6.  Если законов по теме нет или ситуация вне юрисдикции, так и напиши.
-
-**Форматируй красиво:**
+**Форматируй ответ красиво и структурировано:**
 * Используй **жирный текст** для выделения ключевых моментов.
 * Используй заголовки (например, **Что говорит закон?**, **Что делать?**, **Шаблон документа**).
 * Используй списки (маркированные или нумерованные) для пошаговых инструкций и перечислений.
@@ -487,7 +492,6 @@ FILE_ANALYSIS_PROMPT = """
 
 # --- Финальная архитектура с двумя маршрутами ---
 
-# Маршрут №1: ТОЛЬКО для стриминга текста от ИИ
 @app.route("/ask", methods=["POST"])
 def ask_streaming():
     data = request.json
@@ -499,16 +503,12 @@ def ask_streaming():
     def generate_text():
         try:
             history = load_conversation(session_id)
-            # Временно добавляем текущий вопрос для контекста, но не сохраняем его сразу
-            # Это позволяет ИИ анализировать историю + новый вопрос для определения необходимости доп. данных
             temp_history_for_prompt = history + [{"role": "user", "parts": [question]}]
 
-            # Используем PROMPT_TEMPLATE, который включает логику запроса доп. информации
             full_prompt_with_context = PROMPT_TEMPLATE.format(question=question)
 
-            # Передаем историю + текущий вопрос в модель
             stream = model.generate_content(
-                temp_history_for_prompt, # Используем temp_history_for_prompt для корректного контекста
+                temp_history_for_prompt,
                 stream=True
             )
             full_reply = ""
@@ -517,15 +517,13 @@ def ask_streaming():
                     full_reply += chunk.text
                     yield chunk.text
             
-            # Сохраняем сообщение пользователя и полный ответ модели только после завершения стриминга
-            save_message(session_id, "user", question) # Сохраняем только сам вопрос пользователя
+            save_message(session_id, "user", question)
             save_message(session_id, "model", full_reply)
         except Exception as e:
             print(f"❌ Ошибка в стриме /ask: {e}")
             yield "Произошла ошибка при генерации ответа ИИ. Пожалуйста, попробуйте еще раз."
     return Response(stream_with_context(generate_text()), mimetype='text/plain; charset=utf-8', headers={"X-Session-Id": session_id})
 
-# --- /process-full-text: финальная обработка и выдача статей ---
 @app.route("/process-full-text", methods=["POST"])
 def process_full_text():
     data = request.json
@@ -538,7 +536,7 @@ def process_full_text():
 
     try:
         formatted_ai_html = convert_full_markdown_to_html(full_ai_text)
-        laws_found = find_laws_by_keywords(question) # Ищем законы по оригинальному вопросу
+        laws_found = find_laws_by_keywords(question)
         law_section_html = format_laws(laws_found)
         final_html = formatted_ai_html + law_section_html
         return jsonify({"html": final_html, "session_id": session_id})
@@ -568,13 +566,7 @@ def analyze_file():
         filepath = os.path.join("/tmp", file.filename)
         file.save(filepath)
 
-        # Проверяем тип файла и используем соответствующую модель/логику
         if file.filename.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp")):
-            # Для изображений используем Vision Model (gemini-pro-vision)
-            # Внимание: для использования Vision Model нужно её инициализировать
-            # Для простоты, здесь мы используем тот же 'gemini-1.5-flash', но в реальном продакшене лучше использовать gemini-pro-vision
-            image_model = genai.GenerativeModel('gemini-1.5-flash') # Или 'gemini-pro-vision' если у вас она доступна и настроена
-            
             import PIL.Image
             img = PIL.Image.open(filepath)
             
@@ -582,7 +574,7 @@ def analyze_file():
                 FILE_ANALYSIS_PROMPT.format(text="[Изображение документа]", question=question),
                 img
             ]
-            response = image_model.generate_content(vision_prompt_parts)
+            response = model.generate_content(vision_prompt_parts) # Использовать основную модель, если vision model не настроена отдельно
 
         else: # Для текстовых документов (PDF, DOCX)
             text = extract_text_from_file(filepath)
@@ -590,7 +582,7 @@ def analyze_file():
                 os.remove(filepath)
                 return jsonify({"error": "Не удалось извлечь текст из файла или файл пустой.", "session_id": session_id}), 400
             
-            prompt_for_text_file = FILE_ANALYSIS_PROMPT.format(text=text[:8000], question=question) # Ограничиваем текст
+            prompt_for_text_file = FILE_ANALYSIS_PROMPT.format(text=text[:8000], question=question)
             response = model.generate_content(prompt_for_text_file)
 
         os.remove(filepath)
@@ -598,7 +590,6 @@ def analyze_file():
         if not hasattr(response, "text") or not response.text:
             return jsonify({"error": "AI юрист не смог проанализировать файл или файл пустой.", "session_id": session_id}), 400
         
-        # Сохраняем в историю: пользователь отправил файл с вопросом, модель ответила
         save_message(session_id, "user", f"Анализ файла: {file.filename}. Вопрос: {question}")
         save_message(session_id, "model", response.text)
 
@@ -613,10 +604,8 @@ def analyze_file():
 def get_history():
     session_id = request.args.get("session_id", "default")
     history = load_conversation(session_id)
-    # Преобразуем историю в формат, удобный для фронтенда
     formatted_history = []
     for entry in history:
-        # Проверяем, что 'parts' - это список и содержит строки
         content = entry['parts'][0] if isinstance(entry['parts'], list) and entry['parts'] else ''
         formatted_history.append({"role": entry['role'], "content": content})
     return jsonify({"history": formatted_history})
@@ -626,23 +615,21 @@ def get_history():
 def get_all_sessions_summary():
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            # Получаем все уникальные session_id
-            cursor = conn.execute("SELECT DISTINCT session_id FROM memory ORDER BY session_id DESC")
+            cursor = conn.execute("SELECT DISTINCT session_id FROM memory ORDER BY message_index DESC") # ORDER BY message_index DESC для более свежих вверху
             session_ids = [row[0] for row in cursor.fetchall()]
 
             sessions_summary = []
             for sid in session_ids:
-                # Для каждой сессии получаем первый вопрос пользователя
                 first_user_message = conn.execute(
                     "SELECT content FROM memory WHERE session_id=? AND role='user' ORDER BY message_index ASC LIMIT 1",
                     (sid,)
                 ).fetchone()
                 
-                title = f"Сессия {sid[:8]}..." # Дефолтный заголовок, если нет первого сообщения
+                title = f"Новый чат" # Дефолтный заголовок для пустых или новых сессий
                 if first_user_message:
                     title = first_user_message[0]
                     if len(title) > 50:
-                        title = title[:50] + "..." # Обрезаем для краткости
+                        title = title[:50] + "..."
 
                 sessions_summary.append({"id": sid, "title": title})
             return jsonify({"sessions": sessions_summary})
@@ -651,7 +638,7 @@ def get_all_sessions_summary():
         return jsonify({"error": f"Ошибка сервера при получении сводки сессий: {str(e)}"}), 500
 
 
-# --- Маршрут для удаления истории сообщений (используется кнопкой "Новый диалог") ---
+# --- Маршрут для удаления истории сообщений ---
 @app.route("/clear-history", methods=["POST"])
 def clear_history_route():
     session_id = request.json.get("session_id", "default")
