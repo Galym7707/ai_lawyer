@@ -1,4 +1,4 @@
-# kaz_legal_web_api.py (Версия 4.2 — динамический сбор информации, улучшенные промпты)
+# kaz_legal_web_api.py (Версия 4.3 — История чатов, динамический сбор информации, улучшенные промпты)
 from memory import init_db, save_message, load_conversation, delete_conversation # Импортируем delete_conversation
 init_db()
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
@@ -7,6 +7,8 @@ import os
 import json
 import re
 from flask_cors import CORS
+import sqlite3 # Добавляем импорт sqlite3 для нового эндпоинта истории
+from memory import DB_PATH # Импортируем DB_PATH из memory.py
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB
@@ -604,7 +606,7 @@ def analyze_file():
     except Exception as e:
         print(f"❌ analyze_file error: {e}")
         session_id = request.form.get("session_id", "default")
-        return jsonify({"error": f"Ошибка сервера при анализе файла: {str(e)}", "session_id": session_id}), 500
+        return jsonify({"error": f"Server error: {str(e)}", "session_id": session_id}), 500
 
 # --- Маршрут для загрузки истории сообщений ---
 @app.route("/get-history", methods=["GET"])
@@ -618,6 +620,36 @@ def get_history():
         content = entry['parts'][0] if isinstance(entry['parts'], list) and entry['parts'] else ''
         formatted_history.append({"role": entry['role'], "content": content})
     return jsonify({"history": formatted_history})
+
+# --- Маршрут для получения сводки всех сессий для отображения в сайдбаре ---
+@app.route("/get-all-sessions-summary", methods=["GET"])
+def get_all_sessions_summary():
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            # Получаем все уникальные session_id
+            cursor = conn.execute("SELECT DISTINCT session_id FROM memory ORDER BY session_id DESC")
+            session_ids = [row[0] for row in cursor.fetchall()]
+
+            sessions_summary = []
+            for sid in session_ids:
+                # Для каждой сессии получаем первый вопрос пользователя
+                first_user_message = conn.execute(
+                    "SELECT content FROM memory WHERE session_id=? AND role='user' ORDER BY message_index ASC LIMIT 1",
+                    (sid,)
+                ).fetchone()
+                
+                title = f"Сессия {sid[:8]}..." # Дефолтный заголовок, если нет первого сообщения
+                if first_user_message:
+                    title = first_user_message[0]
+                    if len(title) > 50:
+                        title = title[:50] + "..." # Обрезаем для краткости
+
+                sessions_summary.append({"id": sid, "title": title})
+            return jsonify({"sessions": sessions_summary})
+    except Exception as e:
+        print(f"❌ Ошибка в /get-all-sessions-summary: {e}")
+        return jsonify({"error": f"Ошибка сервера при получении сводки сессий: {str(e)}"}), 500
+
 
 # --- Маршрут для удаления истории сообщений (используется кнопкой "Новый диалог") ---
 @app.route("/clear-history", methods=["POST"])
