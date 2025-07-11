@@ -11,6 +11,12 @@
     --accent-secondary: #00e676; /* Зеленый */
     --border-color: #333;
     --sidebar-width: 280px;
+
+    /* New variables for chat bubbles */
+    --chat-bubble-user: #2a343a; /* Darker blue-gray for user */
+    --chat-bubble-ai: #232323; /* Slightly lighter dark for AI */
+    --input-bg: #2a2a2a;
+    --input-border: #444;
 }
 
 /* --- ОСНОВНОЙ ФОН И ТЕКСТ --- */
@@ -24,6 +30,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    font-size: 1rem; /* Base font size for readability */
 }
 
 /* --- ХЕДЕР И НАВИГАЦИЯ --- */
@@ -38,9 +45,10 @@ header {
 }
 
 header h1 {
-    font-size: 1.5rem;
+    font-size: 1.6rem; /* Slightly larger */
     color: var(--accent-primary);
     margin: 0;
+    font-weight: 700;
 }
 
 nav {
@@ -50,10 +58,11 @@ nav {
 
 nav a {
     color: var(--text-primary);
-    margin-left: 1rem;
+    margin-left: 1.2rem; /* Increased spacing */
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s;
+    font-size: 0.95rem; /* Consistent font size */
 }
 
 nav a:hover {
@@ -77,6 +86,8 @@ main {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    height: calc(100vh - 4rem - 68px); /* Adjust height based on header/footer */
+    min-height: 600px; /* Minimum height for usability */
 }
 
 .sidebar {
@@ -97,7 +108,8 @@ main {
     margin-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.5rem;
-    font-size: 1.2rem;
+    font-size: 1.25rem; /* Slightly larger */
+    font-weight: 600;
 }
 
 #chat-list {
@@ -108,17 +120,17 @@ main {
 }
 
 #chat-list li {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.6rem; /* Consistent spacing */
 }
 
 #chat-list button {
     display: block;
     width: 100%;
-    padding: 0.75rem 1rem;
+    padding: 0.8rem 1rem; /* More comfortable padding */
     background-color: transparent;
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 8px; /* Slightly more rounded */
     text-align: left;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s, color 0.2s;
@@ -144,14 +156,16 @@ main {
     background: var(--accent-secondary);
     color: #121212;
     border: none;
-    border-radius: 6px;
-    padding: 10px 18px;
-    font-size: 16px;
+    border-radius: 8px; /* Consistent with other buttons */
+    padding: 12px 18px; /* Larger, more prominent */
+    font-size: 1.05rem; /* Clearer font size */
     cursor: pointer;
     transition: background 0.15s;
-    display: block;
-    width: 100%;
-    text-align: center;
+    display: flex; /* Use flex for icon + text */
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Space between icon and text */
+    font-weight: 600;
 }
 .new-conversation-btn:hover {
     background: #00c853;
@@ -160,30 +174,36 @@ main {
 .main-content-area {
     flex-grow: 1;
     padding: 2rem;
-    display: flex; /* Используем flex для расположения секций */
+    display: flex;
     flex-direction: column;
-    overflow-y: auto; /* Прокрутка для основного контента */
+    overflow-y: auto;
 }
 
 /* Стили для начальных секций (О проекте, Задайте вопрос) */
 #initial-sections {
-    display: flex; /* По умолчанию видимый */
+    display: flex;
     flex-direction: column;
-    gap: 2.5rem; /* Отступ между секциями */
-    flex-grow: 1; /* Чтобы занимал доступное пространство */
+    gap: 2.5rem;
+    flex-grow: 1;
+    padding-bottom: 2rem; /* Add padding at the bottom */
 }
 
 .initial-section {
-    margin-bottom: 0; /* Убираем margin-bottom, так как gap управляет отступами */
+    margin-bottom: 0;
+    background-color: var(--bg-secondary); /* Give initial sections a background */
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
-
 
 h2 {
     color: var(--accent-primary);
-    margin-top: 0; /* Убрал отступ, так как управляется gap и padding */
-    margin-bottom: 1rem;
+    margin-top: 0;
+    margin-bottom: 1.2rem; /* More space below heading */
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.5rem;
+    padding-bottom: 0.6rem;
+    font-size: 1.5rem; /* Larger, clearer headings */
+    font-weight: 600;
 }
 
 ul {
@@ -192,20 +212,21 @@ ul {
 }
 
 li {
-    margin: 0.5rem 0;
+    margin: 0.6rem 0; /* Consistent spacing */
     color: var(--text-secondary);
+    font-size: 0.95rem; /* Consistent font size */
 }
 
-/* --- ФОРМА ВВОДА ВОПРОСА --- */
+/* --- ФОРМА ВВОДА ВОПРОСА (on initial view) --- */
 textarea#userQuestion {
     width: 100%;
-    min-height: 120px; /* Изначальная высота */
-    max-height: 300px; /* Максимальная высота, чтобы не заполняла весь экран */
+    min-height: 120px;
+    max-height: 300px;
     padding: 1rem;
     font-size: 1rem;
     border-radius: 8px;
-    border: 1px solid var(--border-color);
-    background-color: var(--bg-secondary);
+    border: 1px solid var(--input-border); /* Use input-border */
+    background-color: var(--input-bg); /* Use input-bg */
     color: var(--text-primary);
     margin-top: 1rem;
     resize: vertical;
@@ -215,17 +236,18 @@ textarea#userQuestion {
 textarea#userQuestion:focus {
     outline: none;
     border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0,188,212,0.2); /* Soft focus shadow */
 }
 
 button#submitBtn {
-    margin-top: 1rem;
-    padding: 0.75rem 1.5rem;
+    margin-top: 1.2rem; /* More space */
+    padding: 0.85rem 1.75rem; /* Larger button */
     background-color: var(--accent-primary);
     border: none;
     color: #121212;
-    font-size: 1rem;
+    font-size: 1.05rem; /* Consistent size */
     font-weight: bold;
-    border-radius: 6px;
+    border-radius: 8px; /* Consistent with other buttons */
     cursor: pointer;
     transition: background-color 0.3s;
 }
@@ -237,118 +259,170 @@ button#submitBtn:hover {
 button#submitBtn:disabled {
     background-color: #555;
     cursor: not-allowed;
+    opacity: 0.7;
 }
 
 /* --- БЛОК С ОТВЕТОМ ОТ ИИ (current-chat-area) --- */
-#current-chat-area {
-    display: none; /* По умолчанию скрыт */
-    flex-direction: column; /* Элементы внутри будут располагаться вертикально */
-    overflow-y: auto; /* Прокрутка для области чата */
-    flex-grow: 1; /* Занимает доступное пространство */
-    background-color: var(--bg-secondary); /* Фон для всей области чата */
+#current-chat-container {
+    display: flex; /* Use flex to manage chat content and input */
+    flex-direction: column;
+    flex-grow: 1;
+    background-color: var(--bg-secondary);
     border-radius: 8px;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.2);
+    position: relative; /* For sticky input */
+    max-height: 100%; /* Ensure it doesn't overflow parent */
+}
+
+#chat-messages-display {
+    flex-grow: 1;
+    overflow-y: auto; /* Scrollable chat history */
     padding: 20px;
-    box-shadow: inset 0 0 8px rgba(0,0,0,0.2); /* Внутренняя тень */
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Space between messages */
 }
 
 /* Стили для отдельных сообщений в чате */
-.user-message, .ai-message {
-    padding: 12px 18px;
-    border-radius: 8px;
-    margin-bottom: 10px; /* Отступ между сообщениями */
-    margin-top: 10px;
-    max-width: 85%; /* Уменьшил ширину для лучшего вида */
+.chat-bubble {
+    padding: 14px 20px; /* Slightly more padding */
+    border-radius: 20px; /* More rounded bubbles */
+    margin-bottom: 5px; /* Smaller margin-bottom, gap handles main spacing */
+    max-width: 80%;
     word-break: break-word;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    /* Убрал border-left/right, т.к. они могут выглядеть как наложение */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* Stronger shadow for bubbles */
 }
-.user-message {
-    background: #232b34;
-    text-align: right;
-    margin-left: auto; /* Прижимает к правому краю */
+.user-query {
+    background: var(--chat-bubble-user);
     color: var(--text-primary);
+    margin-left: auto; /* Align right */
+    border-bottom-right-radius: 4px; /* Pointy corner for user */
 }
-.ai-message {
-    background: #1d262b;
-    text-align: left;
-    margin-right: auto; /* Прижимает к левому краю */
+.ai-response {
+    background: var(--chat-bubble-ai);
     color: var(--text-primary);
+    margin-right: auto; /* Align left */
+    border-bottom-left-radius: 4px; /* Pointy corner for AI */
 }
-.ai-message.error-message {
+.ai-response.error-message {
     background-color: #301a1a;
-    color: #ff6666; /* Ярко-красный для ошибок */
+    color: #ff6666;
     border-left: 4px solid #ff6666;
 }
 
 /* Стили для контента внутри AI сообщения */
-.ai-message p {
-    margin-bottom: 1em;
+.ai-response p {
+    margin-bottom: 0.8em; /* Adjusted margin */
 }
 
-.ai-message strong {
+.ai-response strong {
     color: var(--accent-secondary);
 }
 
-.ai-message ul, .ai-message ol {
-    margin: 1em 0;
-    padding-left: 1.5em;
+.ai-response ul, .ai-response ol {
+    margin: 0.8em 0; /* Adjusted margin */
+    padding-left: 1.8em; /* More indent */
 }
 
-.ai-message li {
-    margin-bottom: 0.5em;
+.ai-response li {
+    margin-bottom: 0.4em; /* Tighter list spacing */
+    font-size: 0.95rem; /* Consistent font size */
 }
 
-.ai-message h3 {
+.ai-response h3 {
     color: var(--accent-primary);
     margin-top: 1.5em;
     margin-bottom: 0.8em;
-    font-size: 1.2em;
+    font-size: 1.15rem; /* Consistent heading size */
+    font-weight: 600;
 }
 
-.ai-message blockquote {
+.ai-response blockquote {
     border-left: 4px solid var(--text-secondary);
     padding-left: 1em;
     margin: 1em 0;
     color: var(--text-secondary);
     font-style: italic;
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 4px;
+    padding: 10px 15px;
 }
 
 
-/* --- LAW CARDS --- */
+/* --- LAW CARDS / RELEVANT ARTICLES SECTION --- */
 .laws-container {
-    margin-top: 2rem; /* Уменьшил отступ */
-    padding-top: 1.5rem; /* Уменьшил отступ */
-    border-top: 1px solid var(--border-color);
+    margin-top: 2rem;
+    padding: 20px; /* Add padding to the container itself */
+    background-color: var(--bg-primary); /* Lighter background for this section */
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 
 .laws-header {
     color: var(--accent-primary);
     font-size: 1.4rem;
     margin-bottom: 1.5rem;
-    text-align: center;
+    text-align: left; /* Align to left */
+    font-weight: 600;
 }
 
-.law-card {
-    background-color: var(--bg-primary); /* Сделал фон карточек темнее, чтобы контрастировали */
+/* Accordion Styling for Law Cards */
+.accordion-item {
+    background-color: var(--bg-secondary); /* Background for each item */
     border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    transition: transform 0.2s ease-in-out;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
 
-.law-card:hover {
-    transform: translateY(-5px);
+.accordion-item.active {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 15px rgba(0,188,212,0.2);
 }
 
-.card-header {
-    margin-bottom: 1rem;
+.accordion-header {
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.05rem; /* Consistent font size */
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: background-color 0.2s ease;
+}
+
+.accordion-header:hover {
+    background-color: #2a2a2a;
+}
+
+.accordion-icon {
+    font-size: 0.9rem;
+    color: var(--accent-primary);
+    transition: transform 0.3s ease;
+}
+
+.accordion-item.active .accordion-icon {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, padding 0.4s ease-out; /* Slower transition */
+    padding: 0 20px;
+    background-color: var(--bg-primary); /* Content background slightly darker for contrast */
+}
+
+.accordion-item.active .accordion-content {
+    padding: 15px 20px;
+    max-height: 500px; /* Adjust based on max expected content height */
 }
 
 .card-title {
     color: var(--text-primary);
-    font-size: 1.15rem;
+    font-size: 1.1rem; /* Slightly smaller for sub-titles */
     margin: 0;
     line-height: 1.4;
 }
@@ -361,7 +435,7 @@ button#submitBtn:disabled {
 
 .card-body p {
     color: var(--text-secondary);
-    font-size: 0.95rem;
+    font-size: 0.95rem; /* Consistent font size */
     margin-bottom: 1rem;
 }
 
@@ -409,7 +483,7 @@ button#submitBtn:disabled {
     padding: 10px 15px;
     border-radius: 6px;
     margin-bottom: 15px;
-    font-size: 0.9em;
+    font-size: 0.95rem; /* Consistent size */
     color: #fff;
 }
 
@@ -444,7 +518,7 @@ button#submitBtn:disabled {
     margin-left: -120px;
     opacity: 0;
     transition: opacity 0.3s;
-    font-size: 12px;
+    font-size: 0.75rem; /* Smaller tooltip text */
     line-height: 1.4;
 }
 
@@ -467,10 +541,11 @@ button#submitBtn:disabled {
 /* --- ФУТЕР --- */
 footer {
     background: var(--bg-header);
-    padding: 16px 0;
+    padding: 1rem 0; /* Consistent padding */
     width: 100%;
     border-top: 1px solid var(--border-color);
     margin-top: auto;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .footer-content {
@@ -479,6 +554,7 @@ footer {
     align-items: center;
     width: 100%;
     color: var(--text-secondary);
+    font-size: 0.9rem; /* Consistent font size */
 }
 
 /* --- ЗАГРУЗКА ФАЙЛА (DRAG AND DROP) --- */
@@ -506,20 +582,21 @@ footer {
 }
 
 .upload-icon {
-    font-size: 44px;
+    font-size: 48px; /* Larger icon */
     color: var(--accent-primary);
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .drag-text {
-    font-size: 1.2em;
+    font-size: 1.15rem; /* Consistent font size */
     color: var(--text-primary);
     margin-bottom: 8px;
+    font-weight: 500;
 }
 
 .or-text {
     color: var(--text-secondary);
-    font-size: 0.9em;
+    font-size: 0.9rem; /* Consistent font size */
     margin: 10px 0;
 }
 
@@ -533,6 +610,7 @@ footer {
     margin: 12px 0;
     display: inline-block;
     transition: background-color 0.2s;
+    font-size: 0.95rem; /* Consistent font size */
 }
 
 .browse-button:hover {
@@ -541,7 +619,7 @@ footer {
 
 .file-requirements {
     color: var(--text-secondary);
-    font-size: 0.8em;
+    font-size: 0.85rem; /* Consistent font size */
     margin-top: 8px;
 }
 
@@ -549,32 +627,37 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 12px;
+    margin-top: 18px; /* More space */
     flex-wrap: wrap;
-    gap: 24px;
+    gap: 1.5rem; /* Consistent gap */
 }
 
 .file-info {
     color: var(--text-secondary);
-    font-size: 0.9em;
+    font-size: 0.9rem; /* Consistent font size */
+    display: flex; /* For icon + text */
+    align-items: center;
+    gap: 8px;
 }
 
 .action-buttons {
     display: flex;
-    gap: 18px;
+    gap: 1rem; /* Consistent gap */
 }
 
 .action-buttons .btn {
-    padding: 8px 16px;
+    padding: 10px 18px; /* More padding */
     border: none;
-    border-radius: 6px;
+    border-radius: 8px; /* Consistent border-radius */
     font-weight: bold;
     cursor: pointer;
+    font-size: 0.95rem; /* Consistent font size */
 }
 
 .clear-button {
     background-color: #555;
     color: #eee;
+    transition: background-color 0.2s;
 }
 
 .clear-button:hover {
@@ -584,14 +667,14 @@ footer {
 .analyze-button {
     background-color: var(--accent-primary);
     color: #121212;
+    transition: background-color 0.2s;
+    display: flex; /* For icon + text */
+    align-items: center;
+    gap: 8px;
 }
 
 .analyze-button:hover {
     background-color: var(--accent-secondary);
-}
-
-.spinner {
-    margin-left: 8px;
 }
 
 /* --- LOADER/СПИННЕР --- */
@@ -616,14 +699,14 @@ footer {
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.12);
     color: #f4f4f4;
-    font-size: 1.1em;
+    font-size: 1.05rem; /* Consistent font size */
     max-width: 360px;
     margin: 30px auto;
 }
 
 #fileSpinner p, #spinner p {
     margin-bottom: 16px;
-    font-size: 1.06em;
+    font-size: 1rem; /* Consistent font size */
     letter-spacing: 0.01em;
 }
 
@@ -632,14 +715,14 @@ footer {
     min-height: 64px;
     max-height: 180px;
     resize: vertical;
-    margin-top: 10px;
+    margin-top: 15px; /* More space */
     margin-bottom: 0;
     padding: 1rem;
-    background: linear-gradient(120deg, #171e22 60%, #19232b 100%);
-    border: 1.5px solid var(--accent-primary);
+    background: var(--input-bg); /* Use input-bg */
+    border: 1.5px solid var(--input-border); /* Use input-border */
     border-radius: 9px;
     color: var(--text-primary);
-    font-size: 1.05em;
+    font-size: 1rem; /* Consistent font size */
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
     box-shadow: 0 2px 10px 0 rgba(0,188,212,0.04);
@@ -647,30 +730,91 @@ footer {
 .file-question-input:focus {
     border-color: var(--accent-secondary);
     outline: none;
-    box-shadow: 0 0 0 2px rgba(0,230,118,0.13);
+    box-shadow: 0 0 0 3px rgba(0,230,118,0.13); /* Soft focus shadow */
 }
+
+/* --- Persistent Chat Input at the bottom --- */
+.chat-input-area {
+    padding: 15px 25px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-secondary); /* Match sidebar */
+    display: flex;
+    align-items: center;
+    gap: 15px; /* More space */
+    flex-shrink: 0; /* Don't let it shrink */
+}
+
+.chat-input {
+    flex-grow: 1;
+    padding: 14px 20px;
+    border: 1px solid var(--input-border);
+    border-radius: 28px;
+    font-size: 1rem; /* Consistent font size */
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chat-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.chat-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(0,188,212,0.2);
+}
+
+.send-button {
+    background-color: var(--accent-primary);
+    color: #121212; /* Text color for send button */
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1.3rem; /* Larger icon */
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0,188,212,0.3);
+}
+
+.send-button:hover {
+    background-color: var(--accent-secondary);
+    transform: translateY(-1px);
+}
+
 
 /* --- АДАПТИВ ДЛЯ МОБИЛЬНЫХ --- */
 @media (max-width: 800px) {
     .app-container {
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1rem; /* Reduced gap */
         padding: 0;
         border-radius: 0;
         box-shadow: none;
+        height: 100vh; /* Full height on mobile */
+        min-height: auto;
     }
     .sidebar {
         width: 100%;
-        max-height: 250px;
+        max-height: 200px; /* Tighter sidebar on mobile */
         overflow-y: auto;
         border-right: none;
         border-bottom: 1px solid var(--border-color);
         border-radius: 0;
+        padding: 1rem;
+    }
+    .sidebar h2 {
+        font-size: 1.1rem;
+        margin-bottom: 0.8rem;
     }
     #chat-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px; /* Tighter spacing */
     }
     #chat-list li {
         flex-grow: 1;
@@ -679,13 +823,19 @@ footer {
     #chat-list button {
         text-align: center;
         padding: 0.5rem 0.75rem;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
+        border-radius: 6px;
     }
-    #start-new-conversation-sidebar {
+    .new-conversation-btn {
+        width: 100%;
         margin-top: 1rem;
+        padding: 10px;
+        font-size: 0.95rem;
     }
     .main-content-area {
         padding: 1rem;
+        flex-grow: 1;
+        overflow-y: auto;
     }
     body {
         font-size: 15px;
@@ -693,6 +843,22 @@ footer {
     header {
         flex-direction: column;
         gap: 10px;
+        padding: 0.8rem 1rem;
+    }
+    header h1 {
+        font-size: 1.4rem;
+    }
+    header nav {
+        flex-direction: row; /* Keep nav horizontal if possible, or stacked if needed */
+        align-items: center;
+        gap: 10px;
+        margin-top: 0;
+        flex-wrap: wrap; /* Allow wrapping */
+        justify-content: center;
+    }
+    nav a {
+        margin: 0 0.5rem; /* Smaller margins */
+        font-size: 0.85rem;
     }
     main {
         padding: 0;
@@ -705,34 +871,30 @@ footer {
         width: 100%;
         justify-content: space-between;
     }
-    header nav {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-        margin-top: 8px;
-    }
     .footer-content {
-        font-size: 14px;
-        padding: 10px 0;
+        font-size: 0.85rem;
+        padding: 0.8rem 0;
     }
-    .user-message, .ai-message {
-        font-size: 0.98em;
-        padding: 12px;
+    .chat-bubble {
+        font-size: 0.95rem;
+        padding: 10px 15px;
+        max-width: 90%; /* Allow bubbles to be wider on small screens */
     }
     textarea#userQuestion {
         min-height: 80px;
-        font-size: 15px;
+        font-size: 0.95rem;
+        padding: 0.8rem;
     }
-    button#submitBtn, .new-conversation-btn {
-        font-size: 15px;
-        padding: 9px 14px;
+    button#submitBtn {
+        font-size: 0.95rem;
+        padding: 10px 15px;
     }
     .upload-card {
         padding: 16px;
     }
     .upload-footer {
         flex-direction: column;
-        gap: 16px;
+        gap: 1rem;
         align-items: stretch;
     }
     .action-buttons {
@@ -745,12 +907,43 @@ footer {
         margin-bottom: 0;
     }
     #fileSpinner, #spinner {
-        font-size: 1em;
+        font-size: 0.95rem;
         padding: 18px 4px;
-        max-width: 98vw;
+        max-width: 95vw;
     }
     .loader {
         width: 28px;
         height: 28px;
+    }
+    .file-question-input {
+        font-size: 0.95rem;
+        padding: 0.8rem;
+        min-height: 50px;
+    }
+    .chat-input-area {
+        padding: 10px 15px;
+        gap: 10px;
+    }
+    .chat-input {
+        padding: 10px 15px;
+        font-size: 0.95rem;
+    }
+    .send-button {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+    .laws-container {
+        padding: 15px;
+    }
+    .laws-header {
+        font-size: 1.2rem;
+    }
+    .accordion-header {
+        font-size: 0.98rem;
+        padding: 12px 15px;
+    }
+    .accordion-content {
+        padding: 10px 15px;
     }
 }
