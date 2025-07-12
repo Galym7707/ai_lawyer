@@ -1,6 +1,5 @@
-# kaz_legal_web_api.py (Версия 4.4 — Улучшенный UX, строгая юрисдикция РК, приоритет уточняющих вопросов)
+# kaz_legal_web_api.py (Версия 4.5 — Исправленная передача законов в промпт, гарантированное создание папки БД)
 from memory import init_db, save_message, load_conversation, delete_conversation
-init_db()
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 import google.generativeai as genai
 import os
@@ -8,11 +7,15 @@ import json
 import re
 from flask_cors import CORS
 import sqlite3
-from memory import DB_PATH
+from memory import DB_PATH # Импортируем DB_PATH из memory.py
+
+# --- Гарантируем создание папки для базы данных перед инициализацией ---
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+init_db() # Инициализируем базу данных после создания папки
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB
-CORS(app, origins=["https://ai-lawyer-tau.vercel.app"])
+CORS(app, origins=["https://ai-lawyer-tau.vercel.app", "http://localhost:3000"]) # Добавьте localhost:3000 для локальной разработки
 
 # --- AI и база законов ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -430,6 +433,8 @@ PROMPT_TEMPLATE = """
 
 **КРАЙНЕ ВАЖНО: ОТВЕЧАЙ ТОЛЬКО НА ОСНОВЕ ЗАКОНОВ РЕСПУБЛИКИ КАЗАХСТАН. Категорически запрещено упоминать, ссылаться или сравнивать с законодательством любых других стран (например, России, РФ, НДФЛ, СНГ, ЕС, США и т.п.). Всегда помни, что твоя юрисдикция — только Казахстан.**
 
+**Обрати особое внимание: в начале каждого запроса пользователя тебе могут быть предоставлены релевантные законодательные положения Казахстана. ТЫ ДОЛЖЕН ОБЯЗАТЕЛЬНО ИСПОЛЬЗОВАТЬ ИХ КАК ОСНОВУ ДЛЯ ОТВЕТА, СТРОГО ПРИДЕРЖИВАЯСЬ ИНФОРМАЦИИ ИЗ ЭТИХ ПОЛОЖЕНИЙ И НЕ ВЫХОДЯ ЗА ИХ РАМКИ В КОНТЕКСТЕ ЮРИСДИКЦИИ РК.**
+
 **1. ПРИОРИТЕТ: АКТИВНЫЙ ЗАПРОС ДОПОЛНИТЕЛЬНОЙ ИНФОРМАЦИИ.**
 Если для формирования исчерпывающего и точного ответа на текущий вопрос пользователя требуется любая личная или уточняющая информация (например, возраст, доход, семейное положение, стаж работы, конкретные даты, детали документа, местоположение), **ТЫ ДОЛЖЕН НЕЗАМЕДЛИТЕЛЬНО И АКТИВНО ЗАДАТЬ ЭТИ УТОЧНЯЮЩИЕ ВОПРОСЫ**.
 **Всегда объясни, почему тебе нужна эта информация и как она поможет в решении проблемы пользователя.**
@@ -504,12 +509,34 @@ def ask_streaming():
     def generate_text():
         try:
             history = load_conversation(session_id)
-            temp_history_for_prompt = history + [{"role": "user", "parts": [question]}]
+            
+            # 1. Находим релевантные законы по ключевым словам из вопроса
+            laws_found = find_laws_by_keywords(question)
+            
+            laws_context_for_ai = ""
+            if laws_found:
+                laws_context_for_ai = "\n\n**ОБЯЗАТЕЛЬНО ИСПОЛЬЗУЙ СЛЕДУЮЩИЕ РЕЛЕВАНТНЫЕ ЗАКОНОДАТЕЛЬНЫЕ ПОЛОЖЕНИЯ КАЗАХСТАНА ПРИ ФОРМИРОВАНИИ ОТВЕТА (не ссылайся на законы других стран!):**\n"
+                for i, law in enumerate(laws_found[:5]): # Ограничиваем до 5 наиболее релевантных законов для контекста
+                    # Обрезаем текст закона, чтобы не превышать лимит токенов модели
+                    laws_context_for_ai += f"--- {law.get('title', 'Без названия')} ---\n{law.get('text', '')[:1500]}...\n\n" 
+            
+            # Формируем список сообщений для модели Gemini
+            messages_for_gemini = []
 
-            full_prompt_with_context = PROMPT_TEMPLATE.format(question=question)
+            # Добавляем PROMPT_TEMPLATE как системную инструкцию в начале новой сессии
+            # Это устанавливает общую роль и правила для модели
+            if not history: 
+                messages_for_gemini.append({"role": "user", "parts": [PROMPT_TEMPLATE]}) 
+            
+            # Добавляем предыдущую историю диалога
+            messages_for_gemini.extend(history)
+            
+            # Добавляем текущий вопрос пользователя, предваряя его контекстом найденных законов
+            current_user_message_parts = [laws_context_for_ai + "\n\n" + question]
+            messages_for_gemini.append({"role": "user", "parts": current_user_message_parts})
 
             stream = model.generate_content(
-                temp_history_for_prompt,
+                messages_for_gemini,
                 stream=True
             )
             full_reply = ""
