@@ -1,21 +1,19 @@
-# kaz_legal_web_api.py (Версия 4.5 — Исправленная передача законов в промпт, гарантированное создание папки БД)
-from memory import init_db, save_message, load_conversation, delete_conversation
+# kaz_legal_web_api.py (Версия 4.5 — Переход на MongoDB, Улучшенный UX, строгая юрисдикция РК, приоритет уточняющих вопросов)
+from memory import init_db, save_message, load_conversation, delete_conversation, get_all_sessions_summary_mongo # Добавили get_all_sessions_summary_mongo
+init_db() # Инициализируем MongoDB соединение при старте приложения
+
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 import google.generativeai as genai
 import os
 import json
 import re
 from flask_cors import CORS
-import sqlite3
-from memory import DB_PATH # Импортируем DB_PATH из memory.py
-
-# --- Гарантируем создание папки для базы данных перед инициализацией ---
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-init_db() # Инициализируем базу данных после создания папки
+# import sqlite3 # УДАЛИТЬ: больше не нужен
+# from memory import DB_PATH # УДАЛИТЬ: больше не нужен
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB
-CORS(app, origins=["https://ai-lawyer-tau.vercel.app", "http://localhost:3000"]) # Добавьте localhost:3000 для локальной разработки
+CORS(app, origins=["https://ai-lawyer-tau.vercel.app"]) # Убедитесь, что здесь указан домен вашего фронтенда
 
 # --- AI и база законов ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -183,6 +181,7 @@ def find_laws_by_keywords(question, min_relevance=12, max_results=8):
     question_lower = question.lower()
     question_words = set(re.findall(r'\b\w{3,}\b', question_lower))
     if not LAW_DB:
+        print("База законов (LAW_DB) не загружена.")
         return []
 
     priority_codes = []
@@ -249,14 +248,20 @@ def calculate_relevance(expanded_terms, title_lower, text_lower):
 def load_law_db():
     global LAW_DB
     try:
-        if not os.path.exists("laws"):
-            print("Папка 'laws' не найдена. Пожалуйста, убедитесь, что файл 'kazakh_laws.json' находится в папке 'laws' в корне проекта.")
+        # Убедитесь, что папка 'laws' существует и доступна для чтения.
+        # В средах типа Railway или Vercel, если файлы включены в сборку,
+        # они должны быть доступны относительно корневой директории приложения.
+        laws_dir = os.path.join(os.path.dirname(__file__), "laws")
+        json_path = os.path.join(laws_dir, "kazakh_laws.json")
+
+        if not os.path.exists(laws_dir):
+            print(f"Папка '{laws_dir}' не найдена. Убедитесь, что файл 'kazakh_laws.json' находится в папке 'laws' в корне проекта.")
             return
 
-        with open("laws/kazakh_laws.json", "r", encoding="utf-8") as f: raw_db = json.load(f)
+        with open(json_path, "r", encoding="utf-8") as f: raw_db = json.load(f)
         LAW_DB = preprocess_laws_into_articles(raw_db); print(f"✅ База данных загружена! Статей: {len(LAW_DB)}")
     except FileNotFoundError:
-        print(f"❌ Файл 'laws/kazakh_laws.json' не найден. Убедитесь, что он существует.")
+        print(f"❌ Файл '{json_path}' не найден. Убедитесь, что он существует.")
     except Exception as e: print(f"❌ Ошибка загрузки базы: {e}")
 
 def preprocess_laws_into_articles(raw_db):
@@ -274,7 +279,7 @@ def preprocess_laws_into_articles(raw_db):
         if current_title and buffer: records.append({"title": f"{code_name}: {current_title}", "text": " ".join(buffer).strip(), "source": source})
     return records
 
-load_law_db()
+load_law_db() # Загружаем базу законов при старте приложения
 
 # --- Вспомогательные функции форматирования ---
 def determine_source_by_content(content):
@@ -433,8 +438,6 @@ PROMPT_TEMPLATE = """
 
 **КРАЙНЕ ВАЖНО: ОТВЕЧАЙ ТОЛЬКО НА ОСНОВЕ ЗАКОНОВ РЕСПУБЛИКИ КАЗАХСТАН. Категорически запрещено упоминать, ссылаться или сравнивать с законодательством любых других стран (например, России, РФ, НДФЛ, СНГ, ЕС, США и т.п.). Всегда помни, что твоя юрисдикция — только Казахстан.**
 
-**Обрати особое внимание: в начале каждого запроса пользователя тебе могут быть предоставлены релевантные законодательные положения Казахстана. ТЫ ДОЛЖЕН ОБЯЗАТЕЛЬНО ИСПОЛЬЗОВАТЬ ИХ КАК ОСНОВУ ДЛЯ ОТВЕТА, СТРОГО ПРИДЕРЖИВАЯСЬ ИНФОРМАЦИИ ИЗ ЭТИХ ПОЛОЖЕНИЙ И НЕ ВЫХОДЯ ЗА ИХ РАМКИ В КОНТЕКСТЕ ЮРИСДИКЦИИ РК.**
-
 **1. ПРИОРИТЕТ: АКТИВНЫЙ ЗАПРОС ДОПОЛНИТЕЛЬНОЙ ИНФОРМАЦИИ.**
 Если для формирования исчерпывающего и точного ответа на текущий вопрос пользователя требуется любая личная или уточняющая информация (например, возраст, доход, семейное положение, стаж работы, конкретные даты, детали документа, местоположение), **ТЫ ДОЛЖЕН НЕЗАМЕДЛИТЕЛЬНО И АКТИВНО ЗАДАТЬ ЭТИ УТОЧНЯЮЩИЕ ВОПРОСЫ**.
 **Всегда объясни, почему тебе нужна эта информация и как она поможет в решении проблемы пользователя.**
@@ -509,34 +512,38 @@ def ask_streaming():
     def generate_text():
         try:
             history = load_conversation(session_id)
-            
-            # 1. Находим релевантные законы по ключевым словам из вопроса
+            temp_history_for_prompt = history + [{"role": "user", "parts": [question]}]
+
+            # При отправке истории в Gemini, она должна быть в формате, который понимает модель.
+            # Если вы хотите передать найденные законы как контекст, это нужно делать здесь.
+            # На данный момент, PROMPT_TEMPLATE уже достаточно включает роль юриста и юрисдикцию.
+            # Добавление законов в контекст, если они найдены, может выглядеть так:
             laws_found = find_laws_by_keywords(question)
-            
             laws_context_for_ai = ""
             if laws_found:
-                laws_context_for_ai = "\n\n**ОБЯЗАТЕЛЬНО ИСПОЛЬЗУЙ СЛЕДУЮЩИЕ РЕЛЕВАНТНЫЕ ЗАКОНОДАТЕЛЬНЫЕ ПОЛОЖЕНИЯ КАЗАХСТАНА ПРИ ФОРМИРОВАНИИ ОТВЕТА (не ссылайся на законы других стран!):**\n"
-                for i, law in enumerate(laws_found[:5]): # Ограничиваем до 5 наиболее релевантных законов для контекста
-                    # Обрезаем текст закона, чтобы не превышать лимит токенов модели
-                    laws_context_for_ai += f"--- {law.get('title', 'Без названия')} ---\n{law.get('text', '')[:1500]}...\n\n" 
-            
-            # Формируем список сообщений для модели Gemini
-            messages_for_gemini = []
+                laws_context_for_ai = "\n\n**Релевантная информация из законодательства РК:**\n"
+                for i, law in enumerate(laws_found[:5]): # Отправляем до 5 самых релевантных законов
+                    laws_context_for_ai += f"### {law.get('title', 'Статья')}\n{law.get('text', '')[:1500]}...\n\n" # Обрезаем текст для экономии токенов
 
-            # Добавляем PROMPT_TEMPLATE как системную инструкцию в начале новой сессии
-            # Это устанавливает общую роль и правила для модели
-            if not history: 
-                messages_for_gemini.append({"role": "user", "parts": [PROMPT_TEMPLATE]}) 
+            # Формируем полный запрос для модели, включая контекст законов
+            # Добавляем laws_context_for_ai в начало или конец PROMPT_TEMPLATE или в отдельные части истории.
+            # Для простоты, пока будем добавлять к вопросу, если законы найдены.
             
-            # Добавляем предыдущую историю диалога
-            messages_for_gemini.extend(history)
-            
-            # Добавляем текущий вопрос пользователя, предваряя его контекстом найденных законов
-            current_user_message_parts = [laws_context_for_ai + "\n\n" + question]
-            messages_for_gemini.append({"role": "user", "parts": current_user_message_parts})
+            # Вариант 1: Добавить законы в историю как системное сообщение (наиболее правильный)
+            model_history_with_laws = []
+            if laws_context_for_ai:
+                model_history_with_laws.append({"role": "system", "parts": [PROMPT_TEMPLATE + laws_context_for_ai]})
+            else:
+                model_history_with_laws.append({"role": "system", "parts": [PROMPT_TEMPLATE]})
+
+            # Добавляем предыдущую историю чата
+            model_history_with_laws.extend(history)
+            # Добавляем текущий вопрос пользователя
+            model_history_with_laws.append({"role": "user", "parts": [question]})
+
 
             stream = model.generate_content(
-                messages_for_gemini,
+                model_history_with_laws, # Передаем всю историю с контекстом
                 stream=True
             )
             full_reply = ""
@@ -591,7 +598,8 @@ def analyze_file():
         if not file:
             return jsonify({"error": "Файл не получен", "session_id": session_id}), 400
 
-        filepath = os.path.join("/tmp", file.filename)
+        # Vercel и Railway имеют временные файловые системы, /tmp подходит для временных файлов
+        filepath = os.path.join("/tmp", file.filename) 
         file.save(filepath)
 
         if file.filename.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp")):
@@ -613,7 +621,7 @@ def analyze_file():
             prompt_for_text_file = FILE_ANALYSIS_PROMPT.format(text=text[:8000], question=question)
             response = model.generate_content(prompt_for_text_file)
 
-        os.remove(filepath)
+        os.remove(filepath) # Удаляем временный файл после обработки
 
         if not hasattr(response, "text") or not response.text:
             return jsonify({"error": "AI юрист не смог проанализировать файл или файл пустой.", "session_id": session_id}), 400
@@ -642,25 +650,9 @@ def get_history():
 @app.route("/get-all-sessions-summary", methods=["GET"])
 def get_all_sessions_summary():
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.execute("SELECT DISTINCT session_id FROM memory ORDER BY message_index DESC") # ORDER BY message_index DESC для более свежих вверху
-            session_ids = [row[0] for row in cursor.fetchall()]
-
-            sessions_summary = []
-            for sid in session_ids:
-                first_user_message = conn.execute(
-                    "SELECT content FROM memory WHERE session_id=? AND role='user' ORDER BY message_index ASC LIMIT 1",
-                    (sid,)
-                ).fetchone()
-                
-                title = f"Новый чат" # Дефолтный заголовок для пустых или новых сессий
-                if first_user_message:
-                    title = first_user_message[0]
-                    if len(title) > 50:
-                        title = title[:50] + "..."
-
-                sessions_summary.append({"id": sid, "title": title})
-            return jsonify({"sessions": sessions_summary})
+        # Используем новую функцию для MongoDB
+        sessions_summary = get_all_sessions_summary_mongo()
+        return jsonify({"sessions": sessions_summary})
     except Exception as e:
         print(f"❌ Ошибка в /get-all-sessions-summary: {e}")
         return jsonify({"error": f"Ошибка сервера при получении сводки сессий: {str(e)}"}), 500
