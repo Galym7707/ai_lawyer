@@ -1,4 +1,4 @@
-# kaz_legal_web_api.py (Версия 4.6 — Улучшенная производительность поиска, XSS защита, асинхронность, загрузка документов)
+# kaz_legal_web_api.py (Версия 4.7 — Оптимизация токенов, инвертированный индекс, сниппеты законов)
 from memory import init_db, save_message, load_conversation, delete_conversation, get_all_sessions_summary_mongo
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 import google.generativeai as genai
@@ -14,161 +14,149 @@ from docx import Document # Для чтения .docx
 from PyPDF2 import PdfReader # Для чтения .pdf
 import logging # Для логирования
 
+# --- НОВОЕ: Импортируем helpers ---
+from helpers import expand_keywords, build_snippet
+
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB (1 ГБ)
 CORS(app, origins=["https://ai-lawyer-tau.vercel.app", "http://localhost:5000"]) # Добавьте ваш локальный адрес для разработки
 
 # --- Инициализация AI и Базы Законов ---
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    logging.error("❌ Ошибка: Переменная окружения GEMINI_API_KEY не установлена.")
-    # Вместо sys.exit() в Flask приложении лучше вернуть ошибку при запросе,
-    # или инициализировать модель только при наличии ключа.
-    # Для демонстрации, пока оставим заглушку, но в продакшене лучше сразу прерывать.
-    genai.configure(api_key="YOUR_FALLBACK_API_KEY_OR_HANDLE_ERROR")
-else:
-    genai.configure(api_key=GEMINI_API_KEY)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel(
+    'gemini-1.5-flash', 
+    generation_config={"response_mime_type": "text/plain", "temperature": 0.7},
+    safety_settings=[
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ]
+)
+multimodal_model = genai.GenerativeModel( # Модель для работы с изображениями и текстом
+    'gemini-1.5-flash', 
+    generation_config={"response_mime_type": "text/plain", "temperature": 0.7},
+    safety_settings=[
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ]
+)
 
-# Используем меньшую температуру для более точных юридических ответов
-model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "text/plain", "temperature": 0.3})
-multimodal_model = genai.GenerativeModel('gemini-1.5-flash') # Модель для работы с мультимодальным вводом
-
-LAW_DB = [] # Список для хранения загруженных законов
-LAW_INDEX = {} # Инвертированный индекс для быстрого поиска законов
-executor = ThreadPoolExecutor(max_workers=5) # Пул потоков для асинхронных операций
-
-# Словарь синонимов для расширения поисковых запросов
+LAW_DB = []
+LAW_INDEX = {} # Инвертированный индекс для быстрого поиска
+# --- УЛУЧШЕНИЕ: Максимально расширенный словарь синонимов (с добавлением налоговых терминов) ---
 LEGAL_SYNONYMS = {
-    'увольнение': ['уволен', 'уволили', 'расторжение трудового договора', 'прекращение работы'],
-    'пособия': ['выплаты', 'компенсации', 'льготы', 'государственная помощь'],
-    'налоги': ['налогообложение', 'фискальные сборы', 'НДС', 'ИПН', 'корпоративный подоходный налог'],
-    'наследство': ['наследование', 'завещание', 'наследники', 'наследственное право'],
-    'брак': ['супружество', 'семейные отношения', 'развод', 'алименты'],
-    'кредит': ['займ', 'задолженность', 'ипотека', 'банковский кредит'],
-    'штраф': ['административное взыскание', 'пеня', 'неустойка'],
-    'договор': ['соглашение', 'контракт', 'сделка', 'обязательство'],
-    'собственность': ['имущество', 'право собственности', 'владение', 'недвижимость'],
-    'суд': ['судебное разбирательство', 'исковое заявление', 'процесс', 'правосудие'],
-    'гражданство': ['ВНЖ', 'ПМЖ', 'паспорт', 'иностранцы'],
-    'дорога': ['ПДД', 'ДТП', 'автомобиль', 'транспорт'],
-    'земля': ['земельный участок', 'землепользование', 'сельское хозяйство'],
-    'государство': ['правительство', 'госорганы', 'бюджет'],
-    'пенсия': ['пенсионные отчисления', 'пенсионер', 'ЕНПФ'],
-    'защита прав': ['юридическая защита', 'права потребителей', 'омбудсмен'],
+    # Трудовые отношения
+    'увольнение': ['уволен', 'увольняет', 'сокращение', 'расторжение договора', 'прекращение трудового договора', 'расчет', 'увольнение'],
+    'отпуск': ['отпускные', 'ежегодный отпуск', 'трудовой отпуск', 'больничный', 'декретный отпуск'],
+    'зарплата': ['заработная плата', 'оплата труда', 'выплата', 'аванс', 'расчет', 'оклад', 'премия'],
+    'трудовой договор': ['трудовой контракт', 'договор', 'соглашение о труде', 'контракт'],
+    'работодатель': ['компания', 'фирма', 'предприятие', 'начальник', 'руководство', 'организация'],
+    'работник': ['сотрудник', 'персонал', 'служащий', 'подчиненный'],
+    # Налоги
+    'ИП': ['индивидуальный предприниматель', 'предприниматель', 'ИПшник', 'частник'],
+    'УСН': ['упрощенная система налогообложения', 'упрощенка'],
+    'налог': ['налоги', 'налоговый', 'сбор', 'пошлина', 'НДС', 'КПН', 'ИПН', 'социальный налог', 'отчисления', 'взносы'],
+    'ЕНП': ['единый совокупный платеж'],
+    'патент': ['специальный налоговый режим на основе патента'],
+    'декларация': ['налоговая декларация', 'отчетность'],
+    'срок': ['сроки', 'период', 'дата'],
+    'штраф': ['пени', 'взыскание'],
+    # Семья и брак
+    'развод': ['расторжение брака', 'развод', 'алименты', 'раздел имущества'],
+    'брак': ['женитьба', 'семейный союз', 'супружество'],
+    'алименты': ['выплаты на ребенка', 'содержание'],
+    'имущество': ['недвижимость', 'активы', 'собственность'],
+    # Уголовное право
+    'кража': ['хищение', 'воровство'],
+    'мошенничество': ['обман', 'афера'],
+    'преступление': ['правонарушение', 'уголовное дело'],
+    'наказание': ['срок', 'тюрьма', 'штраф', 'лишение свободы'],
+    # Административное право
+    'штраф': ['административный штраф', 'взыскание'],
+    'нарушение': ['проступок', 'правонарушение'],
+    'протокол': ['административный протокол'],
+    # Гражданское право
+    'договор': ['контракт', 'соглашение'],
+    'возмещение ущерба': ['компенсация', 'возмещение убытков'],
+    'иск': ['исковое заявление', 'судебный иск'],
+    'собственность': ['право собственности', 'имущество'],
+    # Общие юридические термины
+    'закон': ['кодекс', 'нормативный акт', 'постановление', 'правила'],
+    'статья': ['пункт', 'часть', 'подпункт'],
+    'суд': ['судебный орган', 'правосудие', 'истец', 'ответчик'],
+    'жалоба': ['обращение', 'заявление', 'петиция'],
+    'консультация': ['совет', 'помощь', 'разъяснение'],
+    'документ': ['бумага', 'справка', 'акт', 'удостоверение'],
 }
 
-
-# Функция для загрузки законов и построения инвертированного индекса
 def load_laws():
     global LAW_DB, LAW_INDEX
     try:
-        # Проверяем наличие файла laws/kazakh_laws.json
-        laws_file_path = 'laws/kazakh_laws.json'
-        if not os.path.exists(laws_file_path):
-            logging.error(f"❌ Ошибка: Файл законов не найден по пути: {laws_file_path}")
-            return
-
+        # Construct the absolute path to kazakh_laws.json
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        laws_file_path = os.path.join(base_dir, 'laws', 'kazakh_laws.json')
+        
         with open(laws_file_path, 'r', encoding='utf-8') as f:
             LAW_DB = json.load(f)
+        logging.info(f"✅ Загружено {len(LAW_DB)} законов.")
         
         # Построение инвертированного индекса
         LAW_INDEX = {}
         for i, law in enumerate(LAW_DB):
-            law_id = i # Используем индекс как ID
-            
-            # Токенизируем заголовок и текст, приводим к нижнему регистру
             text_content = (law.get('title', '') + ' ' + law.get('text', '')).lower()
             words = re.findall(r'\b\w+\b', text_content)
-            
             for word in words:
-                # Добавляем синонимы в индекс
-                for synonym_group in LEGAL_SYNONYMS.values():
-                    if word in synonym_group:
-                        for s_word in synonym_group:
-                            if s_word not in LAW_INDEX:
-                                LAW_INDEX[s_word] = set()
-                            LAW_INDEX[s_word].add(law_id)
                 if word not in LAW_INDEX:
-                    LAW_INDEX[word] = set()
-                LAW_INDEX[word].add(law_id)
-        logging.info(f"✅ Загружено {len(LAW_DB)} законов и построен инвертированный индекс.")
+                    LAW_INDEX[word] = []
+                LAW_INDEX[word].append(i) # Сохраняем индекс закона в LAW_DB
+        logging.info("✅ Построен инвертированный индекс.")
+
     except FileNotFoundError:
-        logging.error(f"❌ Ошибка: Файл 'laws/kazakh_laws.json' не найден.")
+        logging.error(f"❌ Ошибка: Файл законов не найден по пути: {laws_file_path}")
     except json.JSONDecodeError as e:
-        logging.error(f"❌ Ошибка декодирования JSON в 'laws/kazakh_laws.json': {e}")
+        logging.error(f"❌ Ошибка декодирования JSON в файле законов: {e}")
     except Exception as e:
         logging.error(f"❌ Неизвестная ошибка при загрузке законов: {e}")
 
-# Загружаем законы при старте приложения
-load_laws()
+load_laws() # Load laws at startup
 init_db() # Инициализируем MongoDB соединение при старте приложения
 
-# --- Вспомогательные функции ---
-def find_laws_by_keywords(question):
-    """Использует инвертированный индекс для поиска релевантных законов."""
-    question_lower = question.lower()
-    keywords = re.findall(r'\b\w+\b', question_lower)
-    
-    # Расширяем ключевые слова синонимами
-    expanded_keywords = set(keywords)
-    for kw in keywords:
-        for group in LEGAL_SYNONYMS.values():
-            if kw in group:
-                expanded_keywords.update(group)
-    
-    relevant_law_ids = set()
-    for keyword in expanded_keywords:
-        if keyword in LAW_INDEX:
-            relevant_law_ids.update(LAW_INDEX[keyword])
-            
-    relevant_laws = [LAW_DB[lid] for lid in relevant_law_ids]
-    
-    # Сортируем по степени релевантности (количество совпадений ключевых слов)
-    # Это простая метрика, можно улучшить TF-IDF или BM25
-    def calculate_relevance(law_text):
-        count = 0
-        law_text_lower = law_text.lower()
-        for kw in expanded_keywords:
-            count += law_text_lower.count(kw)
-        return count
-
-    # Ограничиваем количество законов для передачи в модель
-    # Это важно для контроля токенов и фокуса модели
-    relevant_laws_sorted = sorted(relevant_laws, key=lambda x: calculate_relevance(x.get('text', '') + x.get('title', '')), reverse=True)[:5] # Берем до 5 самых релевантных
-    
-    return relevant_laws_sorted
-
-
-# --- Функции обработки документов ---
-def extract_text_from_pdf(file_stream):
+# --- НОВОЕ: Функция для извлечения текста из документов с ограничением ---
+def extract_text_from_pdf(file_stream, max_chars=50000): # Лимит 50,000 символов
     reader = PdfReader(file_stream)
     text = ""
     for page in reader.pages:
         text += page.extract_text() or ""
-    return text
+        if len(text) > max_chars: # Прекращаем чтение, если достигнут лимит
+            text = text[:max_chars]
+            break
+    return text.strip()
 
-def extract_text_from_docx(file_stream):
+def extract_text_from_docx(file_stream, max_chars=50000): # Лимит 50,000 символов
     document = Document(file_stream)
     text = ""
     for paragraph in document.paragraphs:
         text += paragraph.text + "\n"
-    return text
-
-def extract_text_from_image(file_stream):
-    # Google Generative AI Vision models can directly process image content.
-    # We will pass the image directly to the multimodal model.
-    return None # Text extraction from image will be handled by the model itself
+        if len(text) > max_chars: # Прекращаем чтение
+            text = text[:max_chars]
+            break
+    return text.strip()
 
 def get_file_parts(file):
-    """Возвращает содержимое файла в формате, пригодном для передачи в модель."""
-    file_stream = io.BytesIO(file.read())
+    # Determine MIME type from the file object's mimetype attribute
     mime_type = file.mimetype
-
-    if 'image' in mime_type:
-        return [genai.upload_file(file_stream.getvalue(), mime_type=mime_type)]
+    file_stream = io.BytesIO(file.read()) # Создаем байтовый поток из FileStorage
+    
+    if mime_type == 'image/jpeg' or mime_type == 'image/png':
+        # Для изображений возвращаем FileData
+        return [genai.types.FileData(mime_type=mime_type, data=file_stream.getvalue())]
     elif mime_type == 'application/pdf':
         text_content = extract_text_from_pdf(file_stream)
         return [{"text": text_content}]
@@ -177,16 +165,69 @@ def get_file_parts(file):
         return [{"text": text_content}]
     elif mime_type == 'text/plain':
         text_content = file_stream.read().decode('utf-8')
-        return [{"text": text_content}]
+        return [{"text": text_content[:50000]}] # Лимит 50,000 символов для текстовых файлов
     else:
-        raise ValueError(f"Неподдерживаемый тип файла: {mime_type}")
+        logging.warning(f"Неподдерживаемый тип файла: {mime_type}")
+        return []
 
+# --- НОВОЕ: Полностью заменяем find_laws_by_keywords ---
+def find_laws_by_keywords(question, max_snippet_chars: int = 4000):
+    """
+    Ищет релевантные законы и возвращает список словарей с
+    title / article / text (=короткий сниппет), не превышая max_snippet_chars.
+    """
+    question_lower = question.lower()
+    raw_keywords = set(re.findall(r'\b\w+\b', question_lower))
+    expanded_keywords = expand_keywords(raw_keywords, LEGAL_SYNONYMS)
 
-# --- Функции для взаимодействия с AI ---
+    # Собираем id статей из инвертированного индекса
+    law_ids = set()
+    for kw in expanded_keywords:
+        law_ids.update(LAW_INDEX.get(kw, []))
+
+    # Считаем простую релевантность
+    def relevance(law_index):
+        law = LAW_DB[law_index]
+        txt = (law.get('title', '') + ' ' + law.get('text', '')).lower()
+        return sum(txt.count(kw) for kw in expanded_keywords)
+
+    # Сортируем, готовим сниппеты, следим за общим объёмом
+    selected, total = [], 0
+    # Сортируем индексы законов по релевантности, затем получаем сами законы
+    sorted_law_indices = sorted(list(law_ids), key=relevance, reverse=True)
+    
+    for law_index in sorted_law_indices:
+        law = LAW_DB[law_index]
+        # Используем build_snippet для создания компактного сниппета
+        snippet = build_snippet(law.get('text', ''), expanded_keywords)
+        
+        law_entry = {
+            "title":   law.get('title', ''),
+            "article": law.get('article', ''),
+            "text":    snippet
+        }
+        # Оцениваем размер в символах для простоты (токены примерно коррелируют)
+        size = len(snippet) + len(law_entry["title"]) + len(law_entry["article"]) + 50 # Добавляем запас
+        
+        if total + size > max_snippet_chars:
+            logging.info(f"🛑 Достигнут лимит символов для сниппетов законов. Остановились на {len(selected)} законах. Общий размер: {total} символов.")
+            break
+        
+        selected.append(law_entry)
+        total += size
+        
+        if len(selected) >= 8:   # максимум 8 статей на запрос (можно настроить)
+            logging.info(f"🛑 Достигнут лимит по количеству статей. Выбрано {len(selected)} статей.")
+            break
+            
+    logging.info(f"✅ Найдено {len(selected)} законов, передано {total} символов.")
+    return selected
+
+# --- Генерация ответа AI ---
 def generate_response(chat_history_formatted, user_question, relevant_laws_info=None, document_content=None):
     prompt_parts = []
 
-    # Добавляем системные инструкции
+    # Системная инструкция
     system_instruction = """
     Ты ИИ-юрист из Казахстана. Твоя основная задача — предоставлять юридические консультации строго по законодательству Республики Казахстан. 
     Ты должен отвечать четко, лаконично, ссылаясь на конкретные статьи, пункты и наименования законов, если это возможно. 
@@ -197,9 +238,16 @@ def generate_response(chat_history_formatted, user_question, relevant_laws_info=
     prompt_parts.append({"role": "user", "parts": [{"text": system_instruction}]})
     prompt_parts.append({"role": "model", "parts": [{"text": "Понял. Я готов предоставлять консультации строго по законодательству Республики Казахстан. Задавайте вопросы."}]})
 
+    # --- ОГРАНИЧЕНИЕ ИСТОРИИ ЧАТА ---
+    # Определите, сколько последних сообщений вы хотите сохранить.
+    # Каждая пара (пользователь, модель) - это 2 сообщения.
+    # Начните с небольшого числа, например, 10-20 сообщений.
+    MAX_HISTORY_MESSAGES = 10 # Например, последние 10 сообщений (5 пар диалогов)
+    
+    # Усекаем историю, чтобы в модель попадали только последние N сообщений
+    truncated_chat_history_formatted = chat_history_formatted[-MAX_HISTORY_MESSAGES:]
 
-    # Добавляем историю чата
-    for msg in chat_history_formatted:
+    for msg in truncated_chat_history_formatted:
         prompt_parts.append({"role": msg["role"], "parts": [msg["content"]]})
 
     # Добавляем информацию о законах, если она есть
@@ -214,115 +262,55 @@ def generate_response(chat_history_formatted, user_question, relevant_laws_info=
 
     # Добавляем содержимое документа, если оно есть
     if document_content:
-        # Если document_content - это объект FileData (для изображений), то он уже является частью, которую можно передать
+        # Если это бинарные данные (изображения), добавляем напрямую
         if isinstance(document_content, list) and document_content and isinstance(document_content[0], genai.types.FileData):
-            # Если это список с объектом FileData, передаем его напрямую
             prompt_parts.append({"role": "user", "parts": document_content})
-        else:
-            # Иначе, это текстовое содержимое
+            # Для мультимодальных запросов, текущий вопрос пользователя добавляется после файла
+            final_user_question = f"Мой вопрос: {user_question}"
+            prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
+            logging.info("Отправляем мультимодальный запрос с изображением/файлом.")
+            response = multimodal_model.generate_content(prompt_parts)
+        else: # Иначе это текстовый контент из документа
             doc_text = "\n\nИспользуй следующий документ для ответа:\n"
             if isinstance(document_content, list):
-                # Если это список текстовых частей (из PDF/DOCX)
                 for part in document_content:
                     if "text" in part:
                         doc_text += part["text"] + "\n"
             else:
-                doc_text += str(document_content) # На всякий случай, если передано что-то другое
+                doc_text += str(document_content)
+            
             prompt_parts.append({"role": "user", "parts": [{"text": doc_text}]})
-        prompt_parts.append({"role": "model", "parts": [{"text": "Принял к сведению содержимое документа."}]})
-
-    # Добавляем текущий вопрос пользователя
-    final_user_question = f"Мой вопрос: {user_question}"
-    if document_content and isinstance(document_content, list) and document_content and isinstance(document_content[0], genai.types.FileData):
-        # Если это запрос с изображением, вопрос пользователя идет после изображения
+            prompt_parts.append({"role": "model", "parts": [{"text": "Принял к сведению содержимое документа."}]})
+            
+            # Добавляем текущий вопрос пользователя для текстовых документов
+            final_user_question = f"Мой вопрос: {user_question}"
+            prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
+            logging.info("Отправляем текстовый запрос с документом.")
+            response = model.generate_content(prompt_parts)
+    else: # Если документа нет, просто добавляем вопрос пользователя
+        final_user_question = f"Мой вопрос: {user_question}"
         prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
-    elif document_content:
-        # Если это документ, уточняем, что вопрос относится к документу
-        prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
-    else:
-        prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
-
-    # Проверяем, какая модель нужна
-    if document_content and isinstance(document_content, list) and document_content and isinstance(document_content[0], genai.types.FileData):
-        # Если есть FileData (изображение), используем мультимодальную модель
-        response = multimodal_model.generate_content(prompt_parts)
-    else:
-        # Иначе, используем обычную модель
+        logging.info("Отправляем текстовый запрос без документа.")
         response = model.generate_content(prompt_parts)
-    
-    # Очистка ответа от XSS
+
     clean_answer = bleach.clean(response.text, tags=bleach.sanitizer.ALLOWED_TAGS + ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a'], attributes={'a': ['href', 'title']}, strip=True)
     return clean_answer
 
-
-# --- API Endpoints ---
-@app.route("/")
-def serve_index():
-    return send_from_directory(app.static_folder, 'index.html')
-
+# --- Маршрут для обработки запросов AI ---
 @app.route("/ask", methods=["POST"])
 def ask_ai():
     try:
-        user_question = request.json.get("question")
-        session_id = request.json.get("session_id", "default")
+        data = request.json
+        user_question = data.get("question", "")
+        session_id = data.get("session_id", "default")
+        uploaded_file = request.files.get('file') # Получаем файл, если он есть
         
-        if not user_question:
-            return jsonify({"error": "Вопрос не может быть пустым"}), 400
+        logging.info(f"Получен запрос для сессии {session_id}: '{user_question[:50]}...'")
 
-        # Загружаем историю для текущей сессии
-        chat_history = load_conversation(session_id)
-        
-        MAX_HISTORY_MESSAGES = 20 
-        truncated_chat_history = chat_history[-MAX_HISTORY_MESSAGES:]
-        # Преобразуем историю для модели
-        chat_history_formatted = []
-        for msg in chat_history:
-            # Извлекаем текст из "parts", если это список объектов, как ожидает модель
-            content_text = ""
-            if isinstance(msg.get("parts"), list):
-                for part in msg["parts"]:
-                    if isinstance(part, dict) and "text" in part:
-                        content_text += part["text"]
-                    elif isinstance(part, str): # На случай, если "parts" содержит простые строки
-                        content_text += part
-            elif isinstance(msg.get("parts"), str): # На случай, если "parts" - это просто строка
-                content_text = msg["parts"]
+        if not user_question and not uploaded_file:
+            return jsonify({"error": "Вопрос или файл не предоставлен."}), 400
 
-            chat_history_formatted.append({"role": msg["role"], "content": content_text})
-
-        # Поиск релевантных законов по ключевым словам из вопроса
-        relevant_laws = find_laws_by_keywords(user_question)
-
-        # Генерируем ответ
-        answer = generate_response(chat_history_formatted, user_question, relevant_laws_info=relevant_laws)
-        
-        # Сохраняем вопрос пользователя и ответ AI
-        save_message(session_id, "user", user_question)
-        save_message(session_id, "model", answer)
-
-        return jsonify({"answer": answer, "session_id": session_id})
-
-    except Exception as e:
-        logging.error(f"❌ Ошибка в /ask: {e}")
-        return jsonify({"error": f"Ошибка сервера: {str(e)}"}), 500
-
-@app.route("/upload-document", methods=["POST"])
-def upload_document():
-    try:
-        if 'file' not in request.files:
-            return jsonify({"error": "Файл не найден"}), 400
-        
-        file = request.files['file']
-        user_question = request.form.get("question", "")
-        session_id = request.form.get("session_id", "default")
-
-        if file.filename == '':
-            return jsonify({"error": "Имя файла не может быть пустым"}), 400
-        
-        # Получаем содержимое файла в нужном формате
-        file_parts = get_file_parts(file)
-
-        # Загружаем историю для текущей сессии
+        # Загружаем историю чата из MongoDB
         chat_history = load_conversation(session_id)
         
         # Преобразуем историю для модели
@@ -339,30 +327,41 @@ def upload_document():
                 content_text = msg["parts"]
             chat_history_formatted.append({"role": msg["role"], "content": content_text})
 
-        # Генерируем ответ, передавая содержимое документа
-        answer = generate_response(chat_history_formatted, user_question, document_content=file_parts)
+        # --- ОБРАБОТКА ДОКУМЕНТОВ ---
+        document_content_for_model = None
+        if uploaded_file:
+            logging.info(f"Обработка загруженного файла: {uploaded_file.filename} ({uploaded_file.mimetype})")
+            document_content_for_model = get_file_parts(uploaded_file)
+            if not document_content_for_model:
+                return jsonify({"error": "Не удалось обработать загруженный файл."}), 400
 
-        # Сохраняем вопрос пользователя и ответ AI. 
-        # Для документов, сохраняем ссылку на файл и вопрос в истории пользователя.
-        # В данном случае, мы сохраним только вопрос, так как само содержимое файла не будет храниться в MongoDB напрямую для истории.
-        user_message_content = f"Вопрос к документу '{file.filename}': {user_question}" if user_question else f"Анализ документа: {file.filename}"
-        save_message(session_id, "user", user_message_content)
-        save_message(session_id, "model", answer)
-        
-        # Удаляем временный FileData для изображений
-        if isinstance(file_parts, list) and file_parts and isinstance(file_parts[0], genai.types.FileData):
-            for part in file_parts:
-                genai.delete_file(part.uri)
-                logging.info(f"🗑️ Удален временный файл Gemini: {part.uri}")
+        # Поиск релевантных законов (теперь использует сниппеты)
+        relevant_laws_info = find_laws_by_keywords(user_question)
 
-        return jsonify({"answer": answer, "session_id": session_id})
+        # Генерируем ответ асинхронно
+        executor = ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(generate_response, chat_history_formatted, user_question, relevant_laws_info, document_content_for_model)
+        ai_answer = future.result() # Ожидаем результат
 
-    except ValueError as ve:
-        logging.error(f"❌ Ошибка загрузки документа (ValueError): {ve}")
-        return jsonify({"error": f"Ошибка: {str(ve)}"}), 400
+        # Сохраняем вопрос пользователя и ответ AI в историю
+        save_message(session_id, "user", user_question)
+        save_message(session_id, "model", ai_answer)
+
+        logging.info(f"Ответ AI для сессии {session_id} сгенерирован успешно.")
+        return jsonify({"answer": ai_answer, "session_id": session_id})
+
+    except genai.types.core.No=API_KEY as e:
+        logging.error(f"❌ Ошибка API ключа Gemini: {e}")
+        return jsonify({"error": "Ошибка конфигурации API: Ключ Gemini API недействителен или отсутствует."}), 500
+    except genai.types.BlockedPromptException as e:
+        logging.warning(f"⚠️ Запрос был заблокирован из-за правил безопасности: {e}")
+        return jsonify({"error": "Ваш запрос был отклонен из-за правил безопасности AI. Пожалуйста, переформулируйте."}), 400
+    except genai.types.StopCandidateException as e:
+        logging.warning(f"⚠️ Генерация ответа была остановлена до завершения: {e}")
+        return jsonify({"error": "Ответ был неполным. Пожалуйста, попробуйте еще раз или задайте уточняющий вопрос."}), 500
     except Exception as e:
-        logging.error(f"❌ Ошибка в /upload-document: {e}")
-        return jsonify({"error": f"Ошибка сервера при загрузке документа: {str(e)}"}), 500
+        logging.error(f"❌ Ошибка в /ask: {e}", exc_info=True) # exc_info=True для полного traceback
+        return jsonify({"error": f"Ошибка сервера: {str(e)}"}), 500
 
 
 # --- Маршрут для загрузки истории сообщений ---
@@ -373,6 +372,7 @@ def get_history():
         history = load_conversation(session_id)
         formatted_history = []
         for entry in history:
+            # Убедитесь, что content корректно извлекается
             content = entry['parts'][0] if isinstance(entry['parts'], list) and entry['parts'] else ''
             formatted_history.append({"role": entry['role'], "content": content})
         return jsonify({"history": formatted_history})
@@ -401,5 +401,13 @@ def clear_history_route():
         logging.error(f"❌ Ошибка в /clear-history: {e}")
         return jsonify({"error": f"Ошибка сервера при очистке истории: {str(e)}"}), 500
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=os.getenv('PORT', 5000), debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true')
+# --- Маршрут для главной страницы (обслуживание frontend) ---
+@app.route('/')
+def serve_index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+# --- Запуск сервера Flask ---
+if __name__ == '__main__':
+    # Используйте '0.0.0.0' для прослушивания всех доступных сетевых интерфейсов
+    # Это необходимо для развертывания на Railway.
+    app.run(host='0.0.0.0', port=os.getenv('PORT', 5000))
