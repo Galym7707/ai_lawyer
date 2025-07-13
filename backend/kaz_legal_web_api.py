@@ -1,4 +1,4 @@
-# kaz_legal_web_api.py (Версия 4.7 — Оптимизация токенов, инвертированный индекс, сниппеты законов, ИСПРАВЛЕНА ОШИБКА SYNTAX ERROR)
+# kaz_legal_web_api.py (Версия 4.8 — ИСПРАВЛЕНЫ ОШИБКИ BLEACH И API KEY EXCEPTION)
 from memory import init_db, save_message, load_conversation, delete_conversation, get_all_sessions_summary_mongo
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 import google.generativeai as genai
@@ -293,7 +293,13 @@ def generate_response(chat_history_formatted, user_question, relevant_laws_info=
         logging.info("Отправляем текстовый запрос без документа.")
         response = model.generate_content(prompt_parts)
 
-    clean_answer = bleach.clean(response.text, tags=bleach.sanitizer.ALLOWED_TAGS + ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a'], attributes={'a': ['href', 'title']}, strip=True)
+    # --- ИСПРАВЛЕНИЕ: Преобразование frozenset в list для bleach.clean ---
+    clean_answer = bleach.clean(
+        response.text, 
+        tags=list(bleach.sanitizer.ALLOWED_TAGS) + ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a'], 
+        attributes={'a': ['href', 'title']}, 
+        strip=True
+    )
     return clean_answer
 
 # --- Маршрут для обработки запросов AI ---
@@ -350,10 +356,13 @@ def ask_ai():
         logging.info(f"Ответ AI для сессии {session_id} сгенерирован успешно.")
         return jsonify({"answer": ai_answer, "session_id": session_id})
 
-    # --- ИСПРАВЛЕНИЕ: genai.types.core.NoAPIKeyError ---
-    except genai.types.core.NoAPIKeyError as e:
-        logging.error(f"❌ Ошибка API ключа Gemini: {e}")
-        return jsonify({"error": "Ошибка конфигурации API: Ключ Gemini API недействителен или отсутствует."}), 500
+    # --- ИСПРАВЛЕНИЕ: Изменение пути к исключению NoAPIKeyError ---
+    # genai.types.core.NoAPIKeyError -> genai.APIError (более общая, но надежная для API ошибок)
+    # Если вам нужно конкретно NoAPIKeyError, проверьте документацию вашей версии google-generativeai,
+    # но genai.APIError обычно покрывает такие случаи.
+    except genai.APIError as e: # ИСПРАВЛЕНО
+        logging.error(f"❌ Ошибка API ключа Gemini или другая ошибка API: {e}")
+        return jsonify({"error": "Ошибка конфигурации API: Ключ Gemini API недействителен или отсутствует, либо другая ошибка API."}), 500
     except genai.types.BlockedPromptException as e:
         logging.warning(f"⚠️ Запрос был заблокирован из-за правил безопасности: {e}")
         return jsonify({"error": "Ваш запрос был отклонен из-за правил безопасности AI. Пожалуйста, переформулируйте."}), 400
