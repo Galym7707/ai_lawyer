@@ -9,3 +9,4 @@ PyPDF2
 Pillow
 pymongo # ДОБАВЛЕНО
 dnspython # ДОБАВЛЕНО (необходим для mongodb+srv URI)
+bleach
