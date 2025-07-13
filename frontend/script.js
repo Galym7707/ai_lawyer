@@ -99,12 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadChatSessions() {
         chatList.innerHTML = '<p>Загрузка истории...</p>';
         try {
-            const res = await fetch('/get-all-sessions-summary');
+            const res = await apiFetch('/get-all-sessions-summary');
             if (!res.ok) {
                 const errorData = await res.json();
                 throw new Error(errorData.error || `Ошибка HTTP: ${res.status}`);
             }
-            const data = await res.json();
+            const data = await safeJson(res);
             chatList.innerHTML = ''; // Clear existing list
 
             if (data.sessions && data.sessions.length > 0) {
