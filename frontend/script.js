@@ -3,10 +3,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialSections = document.getElementById('initial-sections');
     const currentChatContainer = document.getElementById('current-chat-container');
     const chatMessagesDisplay = document.getElementById('chat-messages-display');
-    const userQuestionTextarea = document.getElementById('userQuestion');
-    const submitBtn = document.getElementById('submitBtn');
-    const chatInput = document.getElementById('chat-input');
-    const sendButton = document.getElementById('send-button');
+    const userQuestionTextarea = document.getElementById('userQuestion'); // For initial section
+    const submitBtn = document.getElementById('submitBtn'); // For initial section
+    const chatInput = document.getElementById('chat-input'); // For current chat section
+    const sendButton = document.getElementById('send-button'); // For current chat section
     const newChatSidebarButton = document.getElementById('start-new-conversation-sidebar');
     const spinner = document.getElementById('spinner');
     const fileSpinner = document.getElementById('fileSpinner');
@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set file input accept attribute, removing .doc as per recommendation
     fileInput.setAttribute('accept', '.pdf, .docx, .txt, .jpg, .jpeg, .png, .webp, .bmp, .tiff, .gif');
 
+    // Define a maximum file size for client-side validation (e.g., 200 MB)
+    const MAX_FILE_SIZE_MB = 200;
+    const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
     // --- Session Management ---
     function getSessionId() {
         let sid = localStorage.getItem('kaz_legal_session_id');
@@ -42,6 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
         highlightChatButton(sid); // Highlight the button when session changes
     }
 
+    const welcomeMessageContent = '<p>Добро пожаловать в ИИ-юрист! Задайте свой вопрос по законодательству Казахстана или загрузите документ для анализа.</p>';
+
     function startNewSession() {
         setCurrentSessionId('sess_' + Math.random().toString(36).substr(2, 10)); // Generate new ID
         showInitialSections(); // Show initial sections for a fresh start
@@ -50,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fileQuestionInput.value = '';
         clearFileSelection();
         loadChatSessions(); // Reload sessions to show the new one
-        addMessage('<p>Начните диалог с ИИ-юристом!</p>', 'ai-response'); // Initial greeting for new chat
+        addMessage(welcomeMessageContent, 'ai-response'); // Initial greeting for new chat
     }
 
     // --- Chat Message Rendering ---
@@ -80,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     addMessage(`<p>${msg.content}</p>`, msg.role === 'user' ? 'user-query' : 'ai-response');
                 });
             } else {
-                addMessage('<p>Начните диалог с ИИ-юристом!</p>', 'ai-response');
+                addMessage(welcomeMessageContent, 'ai-response'); // Consistent welcome for empty history
             }
         } catch (error) {
             spinner.style.display = 'none';
@@ -159,8 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!question.trim()) return;
         showChatArea();
         addMessage(`<p>${question}</p>`, 'user-query');
-        userQuestionTextarea.value = '';
-        chatInput.value = '';
+        userQuestionTextarea.value = ''; // Clear initial section input
+        chatInput.value = ''; // Clear current chat section input
         spinner.style.display = 'block';
         chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
 
@@ -183,8 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 addMessage(`<p>${aiResponse.response}</p>`, 'ai-response');
             }
-            loadChatSessions(); // Reload sessions to update titles/order if necessary
-            highlightChatButton(currentSessionId); // Re-highlight current session
+            // Reload sessions to update titles/order if necessary.
+            // loadChatSessions() already calls highlightChatButton, so no need for a redundant call here.
+            loadChatSessions();
         } catch (error) {
             spinner.style.display = 'none';
             console.error('Error sending text message:', error);
@@ -255,13 +262,21 @@ document.addEventListener('DOMContentLoaded', () => {
             handleFileSelection(e.target.files[0]);
         }
     });
+
     const handleFileSelection = (file) => {
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            alert(`Ошибка: Размер файла превышает ${MAX_FILE_SIZE_MB} МБ. Пожалуйста, выберите файл поменьше.`);
+            clearFileSelection();
+            return;
+        }
+
         currentFile = file;
         fileChosenSpan.textContent = file.name;
         fileSubmitBtn.disabled = false;
         clearBtn.disabled = false;
         fileQuestionInput.focus();
     };
+
     const clearFileSelection = () => {
         currentFile = null;
         fileInput.value = '';
@@ -302,8 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 addMessage(`<p>${aiFileResponse.response}</p>`, 'ai-response');
             }
             clearFileSelection();
-            loadChatSessions(); // Reload sessions to update titles/order if necessary
-            highlightChatButton(currentSessionId); // Re-highlight current session
+            // Reload sessions to update titles/order if necessary.
+            // loadChatSessions() already calls highlightChatButton, so no need for a redundant call here.
+            loadChatSessions();
         } catch (error) {
             fileSpinner.style.display = 'none';
             console.error('Error uploading document:', error);
@@ -312,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Initial Event Listeners (already mostly fine) ---
+    // --- Event Listeners ---
     submitBtn.addEventListener('click', (e) => {
         e.preventDefault();
         sendTextMessage(userQuestionTextarea.value);
@@ -338,12 +354,13 @@ document.addEventListener('DOMContentLoaded', () => {
     showInitialSections(); // Start with initial sections visible
     loadChatSessions().then(() => {
         // After sessions are loaded, if there's a valid currentSessionId, load its history
+        // And ensure a corresponding button for the session exists (meaning it was loaded successfully from backend)
         if (currentSessionId && currentSessionId !== 'default' && document.querySelector(`[data-session-id="${currentSessionId}"]`)) {
             loadChatHistory(currentSessionId);
             showChatArea(); // Show chat area if history is loaded
         } else {
-            // If no existing session or it's 'default', treat as a new chat
-            addMessage('<p>Добро пожаловать в ИИ-юрист! Задайте свой вопрос по законодательству Казахстана или загрузите документ для анализа.</p>', 'ai-response');
+            // If no existing session or it's 'default', treat as a new chat and show welcome message
+            addMessage(welcomeMessageContent, 'ai-response');
         }
     });
 });
