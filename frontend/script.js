@@ -73,7 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
     chatMessagesDisplay.innerHTML = '';
     spinner.style.display = 'block';
     try {
-      const data = await safeJson(await apiFetch(`/get-history?session_id=${encodeURIComponent(sessionId)}`));
+      const res   = await apiFetch(`/get-history?session_id=${encodeURIComponent(sessionId)}`);
+      const data  = await safeJson(res);
       spinner.style.display = 'none';
 
       if (data.history?.length) {
@@ -93,11 +94,12 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadChatSessions() {
     chatList.innerHTML = '<p>Загрузка...</p>';
     try {
-      const data = await safeJson(await apiFetch('/get-all-sessions-summary'));
+      const res  = await apiFetch('/get-all-sessions-summary');
+      const data = await safeJson(res);
       chatList.innerHTML = '';
 
       if (data.sessions?.length) {
-        data.sessions.sort((a, b) => b.id.localeCompare(a.id));       // newest first
+        data.sessions.sort((a, b) => b.id.localeCompare(a.id));
         data.sessions.forEach(s => {
           const li = document.createElement('li');
           li.textContent       = s.title || 'Без названия';
@@ -111,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
           };
           chatList.appendChild(li);
         });
-        highlightSession(currentSessionId);
       } else {
         chatList.innerHTML = '<p>Чатов нет</p>';
       }
@@ -149,31 +150,21 @@ document.addEventListener('DOMContentLoaded', () => {
     spinner.style.display = 'block';
 
     try {
-      const data = await safeJson(
-        await apiFetch('/ask', {
-          method : 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body   : JSON.stringify({question: msg, session_id: currentSessionId})
-        })
-      );
+      const res = await apiFetch('/ask', {
+        method : 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body   : JSON.stringify({question: msg, session_id: currentSessionId})
+      });
+      const data = await safeJson(res);
       spinner.style.display = 'none';
 
       if (data.error) {
         addMessage(`<p class="error-message">${data.error}</p>`, 'ai-response');
       } else {
-        /* === КЛЮЧЕВОЕ ИЗМЕНЕНИЕ === */
-        const answerText = data.answer ?? data.response ?? data.text ?? '';
-        if (answerText) addMessage(`<p>${answerText}</p>`, 'ai-response');
-
-        if (data.session_id) {
-          currentSessionId = data.session_id;
-          localStorage.setItem('currentSessionId', currentSessionId);
-          loadChatSessions();          // обновляем список в сайдбаре
-          highlightSession(currentSessionId);
-        } else {
-          // даже если бек не прислал id, обновим список на всякий случай
-          loadChatSessions();
-        }
+        addMessage(`<p>${data.answer}</p>`, 'ai-response');
+        currentSessionId = data.session_id;
+        localStorage.setItem('currentSessionId', currentSessionId);
+        loadChatSessions();
       }
     } catch (e) {
       spinner.style.display = 'none';
@@ -218,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentFile) return;
 
     showChatArea();
-    const q = fileQuestionInput.value.trim();
+    const q  = fileQuestionInput.value.trim();
     addMessage(
       `<p><strong>Документ:</strong> ${currentFile.name}</p>` +
       (q ? `<p><strong>Вопрос:</strong> ${q}</p>` : ''),
@@ -232,7 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
       fd.append('question', q);
       fd.append('session_id', currentSessionId);
 
-      const data = await safeJson(await apiFetch('/upload-document', {method: 'POST', body: fd}));
+      const res  = await apiFetch('/upload-document', {method: 'POST', body: fd});
+      const data = await safeJson(res);
       fileSpinner.style.display = 'none';
 
       if (data.error) {
@@ -257,9 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /* ----------  EVENTS ---------- */
-  submitBtn.onclick  = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
-  sendButton.onclick = e => { e.preventDefault(); sendText(chatInput.value); };
-  newChatBtn.onclick = startNewChat;
+  submitBtn.onclick      = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
+  sendButton.onclick     = e => { e.preventDefault(); sendText(chatInput.value); };
+  newChatBtn.onclick     = startNewChat;
 
   chatInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(chatInput.value); } };
   userQuestionTextarea.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(userQuestionTextarea.value); } };
