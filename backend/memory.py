@@ -52,22 +52,22 @@ def save_message(session_id, role, content):
 
     try:
         # Получаем максимальный message_index для текущей сессии
-        # Если сессия новая, max_index будет None, используем 0
-        latest_message = db.conversations.find({"session_id": session_id}).sort("message_index", -1).limit(1)
-        max_index = 0
-        if latest_message.count() > 0: # Проверяем, есть ли результаты
-            for msg in latest_message: # Итерируемся по курсору
-                max_index = msg.get("message_index", -1) + 1
-                break # Берем первый (единственный) результат
-        
-        db.conversations.insert_one({
+        # Если сессия новая, то index будет 0
+        last_message = db.conversations.find_one(
+            {"session_id": session_id},
+            sort=[("message_index", -1)]
+        )
+        message_index = (last_message["message_index"] + 1) if last_message else 0
+
+        message_document = {
             "session_id": session_id,
-            "message_index": max_index,
+            "message_index": message_index,
             "role": role,
             "content": content,
-            "timestamp": datetime.utcnow() # Добавляем метку времени
-        })
-        print(f"Сообщение сохранено для сессии {session_id}, индекс: {max_index}")
+            "timestamp": datetime.now()
+        }
+        db.conversations.insert_one(message_document)
+        # print(f"💾 Сообщение сохранено в сессии {session_id} с индексом {message_index}")
     except Exception as e:
         print(f"❌ Ошибка при сохранении сообщения в MongoDB: {e}")
 
@@ -75,49 +75,58 @@ def load_conversation(session_id):
     if not db:
         print("❌ Ошибка: База данных MongoDB не инициализирована. Загрузка невозможна.")
         return []
-
     try:
-        # Сортируем по message_index для правильного порядка сообщений
-        messages = db.conversations.find({"session_id": session_id}).sort("message_index", 1)
-        return [{"role": msg["role"], "parts": [msg["content"]]} for msg in messages]
+        messages = db.conversations.find(
+            {"session_id": session_id},
+            sort=[("message_index", 1)]
+        )
+        # Формат должен быть [{"role": "user", "parts": [{"text": "content"}]}]
+        formatted_messages = []
+        for msg in messages:
+            formatted_messages.append({"role": msg["role"], "parts": [{"text": msg["content"]}]})
+        return formatted_messages
     except Exception as e:
-        print(f"❌ Ошибка при загрузке разговора из MongoDB: {e}")
+        print(f"❌ Ошибка при загрузке истории из MongoDB: {e}")
         return []
 
 def delete_conversation(session_id):
-    """Удаляет всю историю сообщений для указанной сессии."""
     if not db:
         print("❌ Ошибка: База данных MongoDB не инициализирована. Удаление невозможно.")
         return
-
     try:
         result = db.conversations.delete_many({"session_id": session_id})
-        print(f"История для сессии {session_id} удалена. Удалено документов: {result.deleted_count}")
+        print(f"🗑️ Удалено {result.deleted_count} сообщений для сессии {session_id}.")
     except Exception as e:
-        print(f"❌ Ошибка при удалении разговора из MongoDB: {e}")
+        print(f"❌ Ошибка при удалении истории из MongoDB: {e}")
 
 def get_all_sessions_summary_mongo():
     if not db:
-        print("❌ Ошибка: База данных MongoDB не инициализирована. Загрузка сводки невозможна.")
+        print("❌ Ошибка: База данных MongoDB не инициализирована. Получение сводки невозможно.")
         return []
-
     try:
-        # Используем агрегацию для получения первого пользовательского сообщения для каждой сессии
-        # Это более эффективно, чем делать отдельные запросы для каждой сессии
+        # Используем агрегационный пайплайн для получения первого сообщения пользователя и сортировки
         pipeline = [
-            # Сортируем по session_id и message_index, чтобы гарантировать порядок
-            {"$sort": {"session_id": 1, "message_index": 1}},
-            # Группируем по session_id и находим первое сообщение пользователя
+            # Группируем по session_id и находим первое сообщение пользователя для каждой сессии
             {"$group": {
                 "_id": "$session_id",
                 "first_user_message_content": {
-                    "$first": {
-                        "$cond": [
-                            {"$eq": ["$role", "user"]},
-                            "$content",
-                            "$$REMOVE" # Удаляем, если не пользовательское сообщение
-                        ]
-                    }
+                    "$first": "$content" # Это будет первое сообщение в сессии, независимо от роли
+                },
+                "first_user_message_role": {
+                    "$first": "$role"
+                },
+                "first_message_timestamp": {
+                    "$first": "$timestamp"
+                }
+            }},
+            # Добавляем поле для определения, есть ли пользовательское сообщение в начале
+            {"$addFields": {
+                "first_user_message_content": {
+                    "$cond": [
+                        {"$eq": ["$first_user_message_role", "user"]},
+                        "$first_user_message_content",
+                        "$$REMOVE" # Удаляем поле, если первое сообщение не от пользователя
+                    ]
                 }
             }},
             # Удаляем сессии без пользовательских сообщений (если таковые есть после $$REMOVE)
