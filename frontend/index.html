@@ -34,55 +34,42 @@
                 <div id="initial-sections">
                     <section id="about" class="initial-section">
                         <h2 id="about-link">🧠 Об AI-помощнике</h2>
-                        <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах, опираясь на действующее законодательство (12 кодексов + ПДД РК).</p>
-                        <ul>
-                            <li>Трудовой кодекс</li>
-                            <li>Гражданский кодекс</li>
-                            <li>Уголовный кодекс</li>
-                            <li>Кодекс о браке и семье</li>
-                            <li>Кодекс об административных правонарушениях</li>
-                            <li>и все остальные кодексы</li>
-                        </ul>
-                        <p style="margin-top:10px;color:var(--accent-secondary);font-weight:500;">
-                            ⚖️ Все юридические ответы формируются на основе законодательства Казахстана. ИИ-юрист не выдумывает законы, а использует только надёжные официальные источники, такие как <a href="https://adilet.zan.kz" target="_blank" style="color:var(--accent-primary);text-decoration:underline;">adilet.zan.kz</a>.
-                        </p>
+                        <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах, опираясь на действующее законодательство Республики Казахстан.</p>
+                        <p>Наш бот создан, чтобы упростить доступ к юридической информации, предоставляя быстрые и точные ответы на ваши вопросы. Он использует передовые технологии искусственного интеллекта для анализа и синтеза информации, обеспечивая надежную поддержку в вопросах права.</p>
+                        <p>Обратите внимание: Kaz Legal Bot предоставляет информационные справки и не является заменой квалифицированной юридической консультации. Для решения сложных и спорных вопросов всегда рекомендуется обращаться к профессиональным юристам.</p>
                     </section>
 
                     <section id="help" class="initial-section">
-                        <h2 id="help-link">📜 Задайте свой вопрос</h2>
-                        <form id="chat-form">
-                            <textarea id="userQuestion" placeholder="Например: Меня уволили без предупреждения, что делать?"></textarea>
-                            <button type="submit" id="submitBtn">Получить ответ</button>
+                        <h2 id="help-link">⚖️ Юридическая помощь</h2>
+                        <p>Вы можете задать вопрос о любом аспекте законодательства Казахстана. Например:</p>
+                        <ul>
+                            <li>"Каковы мои права при увольнении?"</li>
+                            <li>"Какие документы нужны для оформления ИП?"</li>
+                            <li>"Что такое брачный договор в Казахстане?"</li>
+                            <li>"Как оспорить штраф за нарушение ПДД?"</li>
+                        </ul>
+                        <p>Также вы можете загрузить документ (PDF, DOCX, TXT, изображение), и я помогу вам его проанализировать или ответить на вопросы по его содержимому.</p>
+
+                        <form id="file-upload-form">
+                            <h3>Загрузить документ</h3>
+                            <div id="drag-and-drop-area" class="drag-drop-area">
+                                <p><i class="fas fa-cloud-upload-alt"></i> Перетащите файл сюда или <span class="browse-files">выберите</span></p>
+                                <input type="file" id="file-input" accept=".pdf,.docx,.txt,image/*" style="display: none;">
+                                <span id="file-chosen">Файл не выбран</span>
+                                <button type="button" id="clear-btn" class="btn" disabled>Очистить выбор</button>
+                            </div>
+                            <textarea id="file-question-input" placeholder="Задайте вопрос по документу (необязательно)..." rows="3" class="chat-input"></textarea>
+                            <button type="submit" id="file-submit-btn" class="btn" disabled>
+                                <i class="fas fa-paper-plane"></i> Отправить документ
+                            </button>
                         </form>
 
-                        <hr style="border-color: var(--border-color); margin: 2rem 0;">
-
-                        <h3>📎 Загрузите документ для анализа</h3>
-                        <form id="file-form" enctype="multipart/form-data" class="upload-card">
-                            <div class="drag-and-drop-area" id="drag-and-drop-area">
-                                <div class="upload-icon"><i class="fas fa-folder-open"></i></div>
-                                <div class="upload-content">
-                                    <h3 class="drag-text">Перетащите файл сюда</h3>
-                                    <p class="or-text"><span>или</span></p>
-                                    <label for="fileInput" class="browse-button btn">
-                                        Выбрать файл
-                                        <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif" hidden />
-                                    </label>
-                                    <p class="file-requirements">Поддерживаются PDF, DOCX, DOC, изображения до 1&nbsp;ГБ.</p>
-                                </div>
-                            </div>
-                            <div class="upload-footer">
-                                <div class="file-info">📄 <span id="file-chosen">Файл не выбран</span></div>
-                                <textarea id="fileQuestion" class="file-question-input" placeholder="Добавьте свой вопрос или комментарий к файлу (необязательно)"></textarea>
-                                <div class="action-buttons">
-                                    <button type="submit" class="analyze-button btn" id="fileSubmitBtn" disabled>
-                                        Проанализировать документ
-                                        <i class="fas fa-arrow-right"></i>
-                                        <span class="spinner" style="display:none;">⏳</span>
-                                    </button>
-                                    <button type="button" class="clear-button btn" id="clearBtn" disabled>Очистить файл</button>
-                                </div>
-                            </div>
+                        <form id="main-chat-form">
+                            <h3>Задать вопрос</h3>
+                            <textarea id="userQuestion" placeholder="Введите ваш вопрос..." rows="5" class="chat-input"></textarea>
+                            <button type="submit" id="submitBtn" class="btn">
+                                <i class="fas fa-paper-plane"></i> Отправить вопрос
+                            </button>
                         </form>
                     </section>
                 </div>
