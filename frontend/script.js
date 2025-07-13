@@ -1,7 +1,7 @@
 /* =========   GLOBAL API HELPERS   ========= */
 const API_BASE = window.location.hostname.includes('vercel.app')
-  ? 'https://ai-lawyer.up.railway.app'  // production backend
-  : 'http://localhost:5000';            // local dev
+  ? 'https://ai-lawyer.up.railway.app'   // production backend
+  : 'http://localhost:5000';             // local dev
 
 function apiFetch(path, options = {}) {
   return fetch(`${API_BASE}${path}`, options);
@@ -30,17 +30,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const chatList             = document.getElementById('chat-list');
 
   /* ----------  FILE-UPLOAD DOM ---------- */
-  const dragArea             = document.getElementById('drag-and-drop-area');
-  const fileInput            = document.getElementById('file-input');
-  const fileQuestionInput    = document.getElementById('file-question-input');
-  const fileSubmitBtn        = document.getElementById('file-submit-btn');
-  const fileChosenSpan       = document.getElementById('file-chosen');
-  const clearBtn             = document.getElementById('clear-btn');
+  const dragArea          = document.getElementById('drag-and-drop-area');
+  const fileInput         = document.getElementById('file-input');
+  const fileQuestionInput = document.getElementById('file-question-input');
+  const fileSubmitBtn     = document.getElementById('file-submit-btn');
+  const fileChosenSpan    = document.getElementById('file-chosen');
+  const clearBtn          = document.getElementById('clear-btn');
 
   /* ----------  CONSTANTS & STATE ---------- */
-  const MAX_FILE_MB      = 1024;
-  const MAX_FILE_BYTES   = MAX_FILE_MB * 1024 * 1024;
-  const welcomeMessage   = '<p>👋 Привет! Я ваш ИИ-юрист. Задайте вопрос или загрузите документ.</p>';
+  const MAX_FILE_MB    = 1024;
+  const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+  const welcomeMessage = '<p>👋 Привет! Я ваш ИИ-юрист. Задайте вопрос или загрузите документ.</p>';
 
   let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
   let currentFile      = null;
@@ -73,8 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chatMessagesDisplay.innerHTML = '';
     spinner.style.display = 'block';
     try {
-      const res   = await apiFetch(`/get-history?session_id=${encodeURIComponent(sessionId)}`);
-      const data  = await safeJson(res);
+      const data = await safeJson(await apiFetch(`/get-history?session_id=${encodeURIComponent(sessionId)}`));
       spinner.style.display = 'none';
 
       if (data.history?.length) {
@@ -94,12 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadChatSessions() {
     chatList.innerHTML = '<p>Загрузка...</p>';
     try {
-      const res  = await apiFetch('/get-all-sessions-summary');
-      const data = await safeJson(res);
+      const data = await safeJson(await apiFetch('/get-all-sessions-summary'));
       chatList.innerHTML = '';
 
       if (data.sessions?.length) {
-        data.sessions.sort((a, b) => b.id.localeCompare(a.id));
+        data.sessions.sort((a, b) => b.id.localeCompare(a.id));       // newest first
         data.sessions.forEach(s => {
           const li = document.createElement('li');
           li.textContent       = s.title || 'Без названия';
@@ -113,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
           };
           chatList.appendChild(li);
         });
+        highlightSession(currentSessionId);
       } else {
         chatList.innerHTML = '<p>Чатов нет</p>';
       }
@@ -150,21 +149,31 @@ document.addEventListener('DOMContentLoaded', () => {
     spinner.style.display = 'block';
 
     try {
-      const res = await apiFetch('/ask', {
-        method : 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body   : JSON.stringify({question: msg, session_id: currentSessionId})
-      });
-      const data = await safeJson(res);
+      const data = await safeJson(
+        await apiFetch('/ask', {
+          method : 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body   : JSON.stringify({question: msg, session_id: currentSessionId})
+        })
+      );
       spinner.style.display = 'none';
 
       if (data.error) {
         addMessage(`<p class="error-message">${data.error}</p>`, 'ai-response');
       } else {
-        addMessage(`<p>${data.answer}</p>`, 'ai-response');
-        currentSessionId = data.session_id;
-        localStorage.setItem('currentSessionId', currentSessionId);
-        loadChatSessions();
+        /* === КЛЮЧЕВОЕ ИЗМЕНЕНИЕ === */
+        const answerText = data.answer ?? data.response ?? data.text ?? '';
+        if (answerText) addMessage(`<p>${answerText}</p>`, 'ai-response');
+
+        if (data.session_id) {
+          currentSessionId = data.session_id;
+          localStorage.setItem('currentSessionId', currentSessionId);
+          loadChatSessions();          // обновляем список в сайдбаре
+          highlightSession(currentSessionId);
+        } else {
+          // даже если бек не прислал id, обновим список на всякий случай
+          loadChatSessions();
+        }
       }
     } catch (e) {
       spinner.style.display = 'none';
@@ -209,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentFile) return;
 
     showChatArea();
-    const q  = fileQuestionInput.value.trim();
+    const q = fileQuestionInput.value.trim();
     addMessage(
       `<p><strong>Документ:</strong> ${currentFile.name}</p>` +
       (q ? `<p><strong>Вопрос:</strong> ${q}</p>` : ''),
@@ -223,17 +232,21 @@ document.addEventListener('DOMContentLoaded', () => {
       fd.append('question', q);
       fd.append('session_id', currentSessionId);
 
-      const res  = await apiFetch('/upload-document', {method: 'POST', body: fd});
-      const data = await safeJson(res);
+      const data = await safeJson(await apiFetch('/upload-document', {method: 'POST', body: fd}));
       fileSpinner.style.display = 'none';
 
       if (data.error) {
         addMessage(`<p class="error-message">${data.error}</p>`, 'ai-response');
       } else {
-        addMessage(`<p>${data.answer}</p>`, 'ai-response');
-        currentSessionId = data.session_id;
-        localStorage.setItem('currentSessionId', currentSessionId);
+        const answerText = data.answer ?? data.response ?? data.text ?? '';
+        if (answerText) addMessage(`<p>${answerText}</p>`, 'ai-response');
+
+        if (data.session_id) {
+          currentSessionId = data.session_id;
+          localStorage.setItem('currentSessionId', currentSessionId);
+        }
         loadChatSessions();
+        highlightSession(currentSessionId);
       }
     } catch (e) {
       fileSpinner.style.display = 'none';
@@ -244,9 +257,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /* ----------  EVENTS ---------- */
-  submitBtn.onclick      = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
-  sendButton.onclick     = e => { e.preventDefault(); sendText(chatInput.value); };
-  newChatBtn.onclick     = startNewChat;
+  submitBtn.onclick  = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
+  sendButton.onclick = e => { e.preventDefault(); sendText(chatInput.value); };
+  newChatBtn.onclick = startNewChat;
 
   chatInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(chatInput.value); } };
   userQuestionTextarea.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(userQuestionTextarea.value); } };
@@ -254,7 +267,10 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ----------  INIT ---------- */
   showInitialSections();
   loadChatSessions().then(() => {
-    if (currentSessionId !== 'default' && document.querySelector(`[data-session-id="${currentSessionId}"]`)) {
+    if (
+      currentSessionId !== 'default' && 
+      document.querySelector(`[data-session-id="${currentSessionId}"]`)
+    ) {
       loadChatHistory(currentSessionId);
       showChatArea();
     } else {
