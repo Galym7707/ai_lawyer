@@ -272,6 +272,8 @@ def ask_ai():
         # Загружаем историю для текущей сессии
         chat_history = load_conversation(session_id)
         
+        MAX_HISTORY_MESSAGES = 20 
+        truncated_chat_history = chat_history[-MAX_HISTORY_MESSAGES:]
         # Преобразуем историю для модели
         chat_history_formatted = []
         for msg in chat_history:
