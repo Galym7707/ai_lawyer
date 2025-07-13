@@ -1,3 +1,20 @@
+// ===== Backend API helpers =====
+const API_BASE = window.location.hostname.includes('vercel.app')
+      ? 'https://ai-lawyer.up.railway.app'  // production backend on Railway
+      : 'http://localhost:5000';            // local backend during dev
+
+const apiFetch = (path, options = {}) => fetch(`${API_BASE}${path}`, options);
+
+// Gracefully parse JSON or throw detailed error when server returns HTML/CORS error page
+async function safeJson(res) {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return res.json();
+  }
+  const text = await res.text();
+  throw new Error(text.slice(0, 300) || `HTTP ${res.status}`);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // DOM elements
     const initialSections = document.getElementById('initial-sections');
@@ -14,58 +31,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // File Upload Elements
     const dragAndDropArea = document.getElementById('drag-and-drop-area');
-    const fileInput = document.getElementById('fileInput');
+    const fileInput = document.getElementById('file-input');
+    const fileQuestionInput = document.getElementById('file-question-input');
+    const fileSubmitBtn = document.getElementById('file-submit-btn');
     const fileChosenSpan = document.getElementById('file-chosen');
-    const fileQuestionInput = document.getElementById('fileQuestion');
-    const fileSubmitBtn = document.getElementById('fileSubmitBtn');
-    const clearBtn = document.getElementById('clearBtn');
+    const clearBtn = document.getElementById('clear-btn');
 
-    let currentFile = null;
-    let currentSessionId; // Declare, but initialize below for first-time logic
-
-    // Set file input accept attribute, removing .doc as per recommendation
-    fileInput.setAttribute('accept', '.pdf, .docx, .txt, .jpg, .jpeg, .png, .webp, .bmp, .tiff, .gif');
-
-    // Define a maximum file size for client-side validation (e.g., 200 MB)
-    const MAX_FILE_SIZE_MB = 200;
+    // Constants
+    const MAX_FILE_SIZE_MB = 1024; // 1 GB limit
     const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-    // --- Session Management ---
-    function getSessionId() {
-        let sid = localStorage.getItem('kaz_legal_session_id');
-        if (!sid) {
-            sid = 'sess_' + Math.random().toString(36).substr(2, 10);
-            localStorage.setItem('kaz_legal_session_id', sid);
-        }
-        return sid;
-    }
+    // State
+    let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
+    let currentFile = null;
 
-    function setCurrentSessionId(sid) {
-        currentSessionId = sid;
-        localStorage.setItem('kaz_legal_session_id', sid);
-        highlightChatButton(sid); // Highlight the button when session changes
-    }
+    // Helper to scroll chat to bottom
+    const scrollChatToBottom = () => {
+        chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
+    };
 
-    const welcomeMessageContent = '<p>Добро пожаловать в ИИ-юрист! Задайте свой вопрос по законодательству Казахстана или загрузите документ для анализа.</p>';
+    // --- UI Show/Hide helpers ---
+    const showChatArea = () => {
+        initialSections.style.display = 'none';
+        currentChatContainer.style.display = 'block';
+    };
 
-    function startNewSession() {
-        setCurrentSessionId('sess_' + Math.random().toString(36).substr(2, 10)); // Generate new ID
-        showInitialSections(); // Show initial sections for a fresh start
-        chatMessagesDisplay.innerHTML = ''; // Clear current chat display
-        userQuestionTextarea.value = '';
-        fileQuestionInput.value = '';
-        clearFileSelection();
-        loadChatSessions(); // Reload sessions to show the new one
-        addMessage(welcomeMessageContent, 'ai-response'); // Initial greeting for new chat
-    }
+    const showInitialSections = () => {
+        initialSections.style.display = 'block';
+        currentChatContainer.style.display = 'none';
+    };
 
-    // --- Chat Message Rendering ---
-    const addMessage = (content, type) => {
+    // --- Message rendering ---
+    const welcomeMessageContent = `<p>👋 Привет! Я ваш ИИ-юрист. Задайте вопрос или загрузите документ.</p>`;
+    const addMessage = (content, type = 'ai-response') => {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('chat-bubble', type);
         messageDiv.innerHTML = content;
         chatMessagesDisplay.appendChild(messageDiv);
-        chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
+        scrollChatToBottom();
     };
 
     // --- Fetch Chat History ---
@@ -73,12 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessagesDisplay.innerHTML = ''; // Clear display before loading new history
         spinner.style.display = 'block'; // Show spinner while loading
         try {
-            const res = await fetch(`/get-history?session_id=${encodeURIComponent(sessionId)}`);
+            const res = await apiFetch(`/get-history?session_id=${encodeURIComponent(sessionId)}`);
             if (!res.ok) {
-                const errorData = await res.json();
+                const errorData = await safeJson(res);
                 throw new Error(errorData.error || `Ошибка HTTP: ${res.status}`);
             }
-            const data = await res.json();
+            const data = await safeJson(res);
             spinner.style.display = 'none';
 
             if (data.history && data.history.length > 0) {
@@ -95,63 +98,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Fetch Chat List (Sidebar) ---
+    // --- Load chat sessions for sidebar ---
     async function loadChatSessions() {
         chatList.innerHTML = '<p>Загрузка истории...</p>';
         try {
             const res = await apiFetch('/get-all-sessions-summary');
             if (!res.ok) {
-                const errorData = await res.json();
+                const errorData = await safeJson(res);
                 throw new Error(errorData.error || `Ошибка HTTP: ${res.status}`);
             }
             const data = await safeJson(res);
             chatList.innerHTML = ''; // Clear existing list
 
             if (data.sessions && data.sessions.length > 0) {
-                data.sessions.sort((a, b) => b.id.localeCompare(a.id)); // Sort to show newer chats first (assuming 'sess_TIMESTAMP' format)
+                // Newest first (id looks like sess_TIMESTAMP)
+                data.sessions.sort((a, b) => b.id.localeCompare(a.id));
                 data.sessions.forEach(session => {
                     const li = document.createElement('li');
-                    const btn = document.createElement('button');
-                    btn.textContent = session.title || 'Новый чат';
-                    btn.classList.add('chat-session-btn');
-                    btn.setAttribute('data-session-id', session.id); // Store session ID on button
-                    btn.onclick = () => {
-                        if (currentSessionId !== session.id) { // Only load if different session
-                            setCurrentSessionId(session.id);
-                            showChatArea();
-                            loadChatHistory(session.id);
-                        }
-                    };
-                    li.appendChild(btn);
+                    li.textContent = session.title || 'Без названия';
+                    li.dataset.sessionId = session.id;
+                    li.addEventListener('click', () => {
+                        currentSessionId = session.id;
+                        localStorage.setItem('currentSessionId', currentSessionId);
+                        highlightChatButton(session.id);
+                        loadChatHistory(session.id);
+                        showChatArea();
+                    });
                     chatList.appendChild(li);
                 });
-                highlightChatButton(currentSessionId); // Ensure the current session is highlighted
             } else {
-                chatList.innerHTML = '<li><span>Нет чатов</span></li>';
+                chatList.innerHTML = '<p>Пока нет сохранённых чатов</p>';
             }
         } catch (error) {
+            chatList.innerHTML = '<p class="error-message">Ошибка загрузки списка чатов</p>';
             console.error('Ошибка загрузки списка чатов:', error);
-            chatList.innerHTML = `<li><span>Ошибка загрузки: ${error.message || 'Неизвестная ошибка'}</span></li>`;
         }
     }
 
-    function highlightChatButton(sessionId) {
-        document.querySelectorAll('#chat-list button').forEach(b => {
-            b.classList.remove('active');
-            if (b.getAttribute('data-session-id') === sessionId) {
-                b.classList.add('active');
-            }
+    const highlightChatButton = (sessionId) => {
+        document.querySelectorAll('#chat-list li').forEach(li => {
+            li.classList.toggle('active', li.dataset.sessionId === sessionId);
         });
-    }
-
-    // --- Chat Area State ---
-    const showChatArea = () => {
-        initialSections.style.display = 'none';
-        currentChatContainer.style.display = 'flex';
-        chatInput.focus();
     };
-    const showInitialSections = () => {
-        initialSections.style.display = 'flex';
+
+    // --- New Chat logic ---
+    const startNewChat = () => {
+        currentSessionId = 'default';
+        localStorage.setItem('currentSessionId', currentSessionId);
+        highlightChatButton(null);
+        showInitialSections(); // Back to initial sections
         currentChatContainer.style.display = 'none';
         chatMessagesDisplay.innerHTML = ''; // Clear chat history display
         userQuestionTextarea.value = '';
@@ -168,10 +163,10 @@ document.addEventListener('DOMContentLoaded', () => {
         userQuestionTextarea.value = ''; // Clear initial section input
         chatInput.value = ''; // Clear current chat section input
         spinner.style.display = 'block';
-        chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
+        scrollChatToBottom();
 
         try {
-            const res = await fetch('/ask', {
+            const res = await apiFetch('/ask', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -179,68 +174,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     session_id: currentSessionId
                 })
             });
-            const aiResponse = await res.json();
+            const aiResponse = await safeJson(res);
             spinner.style.display = 'none';
 
             if (aiResponse.error) {
                 addMessage(`<p class="error-message">${aiResponse.error}</p>`, 'ai-response');
-            } else if (aiResponse.articles && aiResponse.articles.length > 0) {
-                addMessage(formatAiResponseWithArticles(aiResponse.response, aiResponse.articles), 'ai-response');
             } else {
-                addMessage(`<p>${aiResponse.response}</p>`, 'ai-response');
+                addMessage(`<p>${aiResponse.answer}</p>`, 'ai-response');
+                currentSessionId = aiResponse.session_id; // Ensure we keep latest
+                localStorage.setItem('currentSessionId', currentSessionId);
+                loadChatSessions(); // Refresh sidebar
             }
-            // Reload sessions to update titles/order if necessary.
-            // loadChatSessions() already calls highlightChatButton, so no need for a redundant call here.
-            loadChatSessions();
         } catch (error) {
             spinner.style.display = 'none';
-            console.error('Error sending text message:', error);
-            addMessage(`<p class="error-message">Произошла ошибка при получении ответа: ${error.message || 'Неизвестная ошибка'}. Пожалуйста, попробуйте еще раз.</p>`, 'ai-response');
+            console.error('Ошибка отправки вопроса:', error);
+            addMessage(`<p class="error-message">Ошибка: ${error.message || 'Неизвестная ошибка'}</p>`, 'ai-response');
         }
     };
 
-    // --- Format AI Response with Articles ---
-    const formatAiResponseWithArticles = (responseText, articles) => {
-        let html = `<div>${responseText}</div>`;
-        if (articles && articles.length > 0) {
-            html += `<div class="laws-container">
-                        <h3 class="laws-header"><i class="fas fa-gavel"></i> Релевантные статьи законодательства РК <span class="article-count">(Только законы РК)</span></h3>
-                        <div class="article-accordion">`;
-            articles.forEach((article, index) => {
-                html += `
-                    <div class="accordion-item">
-                        <div class="accordion-header" onclick="toggleAccordion(this)">
-                            <span class="card-title">${index + 1}. ${article.title}</span>
-                            <i class="fas fa-chevron-down accordion-icon"></i>
-                        </div>
-                        <div class="accordion-content">
-                            <p class="card-body-text">${article.text}</p>
-                            <div class="card-footer">
-                                <span class="card-source">Источник: ${article.source}</span>
-                                <a href="${article.link}" class="card-link" target="_blank">Читать полностью <i class="fas fa-external-link-alt"></i></a>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-            html += `</div></div>`;
-        }
-        return html;
-    };
-
-    // Accordion toggling
-    window.toggleAccordion = (element) => {
-        const item = element.closest('.accordion-item');
-        const content = item.querySelector('.accordion-content');
-        const icon = element.querySelector('.accordion-icon');
-        item.classList.toggle('active');
-        if (item.classList.contains('active')) {
-            content.style.maxHeight = content.scrollHeight + "px";
-            icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
-        } else {
-            content.style.maxHeight = "0";
-            icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
-        }
-    };
+    // --- Accordion behaviour in initial sections ---
+    document.querySelectorAll('.accordion').forEach(acc => {
+        acc.addEventListener('click', function() {
+            this.classList.toggle('active');
+            const content = this.nextElementSibling;
+            const icon = this.querySelector('i');
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            }
+        });
+    });
 
     // --- File Upload Logic ---
     dragAndDropArea.addEventListener('dragover', (e) => {
@@ -257,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
             handleFileSelection(e.dataTransfer.files[0]);
         }
     });
+
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             handleFileSelection(e.target.files[0]);
@@ -283,8 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
         fileChosenSpan.textContent = 'Файл не выбран';
         fileSubmitBtn.disabled = true;
         clearBtn.disabled = true;
-        fileQuestionInput.value = '';
     };
+
     clearBtn.addEventListener('click', clearFileSelection);
 
     fileSubmitBtn.addEventListener('click', async (e) => {
@@ -296,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                  (fileQuestion ? `<p><strong>Мой вопрос:</strong> ${fileQuestion}</p>` : '');
         addMessage(userFileMessage, 'user-query');
         fileSpinner.style.display = 'block';
-        chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
+        scrollChatToBottom();
 
         try {
             const formData = new FormData();
@@ -304,26 +271,26 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('question', fileQuestion);
             formData.append('session_id', currentSessionId);
 
-            const res = await fetch('/upload-document', {
+            const res = await apiFetch('/upload-document', {
                 method: 'POST',
                 body: formData
             });
-            const aiFileResponse = await res.json();
+            const aiFileResponse = await safeJson(res);
             fileSpinner.style.display = 'none';
 
             if (aiFileResponse.error) {
                 addMessage(`<p class="error-message">${aiFileResponse.error}</p>`, 'ai-response');
             } else {
-                addMessage(`<p>${aiFileResponse.response}</p>`, 'ai-response');
+                addMessage(`<p>${aiFileResponse.answer}</p>`, 'ai-response');
+                currentSessionId = aiFileResponse.session_id;
+                localStorage.setItem('currentSessionId', currentSessionId);
+                loadChatSessions();
             }
             clearFileSelection();
-            // Reload sessions to update titles/order if necessary.
-            // loadChatSessions() already calls highlightChatButton, so no need for a redundant call here.
-            loadChatSessions();
         } catch (error) {
             fileSpinner.style.display = 'none';
             console.error('Error uploading document:', error);
-            addMessage(`<p class="error-message">Произошла ошибка при анализе документа: ${error.message || 'Неизвестная ошибка'}. Пожалуйста, попробуйте еще раз.</p>`, 'ai-response');
+            addMessage(`<p class="error-message">Произошла ошибка: ${error.message || 'Неизвестная ошибка'}. Пожалуйста, попробуйте еще раз.</p>`, 'ai-response');
             clearFileSelection();
         }
     });
@@ -333,33 +300,36 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         sendTextMessage(userQuestionTextarea.value);
     });
-    chatInput.addEventListener('keypress', (e) => {
+
+    sendButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        sendTextMessage(chatInput.value);
+    });
+
+    chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             sendTextMessage(chatInput.value);
         }
     });
-    sendButton.addEventListener('click', () => {
-        sendTextMessage(chatInput.value);
-    });
-    newChatSidebarButton.addEventListener('click', () => {
-        startNewSession();
+
+    userQuestionTextarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendTextMessage(userQuestionTextarea.value);
+        }
     });
 
-    // --- Initialization ---
-    // Initialize currentSessionId first
-    currentSessionId = getSessionId();
+    newChatSidebarButton.addEventListener('click', startNewChat);
 
-    // Then load everything else
+    // Initial load
     showInitialSections(); // Start with initial sections visible
     loadChatSessions().then(() => {
-        // After sessions are loaded, if there's a valid currentSessionId, load its history
-        // And ensure a corresponding button for the session exists (meaning it was loaded successfully from backend)
-        if (currentSessionId && currentSessionId !== 'default' && document.querySelector(`[data-session-id="${currentSessionId}"]`)) {
+        if (currentSessionId && currentSessionId !== 'default' &&
+            document.querySelector(`[data-session-id="${currentSessionId}"]`)) {
             loadChatHistory(currentSessionId);
             showChatArea(); // Show chat area if history is loaded
         } else {
-            // If no existing session or it's 'default', treat as a new chat and show welcome message
             addMessage(welcomeMessageContent, 'ai-response');
         }
     });
