@@ -6,8 +6,6 @@ import os
 import json
 import re
 from flask_cors import CORS
-import sqlite3 # Временно оставлено для DB_PATH, но будет удалено после полной миграции на MongoDB
-from memory import DB_PATH # Временно оставлено для DB_PATH, но будет удалено после полной миграции на MongoDB
 import bleach # Для очистки HTML от XSS
 from concurrent.futures import ThreadPoolExecutor # Для асинхронных вызовов
 from PIL import Image # Для обработки изображений
