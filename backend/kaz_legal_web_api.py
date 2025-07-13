@@ -91,11 +91,9 @@ def load_laws():
                             if s_word not in LAW_INDEX:
                                 LAW_INDEX[s_word] = set()
                             LAW_INDEX[s_word].add(law_id)
-                
                 if word not in LAW_INDEX:
                     LAW_INDEX[word] = set()
                 LAW_INDEX[word].add(law_id)
-        
         logging.info(f"✅ Загружено {len(LAW_DB)} законов и построен инвертированный индекс.")
     except FileNotFoundError:
         logging.error(f"❌ Ошибка: Файл 'laws/kazakh_laws.json' не найден.")
@@ -109,268 +107,260 @@ load_laws()
 init_db() # Инициализируем MongoDB соединение при старте приложения
 
 # --- Вспомогательные функции ---
-
 def find_laws_by_keywords(question):
     """Использует инвертированный индекс для поиска релевантных законов."""
-    if not LAW_INDEX:
-        logging.warning("Предупреждение: Инвертированный индекс законов пуст.")
-        return []
-
-    keywords = re.findall(r'\b\w+\b', question.lower())
+    question_lower = question.lower()
+    keywords = re.findall(r'\b\w+\b', question_lower)
     
     # Расширяем ключевые слова синонимами
     expanded_keywords = set(keywords)
     for kw in keywords:
-        for syn_group in LEGAL_SYNONYMS.values():
-            if kw in syn_group:
-                expanded_keywords.update(syn_group)
-
+        for group in LEGAL_SYNONYMS.values():
+            if kw in group:
+                expanded_keywords.update(group)
+    
     relevant_law_ids = set()
     for keyword in expanded_keywords:
         if keyword in LAW_INDEX:
             relevant_law_ids.update(LAW_INDEX[keyword])
+            
+    relevant_laws = [LAW_DB[lid] for lid in relevant_law_ids]
     
-    # Сортировка по релевантности (простое совпадение ключевых слов)
-    # Можно улучшить, например, считать количество совпадений
-    ranked_laws = []
-    for law_id in list(relevant_law_ids):
-        law = LAW_DB[law_id]
-        match_score = sum(1 for kw in expanded_keywords if kw in (law.get('title', '') + ' ' + law.get('text', '')).lower())
-        ranked_laws.append((match_score, law))
+    # Сортируем по степени релевантности (количество совпадений ключевых слов)
+    # Это простая метрика, можно улучшить TF-IDF или BM25
+    def calculate_relevance(law_text):
+        count = 0
+        law_text_lower = law_text.lower()
+        for kw in expanded_keywords:
+            count += law_text_lower.count(kw)
+        return count
+
+    # Ограничиваем количество законов для передачи в модель
+    # Это важно для контроля токенов и фокуса модели
+    relevant_laws_sorted = sorted(relevant_laws, key=lambda x: calculate_relevance(x.get('text', '') + x.get('title', '')), reverse=True)[:5] # Берем до 5 самых релевантных
     
-    ranked_laws.sort(key=lambda x: x[0], reverse=True)
-    return [law for score, law in ranked_laws[:5]] # Возвращаем топ-5 релевантных законов
+    return relevant_laws_sorted
 
 
-def clean_html_response(html_content):
-    """Очищает HTML контент от потенциальных XSS-атак."""
-    # Разрешенные теги, атрибуты и стили
-    allowed_tags = ['p', 'br', 'b', 'i', 'u', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'hr', 'small']
-    allowed_attrs = {'a': ['href', 'target'], '*': ['class', 'style']} # '*' означает для всех тегов
-    allowed_styles = ['margin-top', 'color', 'font-weight', 'text-decoration'] # Пример разрешенных стилей
-    
-    clean_content = bleach.clean(
-        html_content, 
-        tags=allowed_tags, 
-        attributes=allowed_attrs, 
-        styles=allowed_styles,
-        strip=True # Удалять незарегистрированные теги
-    )
-    return clean_content
+# --- Функции обработки документов ---
+def extract_text_from_pdf(file_stream):
+    reader = PdfReader(file_stream)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() or ""
+    return text
+
+def extract_text_from_docx(file_stream):
+    document = Document(file_stream)
+    text = ""
+    for paragraph in document.paragraphs:
+        text += paragraph.text + "\n"
+    return text
+
+def extract_text_from_image(file_stream):
+    # Google Generative AI Vision models can directly process image content.
+    # We will pass the image directly to the multimodal model.
+    return None # Text extraction from image will be handled by the model itself
+
+def get_file_parts(file):
+    """Возвращает содержимое файла в формате, пригодном для передачи в модель."""
+    file_stream = io.BytesIO(file.read())
+    mime_type = file.mimetype
+
+    if 'image' in mime_type:
+        return [genai.upload_file(file_stream.getvalue(), mime_type=mime_type)]
+    elif mime_type == 'application/pdf':
+        text_content = extract_text_from_pdf(file_stream)
+        return [{"text": text_content}]
+    elif mime_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        text_content = extract_text_from_docx(file_stream)
+        return [{"text": text_content}]
+    elif mime_type == 'text/plain':
+        text_content = file_stream.read().decode('utf-8')
+        return [{"text": text_content}]
+    else:
+        raise ValueError(f"Неподдерживаемый тип файла: {mime_type}")
 
 
-def extract_text_from_file(file_stream, filename):
-    """Извлекает текст из различных типов файлов."""
-    file_extension = filename.split('.')[-1].lower()
-    text_content = ""
-    
-    try:
-        if file_extension == 'pdf':
-            reader = PdfReader(file_stream)
-            for page in reader.pages:
-                text_content += page.extract_text() or ""
-        elif file_extension == 'docx':
-            document = Document(file_stream)
-            for para in document.paragraphs:
-                text_content += para.text + "\n"
-        elif file_extension in ['txt']:
-            text_content = file_stream.read().decode('utf-8')
-        elif file_extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp']:
-            # Для изображений, мы можем напрямую передать файл в Gemini Multimodal
-            # Но здесь мы просто возвращаем пустой текст, так как Gemini будет обрабатывать изображение.
-            # Важно: для реального OCR текста из изображений потребуется дополнительный сервис (например, Google Cloud Vision API)
-            # или если Gemini сам может "читать" текст из изображений, то можно не извлекать его здесь.
-            logging.info(f"Изображение '{filename}' обнаружено. Будет отправлено как мультимодальный ввод.")
-            return None # Индикатор, что это изображение
+# --- Функции для взаимодействия с AI ---
+def generate_response(chat_history_formatted, user_question, relevant_laws_info=None, document_content=None):
+    prompt_parts = []
+
+    # Добавляем системные инструкции
+    system_instruction = """
+    Ты ИИ-юрист из Казахстана. Твоя основная задача — предоставлять юридические консультации строго по законодательству Республики Казахстан. 
+    Ты должен отвечать четко, лаконично, ссылаясь на конкретные статьи, пункты и наименования законов, если это возможно. 
+    Если ответ требует уточнения или информации, которой у тебя нет, задай уточняющий вопрос. 
+    Не выдумывай информацию. Если не знаешь ответа, так и скажи, но постарайся предложить, где пользователь может найти информацию (например, "обратитесь к юристу", "проверьте статьи X Закона Y").
+    Всегда помни о юрисдикции РК.
+    """
+    prompt_parts.append({"role": "user", "parts": [{"text": system_instruction}]})
+    prompt_parts.append({"role": "model", "parts": [{"text": "Понял. Я готов предоставлять консультации строго по законодательству Республики Казахстан. Задавайте вопросы."}]})
+
+
+    # Добавляем историю чата
+    for msg in chat_history_formatted:
+        prompt_parts.append({"role": msg["role"], "parts": [msg["content"]]})
+
+    # Добавляем информацию о законах, если она есть
+    if relevant_laws_info:
+        laws_text = "\n\nИспользуй следующую информацию из законодательства РК для ответа:\n"
+        for law in relevant_laws_info:
+            laws_text += f"Название: {law.get('title', 'N/A')}\n"
+            laws_text += f"Статья/Пункт: {law.get('article', 'N/A')}\n"
+            laws_text += f"Текст: {law.get('text', 'N/A')}\n\n"
+        prompt_parts.append({"role": "user", "parts": [{"text": laws_text}]})
+        prompt_parts.append({"role": "model", "parts": [{"text": "Принял к сведению предоставленную информацию о законах."}]})
+
+    # Добавляем содержимое документа, если оно есть
+    if document_content:
+        # Если document_content - это объект FileData (для изображений), то он уже является частью, которую можно передать
+        if isinstance(document_content, list) and document_content and isinstance(document_content[0], genai.types.FileData):
+            # Если это список с объектом FileData, передаем его напрямую
+            prompt_parts.append({"role": "user", "parts": document_content})
         else:
-            logging.warning(f"Неподдерживаемый формат файла для извлечения текста: {filename}")
-            return None # Или поднять ошибку
-    except Exception as e:
-        logging.error(f"Ошибка при извлечении текста из файла '{filename}': {e}")
-        return None
-    return text_content
+            # Иначе, это текстовое содержимое
+            doc_text = "\n\nИспользуй следующий документ для ответа:\n"
+            if isinstance(document_content, list):
+                # Если это список текстовых частей (из PDF/DOCX)
+                for part in document_content:
+                    if "text" in part:
+                        doc_text += part["text"] + "\n"
+            else:
+                doc_text += str(document_content) # На всякий случай, если передано что-то другое
+            prompt_parts.append({"role": "user", "parts": [{"text": doc_text}]})
+        prompt_parts.append({"role": "model", "parts": [{"text": "Принял к сведению содержимое документа."}]})
 
+    # Добавляем текущий вопрос пользователя
+    final_user_question = f"Мой вопрос: {user_question}"
+    if document_content and isinstance(document_content, list) and document_content and isinstance(document_content[0], genai.types.FileData):
+        # Если это запрос с изображением, вопрос пользователя идет после изображения
+        prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
+    elif document_content:
+        # Если это документ, уточняем, что вопрос относится к документу
+        prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
+    else:
+        prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
 
-# --- Маршруты API ---
-
-# Маршрут для обработки текстовых запросов
-@app.route("/ask", methods=["POST"])
-def ask():
-    user_question = request.json.get("question", "").strip()
-    session_id = request.json.get("session_id", "default")
+    # Проверяем, какая модель нужна
+    if document_content and isinstance(document_content, list) and document_content and isinstance(document_content[0], genai.types.FileData):
+        # Если есть FileData (изображение), используем мультимодальную модель
+        response = multimodal_model.generate_content(prompt_parts)
+    else:
+        # Иначе, используем обычную модель
+        response = model.generate_content(prompt_parts)
     
-    if not user_question:
-        return jsonify({"error": "Пустой запрос"}), 400
+    # Очистка ответа от XSS
+    clean_answer = bleach.clean(response.text, tags=bleach.sanitizer.ALLOWED_TAGS + ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a'], attributes={'a': ['href', 'title']}, strip=True)
+    return clean_answer
 
-    if len(user_question) > 2000: # Ограничение длины запроса
-        return jsonify({"error": "Запрос слишком длинный. Максимум 2000 символов."}), 413
 
+# --- API Endpoints ---
+@app.route("/")
+def serve_index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route("/ask", methods=["POST"])
+def ask_ai():
     try:
-        # Загружаем историю беседы для текущей сессии
-        history = load_conversation(session_id)
+        user_question = request.json.get("question")
+        session_id = request.json.get("session_id", "default")
         
-        # Находим релевантные законы
+        if not user_question:
+            return jsonify({"error": "Вопрос не может быть пустым"}), 400
+
+        # Загружаем историю для текущей сессии
+        chat_history = load_conversation(session_id)
+        
+        # Преобразуем историю для модели
+        chat_history_formatted = []
+        for msg in chat_history:
+            # Извлекаем текст из "parts", если это список объектов, как ожидает модель
+            content_text = ""
+            if isinstance(msg.get("parts"), list):
+                for part in msg["parts"]:
+                    if isinstance(part, dict) and "text" in part:
+                        content_text += part["text"]
+                    elif isinstance(part, str): # На случай, если "parts" содержит простые строки
+                        content_text += part
+            elif isinstance(msg.get("parts"), str): # На случай, если "parts" - это просто строка
+                content_text = msg["parts"]
+
+            chat_history_formatted.append({"role": msg["role"], "content": content_text})
+
+        # Поиск релевантных законов по ключевым словам из вопроса
         relevant_laws = find_laws_by_keywords(user_question)
-        
-        # Формируем промпт для AI
-        system_instruction = (
-            "Ты — Kaz Legal Bot, высококвалифицированный AI-юрист, специализирующийся строго исключительно на законодательстве Республики Казахстан. "
-            "Твоя задача — предоставлять точные, полные и релевантные юридические консультации, основываясь только на официальных правовых актах РК. "
-            "Всегда указывай статьи законов, на которые ссылаешься. Если информация не найдена в предоставленных законах, четко об этом сообщай. "
-            "Не выдумывай законы и не ссылайся на несуществующие статьи. "
-            "Если вопрос касается законодательства других стран (например, РФ, США и т.д.), вежливо откажи в консультации, объяснив, что ты специализируешься только на законодательстве РК. "
-            "Ответы форматируй с использованием HTML для читабельности (параграфы <p>, списки <ul>, <ol>, выделение <strong>, <em>)."
-            "Законодательство РК является твоим единственным источником истины."
-            "Всегда начинай ответ с подтверждения, что ты работаешь исключительно с законодательством Республики Казахстан."
-        )
 
-        context_laws = ""
-        if relevant_laws:
-            context_laws = "\n\n--- Релевантные статьи законодательства РК ---\n"
-            for i, law in enumerate(relevant_laws):
-                context_laws += f"Закон {i+1}: {law.get('title', 'Без названия')}\nТекст: {law.get('text', 'Нет текста')}\n\n"
+        # Генерируем ответ
+        answer = generate_response(chat_history_formatted, user_question, relevant_laws_info=relevant_laws)
         
-        full_prompt = f"{system_instruction}\n\nИстория диалога:\n"
-        for msg in history:
-            full_prompt += f"{msg['role']}: {msg['parts'][0]}\n"
-        
-        full_prompt += f"\nПользовательский запрос: {user_question}\n{context_laws}\n"
-        full_prompt += "Мой ответ (включая ссылки на статьи законов РК):"
-
-        # Сохраняем сообщение пользователя
+        # Сохраняем вопрос пользователя и ответ AI
         save_message(session_id, "user", user_question)
+        save_message(session_id, "model", answer)
 
-        # Асинхронный вызов Gemini API
-        future = executor.submit(model.generate_content, full_prompt)
-        ai_response_text = future.result().text
+        return jsonify({"answer": answer, "session_id": session_id})
 
-        # Очистка ответа от потенциальных XSS
-        cleaned_response_text = clean_html_response(ai_response_text)
-        
-        # Сохраняем ответ AI
-        save_message(session_id, "model", cleaned_response_text)
-
-        # Форматирование статей для фронтенда (если они были найдены)
-        formatted_articles = []
-        for law in relevant_laws:
-            formatted_articles.append({
-                "title": bleach.clean(law.get('title', 'Закон РК'), tags=[], strip=True), # Очистка заголовка
-                "text": clean_html_response(law.get('text', 'Информация не предоставлена.')), # Очистка текста статьи
-                "source": bleach.clean(law.get('source', 'Законодательство РК'), tags=[], strip=True),
-                "link": bleach.clean(law.get('link', '#'), tags=[], attributes={'a': ['href', 'target']}, strip=True) # Очистка ссылки
-            })
-
-        return jsonify({
-            "response": cleaned_response_text,
-            "articles": formatted_articles
-        })
-
-    except genai.APIError as e:
-        logging.error(f"❌ Ошибка Gemini API: {e}")
-        error_message = "Произошла ошибка при обращении к AI. Пожалуйста, убедитесь, что ваш API ключ действителен и попробуйте позже."
-        save_message(session_id, "model", error_message)
-        return jsonify({"error": error_message}), 500
     except Exception as e:
-        logging.error(f"❌ Неизвестная ошибка в /ask: {e}")
-        error_message = f"Произошла ошибка сервера: {str(e)}. Пожалуйста, попробуйте еще раз."
-        save_message(session_id, "model", error_message)
-        return jsonify({"error": error_message}), 500
+        logging.error(f"❌ Ошибка в /ask: {e}")
+        return jsonify({"error": f"Ошибка сервера: {str(e)}"}), 500
 
-# Маршрут для загрузки и анализа документов
 @app.route("/upload-document", methods=["POST"])
 def upload_document():
-    if 'file' not in request.files:
-        return jsonify({"error": "Файл не предоставлен"}), 400
-
-    file = request.files['file']
-    file_question = request.form.get("question", "").strip()
-    session_id = request.form.get("session_id", "default")
-
-    if file.filename == '':
-        return jsonify({"error": "Пустое имя файла"}), 400
-
-    if len(file_question) > 1000: # Ограничение длины вопроса к файлу
-        return jsonify({"error": "Вопрос к файлу слишком длинный. Максимум 1000 символов."}), 413
-
-    # Поддерживаемые форматы для извлечения текста и для мультимодального ввода
-    allowed_text_extensions = ['pdf', 'docx', 'txt']
-    allowed_image_extensions = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'tiff', 'gif']
-    file_extension = file.filename.split('.')[-1].lower()
-
-    file_content_for_gemini = None
-    text_content = None
-
-    # Сохраняем файл во временный буфер
-    file_stream = io.BytesIO(file.read())
-    
-    if file_extension in allowed_text_extensions:
-        text_content = extract_text_from_file(file_stream, file.filename)
-        if text_content is None:
-            return jsonify({"error": "Не удалось извлечь текст из файла."}), 500
-        file_content_for_gemini = text_content
-    elif file_extension in allowed_image_extensions:
-        try:
-            # Для изображений, просто передаем их напрямую как части
-            image = Image.open(file_stream)
-            file_content_for_gemini = image
-            # Для мультимодального запроса можно добавить текст как отдельную часть
-            text_content = f"Пожалуйста, проанализируйте этот документ (изображение): {file_question}"
-        except Exception as e:
-            logging.error(f"Ошибка обработки изображения: {e}")
-            return jsonify({"error": "Ошибка обработки изображения."}), 500
-    else:
-        return jsonify({"error": "Неподдерживаемый формат файла. Поддерживаются PDF, DOCX, TXT, JPG, JPEG, PNG, WEBP, BMP, TIFF, GIF."}), 415
-
     try:
-        parts = []
-        user_message_to_save = f"Загружен документ: {file.filename}"
-        if file_question:
-            user_message_to_save += f"\nВопрос к документу: {file_question}"
-
-        # Добавляем текстовый запрос
-        if text_content:
-            parts.append(text_content)
+        if 'file' not in request.files:
+            return jsonify({"error": "Файл не найден"}), 400
         
-        # Добавляем файл как часть для Gemini
-        if file_content_for_gemini:
-            if isinstance(file_content_for_gemini, Image.Image):
-                parts.append(file_content_for_gemini)
-            elif isinstance(file_content_for_gemini, str): # Если это извлеченный текст
-                if not text_content: # Если текст уже был добавлен как 'text_content', не дублируем
-                    parts.append(file_content_for_gemini)
+        file = request.files['file']
+        user_question = request.form.get("question", "")
+        session_id = request.form.get("session_id", "default")
+
+        if file.filename == '':
+            return jsonify({"error": "Имя файла не может быть пустым"}), 400
         
-        # Добавляем вопрос пользователя как отдельную часть
-        if file_question:
-            parts.append(file_question)
+        # Получаем содержимое файла в нужном формате
+        file_parts = get_file_parts(file)
 
-        if not parts:
-            return jsonify({"error": "Недостаточно контента для анализа."}), 400
+        # Загружаем историю для текущей сессии
+        chat_history = load_conversation(session_id)
+        
+        # Преобразуем историю для модели
+        chat_history_formatted = []
+        for msg in chat_history:
+            content_text = ""
+            if isinstance(msg.get("parts"), list):
+                for part in msg["parts"]:
+                    if isinstance(part, dict) and "text" in part:
+                        content_text += part["text"]
+                    elif isinstance(part, str):
+                        content_text += part
+            elif isinstance(msg.get("parts"), str):
+                content_text = msg["parts"]
+            chat_history_formatted.append({"role": msg["role"], "content": content_text})
 
-        # Сохраняем сообщение пользователя (информацию о загрузке файла и вопрос)
-        save_message(session_id, "user", user_message_to_save)
+        # Генерируем ответ, передавая содержимое документа
+        answer = generate_response(chat_history_formatted, user_question, document_content=file_parts)
 
-        # Вызов мультимодальной модели
-        future = executor.submit(multimodal_model.generate_content, parts)
-        ai_response = future.result().text
+        # Сохраняем вопрос пользователя и ответ AI. 
+        # Для документов, сохраняем ссылку на файл и вопрос в истории пользователя.
+        # В данном случае, мы сохраним только вопрос, так как само содержимое файла не будет храниться в MongoDB напрямую для истории.
+        user_message_content = f"Вопрос к документу '{file.filename}': {user_question}" if user_question else f"Анализ документа: {file.filename}"
+        save_message(session_id, "user", user_message_content)
+        save_message(session_id, "model", answer)
+        
+        # Удаляем временный FileData для изображений
+        if isinstance(file_parts, list) and file_parts and isinstance(file_parts[0], genai.types.FileData):
+            for part in file_parts:
+                genai.delete_file(part.uri)
+                logging.info(f"🗑️ Удален временный файл Gemini: {part.uri}")
 
-        # Очистка ответа от потенциальных XSS
-        cleaned_ai_response = clean_html_response(ai_response)
+        return jsonify({"answer": answer, "session_id": session_id})
 
-        # Сохраняем ответ AI
-        save_message(session_id, "model", cleaned_ai_response)
-
-        return jsonify({"response": cleaned_ai_response})
-
-    except genai.APIError as e:
-        logging.error(f"❌ Ошибка Gemini API при обработке документа: {e}")
-        error_message = "Произошла ошибка при анализе документа AI. Пожалуйста, попробуйте позже."
-        save_message(session_id, "model", error_message)
-        return jsonify({"error": error_message}), 500
+    except ValueError as ve:
+        logging.error(f"❌ Ошибка загрузки документа (ValueError): {ve}")
+        return jsonify({"error": f"Ошибка: {str(ve)}"}), 400
     except Exception as e:
-        logging.error(f"❌ Неизвестная ошибка в /upload-document: {e}")
-        error_message = f"Произошла ошибка сервера при обработке документа: {str(e)}. Пожалуйста, попробуйте еще раз."
-        save_message(session_id, "model", error_message)
-        return jsonify({"error": error_message}), 500
+        logging.error(f"❌ Ошибка в /upload-document: {e}")
+        return jsonify({"error": f"Ошибка сервера при загрузке документа: {str(e)}"}), 500
 
 
 # --- Маршрут для загрузки истории сообщений ---
@@ -410,4 +400,4 @@ def clear_history_route():
         return jsonify({"error": f"Ошибка сервера при очистке истории: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    app.run(host='0.0.0.0', port=os.getenv('PORT', 5000), debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true')
