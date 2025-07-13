@@ -1,4 +1,4 @@
-# kaz_legal_web_api.py (Версия 4.7 — Оптимизация токенов, инвертированный индекс, сниппеты законов)
+# kaz_legal_web_api.py (Версия 4.7 — Оптимизация токенов, инвертированный индекс, сниппеты законов, ИСПРАВЛЕНА ОШИБКА SYNTAX ERROR)
 from memory import init_db, save_message, load_conversation, delete_conversation, get_all_sessions_summary_mongo
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 import google.generativeai as genai
@@ -350,7 +350,8 @@ def ask_ai():
         logging.info(f"Ответ AI для сессии {session_id} сгенерирован успешно.")
         return jsonify({"answer": ai_answer, "session_id": session_id})
 
-    except genai.types.core.No=API_KEY as e:
+    # --- ИСПРАВЛЕНИЕ: genai.types.core.NoAPIKeyError ---
+    except genai.types.core.NoAPIKeyError as e:
         logging.error(f"❌ Ошибка API ключа Gemini: {e}")
         return jsonify({"error": "Ошибка конфигурации API: Ключ Gemini API недействителен или отсутствует."}), 500
     except genai.types.BlockedPromptException as e:
