@@ -13,7 +13,7 @@ db = None
 
 def init_db():
     global client, db
-    if not MONGO_URI:
+    if MONGO_URI is None: # Исправлено: если MONGO_URI не установлен
         print("❌ Ошибка: Переменная окружения MONGO_URI не установлена. Подключение к MongoDB невозможно.")
         return
 
@@ -46,7 +46,8 @@ def init_db():
         db = None
 
 def save_message(session_id, role, content):
-    if not db:
+    global db # Убедитесь, что db доступен в этой функции
+    if db is None: # Исправлено
         print("❌ Ошибка: База данных MongoDB не инициализирована. Сохранение невозможно.")
         return
 
@@ -72,7 +73,8 @@ def save_message(session_id, role, content):
         print(f"❌ Ошибка при сохранении сообщения в MongoDB: {e}")
 
 def load_conversation(session_id):
-    if not db:
+    global db # Убедитесь, что db доступен в этой функции
+    if db is None: # Исправлено
         print("❌ Ошибка: База данных MongoDB не инициализирована. Загрузка невозможна.")
         return []
     try:
@@ -90,7 +92,8 @@ def load_conversation(session_id):
         return []
 
 def delete_conversation(session_id):
-    if not db:
+    global db # Убедитесь, что db доступен в этой функции
+    if db is None: # Исправлено
         print("❌ Ошибка: База данных MongoDB не инициализирована. Удаление невозможно.")
         return
     try:
@@ -100,7 +103,8 @@ def delete_conversation(session_id):
         print(f"❌ Ошибка при удалении истории из MongoDB: {e}")
 
 def get_all_sessions_summary_mongo():
-    if not db:
+    global db # Убедитесь, что db доступен в этой функции
+    if db is None: # Исправлено
         print("❌ Ошибка: База данных MongoDB не инициализирована. Получение сводки невозможно.")
         return []
     try:
