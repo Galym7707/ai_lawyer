@@ -328,6 +328,7 @@ def generate_response(chat_history_formatted, user_question, relevant_laws_info=
     7.  **Цензура:** **Не используй звездочки (*) для цензуры.** Если какой-то термин считается чувствительным, постарайся перефразировать ответ, либо, если это юридический термин, используй его как есть, так как это важно для юридической точности.
     8.  **Ограничения:** Не придумывай информацию. Если у тебя нет данных по конкретному вопросу, так и скажи, предложив обратиться к профильному юристу или официальным источникам.
     
+    УЛЬТРАВАЖНО: Всегда возвращай результат в чистом HTML — ни одного символа markdown или звездочек!!!
     """
     prompt_parts.append({"role": "user", "parts": [{"text": system_instruction}]})
     prompt_parts.append({"role": "model", "parts": [{"text": "Понял. Я готов предоставлять консультации строго по законодательству Республики Казахстан, оформляя ответы в формате HTML."}]})
@@ -386,7 +387,7 @@ def generate_response(chat_history_formatted, user_question, relevant_laws_info=
         prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
         logging.info("Отправляем текстовый запрос без документа.")
         response = model.generate_content(prompt_parts)
-
+    
     # --- ИСПРАВЛЕНИЕ: Преобразование frozenset в list для bleach.clean ---
     # Убедимся, что все нужные HTML теги разрешены
     ALLOWED_TAGS_EXTENDED = list(bleach.sanitizer.ALLOWED_TAGS) + [
