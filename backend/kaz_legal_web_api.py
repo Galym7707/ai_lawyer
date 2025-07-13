@@ -1,4 +1,4 @@
-# kaz_legal_web_api.py (Версия 4.8 — ИСПРАВЛЕНЫ ОШИБКИ BLEACH И API KEY EXCEPTION)
+# kaz_legal_web_api.py (Версия 4.9 — Улучшенное форматирование ответов AI)
 from memory import init_db, save_message, load_conversation, delete_conversation, get_all_sessions_summary_mongo
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 import google.generativeai as genai
@@ -28,8 +28,8 @@ CORS(app, origins=["https://ai-lawyer-tau.vercel.app", "http://localhost:5000"])
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel(
-    'gemini-1.5-flash', 
-    generation_config={"response_mime_type": "text/plain", "temperature": 0.7},
+    'gemini-1.5-flash',
+    generation_config={"response_mime_type": "text/plain", "temperature": 0.7}, # Model still prefers markdown but will adapt to HTML instruction
     safety_settings=[
         {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
         {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -38,7 +38,7 @@ model = genai.GenerativeModel(
     ]
 )
 multimodal_model = genai.GenerativeModel( # Модель для работы с изображениями и текстом
-    'gemini-1.5-flash', 
+    'gemini-1.5-flash',
     generation_config={"response_mime_type": "text/plain", "temperature": 0.7},
     safety_settings=[
         {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
@@ -102,11 +102,11 @@ def load_laws():
         # Construct the absolute path to kazakh_laws.json
         base_dir = os.path.dirname(os.path.abspath(__file__))
         laws_file_path = os.path.join(base_dir, 'laws', 'kazakh_laws.json')
-        
+
         with open(laws_file_path, 'r', encoding='utf-8') as f:
             LAW_DB = json.load(f)
         logging.info(f"✅ Загружено {len(LAW_DB)} законов.")
-        
+
         # Построение инвертированного индекса
         LAW_INDEX = {}
         for i, law in enumerate(LAW_DB):
@@ -153,7 +153,7 @@ def get_file_parts(file):
     # Determine MIME type from the file object's mimetype attribute
     mime_type = file.mimetype
     file_stream = io.BytesIO(file.read()) # Создаем байтовый поток из FileStorage
-    
+
     if mime_type == 'image/jpeg' or mime_type == 'image/png':
         # Для изображений возвращаем FileData
         return [genai.types.FileData(mime_type=mime_type, data=file_stream.getvalue())]
@@ -195,12 +195,12 @@ def find_laws_by_keywords(question, max_snippet_chars: int = 4000):
     selected, total = [], 0
     # Сортируем индексы законов по релевантности, затем получаем сами законы
     sorted_law_indices = sorted(list(law_ids), key=relevance, reverse=True)
-    
+
     for law_index in sorted_law_indices:
         law = LAW_DB[law_index]
         # Используем build_snippet для создания компактного сниппета
         snippet = build_snippet(law.get('text', ''), expanded_keywords)
-        
+
         law_entry = {
             "title":   law.get('title', ''),
             "article": law.get('article', ''),
@@ -208,18 +208,18 @@ def find_laws_by_keywords(question, max_snippet_chars: int = 4000):
         }
         # Оцениваем размер в символах для простоты (токены примерно коррелируют)
         size = len(snippet) + len(law_entry["title"]) + len(law_entry["article"]) + 50 # Добавляем запас
-        
+
         if total + size > max_snippet_chars:
             logging.info(f"🛑 Достигнут лимит символов для сниппетов законов. Остановились на {len(selected)} законах. Общий размер: {total} символов.")
             break
-        
+
         selected.append(law_entry)
         total += size
-        
+
         if len(selected) >= 8:   # максимум 8 статей на запрос (можно настроить)
             logging.info(f"🛑 Достигнут лимит по количеству статей. Выбрано {len(selected)} статей.")
             break
-            
+
     logging.info(f"✅ Найдено {len(selected)} законов, передано {total} символов.")
     return selected
 
@@ -229,21 +229,23 @@ def generate_response(chat_history_formatted, user_question, relevant_laws_info=
 
     # Системная инструкция
     system_instruction = """
-    Ты ИИ-юрист из Казахстана. Твоя основная задача — предоставлять юридические консультации строго по законодательству Республики Казахстан. 
-    Ты должен отвечать четко, лаконично, ссылаясь на конкретные статьи, пункты и наименования законов, если это возможно. 
-    Если ответ требует уточнения или информации, которой у тебя нет, задай уточняющий вопрос. 
+    Ты ИИ-юрист из Казахстана. Твоя основная задача — предоставлять юридические консультации строго по законодательству Республики Казахстан.
+    Ты должен отвечать четко, лаконично, ссылаясь на конкретные статьи, пункты и наименования законов, если это возможно.
+    ОФОРМЛЯЙ СВОЙ ОТВЕТ В ФОРМАТЕ HTML. Используй теги <p> для параграфов, <ul> и <li> для списков, <strong> для выделения жирным.
+    Не используй Markdown (например, **жирный текст** или *списки через дефис).
+    Если ответ требует уточнения или информации, которой у тебя нет, задай уточняющий вопрос.
     Не выдумывай информацию. Если не знаешь ответа, так и скажи, но постарайся предложить, где пользователь может найти информацию (например, "обратитесь к юристу", "проверьте статьи X Закона Y").
     Всегда помни о юрисдикции РК.
     """
     prompt_parts.append({"role": "user", "parts": [{"text": system_instruction}]})
-    prompt_parts.append({"role": "model", "parts": [{"text": "Понял. Я готов предоставлять консультации строго по законодательству Республики Казахстан. Задавайте вопросы."}]})
+    prompt_parts.append({"role": "model", "parts": [{"text": "Понял. Я готов предоставлять консультации строго по законодательству Республики Казахстан, оформляя ответы в формате HTML."}]})
 
     # --- ОГРАНИЧЕНИЕ ИСТОРИИ ЧАТА ---
     # Определите, сколько последних сообщений вы хотите сохранить.
     # Каждая пара (пользователь, модель) - это 2 сообщения.
     # Начните с небольшого числа, например, 10-20 сообщений.
     MAX_HISTORY_MESSAGES = 10 # Например, последние 10 сообщений (5 пар диалогов)
-    
+
     # Усекаем историю, чтобы в модель попадали только последние N сообщений
     truncated_chat_history_formatted = chat_history_formatted[-MAX_HISTORY_MESSAGES:]
 
@@ -278,10 +280,10 @@ def generate_response(chat_history_formatted, user_question, relevant_laws_info=
                         doc_text += part["text"] + "\n"
             else:
                 doc_text += str(document_content)
-            
+
             prompt_parts.append({"role": "user", "parts": [{"text": doc_text}]})
             prompt_parts.append({"role": "model", "parts": [{"text": "Принял к сведению содержимое документа."}]})
-            
+
             # Добавляем текущий вопрос пользователя для текстовых документов
             final_user_question = f"Мой вопрос: {user_question}"
             prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
@@ -294,10 +296,16 @@ def generate_response(chat_history_formatted, user_question, relevant_laws_info=
         response = model.generate_content(prompt_parts)
 
     # --- ИСПРАВЛЕНИЕ: Преобразование frozenset в list для bleach.clean ---
+    # Убедимся, что все нужные HTML теги разрешены
+    ALLOWED_TAGS_EXTENDED = list(bleach.sanitizer.ALLOWED_TAGS) + [
+        'p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a',
+        'div', # Добавляем div для возможного блочного форматирования
+        'span' # Добавляем span для инлайн форматирования
+    ]
     clean_answer = bleach.clean(
-        response.text, 
-        tags=list(bleach.sanitizer.ALLOWED_TAGS) + ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a'], 
-        attributes={'a': ['href', 'title']}, 
+        response.text,
+        tags=ALLOWED_TAGS_EXTENDED,
+        attributes={'a': ['href', 'title']},
         strip=True
     )
     return clean_answer
@@ -310,7 +318,7 @@ def ask_ai():
         user_question = data.get("question", "")
         session_id = data.get("session_id", "default")
         uploaded_file = request.files.get('file') # Получаем файл, если он есть
-        
+
         logging.info(f"Получен запрос для сессии {session_id}: '{user_question[:50]}...'")
 
         if not user_question and not uploaded_file:
@@ -318,7 +326,7 @@ def ask_ai():
 
         # Загружаем историю чата из MongoDB
         chat_history = load_conversation(session_id)
-        
+
         # Преобразуем историю для модели
         chat_history_formatted = []
         for msg in chat_history:
@@ -351,16 +359,12 @@ def ask_ai():
 
         # Сохраняем вопрос пользователя и ответ AI в историю
         save_message(session_id, "user", user_question)
-        save_message(session_id, "model", ai_answer)
+        save_message(session_id, "model", ai_answer) # Сохраняем уже HTML ответ
 
         logging.info(f"Ответ AI для сессии {session_id} сгенерирован успешно.")
         return jsonify({"answer": ai_answer, "session_id": session_id})
 
-    # --- ИСПРАВЛЕНИЕ: Изменение пути к исключению NoAPIKeyError ---
-    # genai.types.core.NoAPIKeyError -> genai.APIError (более общая, но надежная для API ошибок)
-    # Если вам нужно конкретно NoAPIKeyError, проверьте документацию вашей версии google-generativeai,
-    # но genai.APIError обычно покрывает такие случаи.
-    except genai.APIError as e: # ИСПРАВЛЕНО
+    except genai.APIError as e: # ИСПРАВЛЕНО: Правильный путь для исключения API
         logging.error(f"❌ Ошибка API ключа Gemini или другая ошибка API: {e}")
         return jsonify({"error": "Ошибка конфигурации API: Ключ Gemini API недействителен или отсутствует, либо другая ошибка API."}), 500
     except genai.types.BlockedPromptException as e:
@@ -383,6 +387,7 @@ def get_history():
         formatted_history = []
         for entry in history:
             # Убедитесь, что content корректно извлекается
+            # Теперь content может быть HTML, поэтому передаем его как есть
             content = entry['parts'][0] if isinstance(entry['parts'], list) and entry['parts'] else ''
             formatted_history.append({"role": entry['role'], "content": content})
         return jsonify({"history": formatted_history})
