@@ -33,49 +33,47 @@
 
             <div class="main-content-area">
                 <div id="initial-sections">
-                    <section id="about" class="intro-section">
-                        <h2 id="about-link">🤖 О проекте</h2>
-                        <p><strong>Kaz Legal Bot</strong> — это инновационный AI-юрист, разработанный специально для граждан Казахстана. Он предоставляет мгновенные и точные юридические консультации на основе действующего законодательства Республики Казахстан. Наша цель — сделать юридическую помощь доступной и понятной для каждого.</p>
-                        <p>Бот обучен на обширной базе данных, включающей законы, нормативно-правовые акты и судебную практику РК. Он способен анализировать сложные юридические вопросы и предлагать решения, максимально соответствующие требованиям казахстанского законодательства.</p>
+                    <section id="hero-section" class="input-card">
+                        <p class="greeting-message">Привет! Я ваш ИИ-юрист. Чем могу помочь?</p>
+                        <form id="chat-form">
+                            <textarea id="userQuestion" placeholder="Задайте ваш юридический вопрос здесь..."></textarea>
+                            <button type="submit" id="send-initial-message" class="btn primary-btn"><i class="fas fa-paper-plane"></i> Отправить</button>
+                        </form>
                     </section>
 
-                    <section id="help" class="intro-section">
-                        <h2 id="help-link">⚖️ Юридическая помощь</h2>
-                        <p>Вы можете задать любой юридический вопрос, касающийся законодательства Казахстана. Например:</p>
+                    <section id="upload-section" class="upload-card">
+                        <h2>Загрузите документ для анализа</h2>
+                        <div id="drop-area" class="drop-area">
+                            <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
+                            <label for="fileInput" class="drop-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Перетащите файл сюда или нажмите, чтобы выбрать</p>
+                                <p class="file-types">Поддерживаемые форматы: PDF, DOCX, TXT, PNG, JPG</p>
+                            </label>
+                            <div id="file-list" class="file-list"></div>
+                        </div>
+                        <textarea id="file-question" class="file-question-input" placeholder="Задайте вопрос по документу (необязательно)"></textarea>
+                        <div class="upload-footer">
+                            <button id="upload-button" class="btn primary-btn" disabled><i class="fas fa-upload"></i> Загрузить</button>
+                            <button id="clear-files-button" class="btn secondary-btn" style="display:none;"><i class="fas fa-times-circle"></i> Очистить</button>
+                        </div>
+                    </section>
+
+                    <section id="about-section">
+                        <h2 id="about-link">🤖 О проекте</h2>
+                        <p>Kaz Legal Bot — это инновационный AI-помощник, разработанный для предоставления быстрой и точной юридической информации, основанной исключительно на законодательстве Республики Казахстан. Наша цель — сделать правовую помощь доступной и понятной для каждого.</p>
+                        <p>Мы используем передовые модели искусственного интеллекта для анализа вашего запроса и предоставления релевантных ответов, а также можем анализировать загруженные вами юридические документы, такие как договоры, исковые заявления, нормативные акты и многое другое. </p>
+                        <p><b>Важное примечание:</b> Kaz Legal Bot является справочным инструментом и не заменяет консультацию с квалифицированным юристом. Всегда обращайтесь за профессиональной юридической помощью для решения конкретных правовых вопросов.</p>
+                    </section>
+
+                    <section id="help-section">
+                        <h2 id="help-link">✨ Как получить юридическую помощь?</h2>
                         <ul>
-                            <li>"Каковы мои права при увольнении по собственному желанию?"</li>
-                            <li>"Как оспорить штраф за нарушение ПДД в Казахстане?"</li>
-                            <li>"Какие документы нужны для регистрации ИП в РК?"</li>
-                            <li>"Что такое брачный договор и как его заключить?"</li>
-                            <li>"Поясните статью 25 Закона РК 'О жилищных отношениях'."</li>
+                            <li><b>Задайте вопрос:</b> Просто введите ваш вопрос в текстовое поле и нажмите Enter или кнопку отправки.</li>
+                            <li><b>Загрузите документ:</b> Перетащите или выберите ваш документ (PDF, DOCX, TXT, JPG, PNG) в специальную область. Вы также можете добавить вопрос по содержимому документа.</li>
+                            <li><b>История чатов:</b> Все ваши предыдущие диалоги сохраняются в боковой панели для удобного доступа.</li>
+                            <li><b>Уточняющие вопросы:</b> Если ответ ИИ будет недостаточно полным, он задаст уточняющие вопросы, чтобы максимально точно понять вашу ситуацию и предоставить наилучший ответ.</li>
                         </ul>
-                        <p>Вы также можете загрузить документ (например, договор, постановление, исковое заявление) в форматах PDF, DOCX, JPG или PNG, и задать вопрос по его содержанию.</p>
-                        <form id="chat-form">
-                            <textarea id="userQuestion" placeholder="Напишите ваш вопрос здесь..."></textarea>
-                            <div class="upload-card">
-                                <label for="file-upload" class="file-upload-label">
-                                    <i class="fas fa-paperclip"></i> Прикрепить документ
-                                    <input type="file" id="file-upload" accept=".pdf,.docx,.jpg,.png" style="display: none;">
-                                </label>
-                                <span id="file-name" class="file-name-display">Файл не выбран</span>
-                                <button type="button" id="clear-file" class="clear-file-button" style="display: none;">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="upload-footer">
-                                <button type="submit" id="submitBtn" class="btn">
-                                    <i class="fas fa-robot"></i> Получить консультацию
-                                </button>
-                                <div class="action-buttons">
-                                    <button type="button" id="start-new-conversation-main" class="btn new-conversation-btn">
-                                        <i class="fas fa-plus"></i> Новый чат
-                                    </button>
-                                    <button type="button" id="clear-history-button" class="btn clear-history-btn">
-                                        <i class="fas fa-trash"></i> Очистить историю
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
                     </section>
                 </div>
 
