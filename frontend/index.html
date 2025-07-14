@@ -11,7 +11,7 @@
 </head>
 <body>
     <header>
-        <h1>Kaz Legal Bot</h1>
+        <h1 id="home-link">Kaz Legal Bot</h1>
         <nav>
             <a href="#about-link" id="about-link-nav">О проекте</a>
             <a href="#help-link">Юридическая помощь</a>
@@ -33,44 +33,43 @@
 
             <div class="main-content-area">
                 <div id="initial-sections">
-                    <section id="about" class="initial-section">
-                        <h2 id="about-link">🧠 Об AI-помощнике</h2>
-                        <p><strong>Kaz Legal Bot</strong> — это умный юридический ассистент, который помогает гражданам Казахстана разобраться в правовых вопросах, опираясь на действующее законодательство Республики Казахстан.</p>
-                        <p>Наш бот создан, чтобы упростить доступ к юридической информации, предоставляя быстрые и точные ответы на ваши вопросы. Он использует передовые технологии искусственного интеллекта для анализа и синтеза информации, обеспечивая надежную поддержку в вопросах права.</p>
-                        <p>Обратите внимание: Kaz Legal Bot предоставляет информационные справки и не является заменой квалифицированной юридической консультации. Для решения сложных и спорных вопросов всегда рекомендуется обращаться к профессиональным юристам.</p>
+                    <section id="about" class="intro-section">
+                        <h2 id="about-link">О проекте</h2>
+                        <p><strong>Kaz Legal Bot</strong> — ваш надежный помощник в мире законодательства Республики Казахстан. Наш ИИ-юрист, основанный на передовых моделях искусственного интеллекта, разработан специально для предоставления точных и актуальных юридических консультаций, соответствующих нормам права РК. Он обучен на обширной базе законодательных актов Казахстана и постоянно совершенствуется, чтобы предложить вам максимально полную и полезную информацию.</p>
+                        <p>Мы стремимся сделать юридическую помощь доступной и понятной каждому, предоставляя быстрые и достоверные ответы на широкий круг вопросов, от трудового и гражданского права до административных и налоговых нюансов.</p>
                     </section>
 
-                    <section id="help" class="initial-section">
-                        <h2 id="help-link">⚖️ Юридическая помощь</h2>
-                        <p>Вы можете задать вопрос о любом аспекте законодательства Казахстана. Например:</p>
+                    <section id="help" class="intro-section">
+                        <h2 id="help-link">Юридическая помощь</h2>
+                        <p>ИИ-юрист предоставит вам следующие виды помощи:</p>
                         <ul>
-                            <li>"Каковы мои права при увольнении?"</li>
-                            <li>"Какие документы нужны для оформления ИП?"</li>
-                            <li>"Что такое брачный договор в Казахстане?"</li>
-                            <li>"Как оспорить штраф за нарушение ПДД?"</li>
+                            <li><strong>Разъяснение законодательства:</strong> Получите четкие и понятные объяснения статей и положений законов Республики Казахстан.</li>
+                            <li><strong>Консультации по правовым вопросам:</strong> Задавайте вопросы по различным областям права — гражданскому, трудовому, административному, налоговому и другим.</li>
+                            <li><strong>Помощь в понимании документов:</strong> Загрузите документ (например, договор, уведомление, акт), и ИИ-юрист поможет вам понять его содержание и правовые последствия.</li>
+                            <li><strong>Анализ ситуаций:</strong> Опишите вашу ситуацию, и ИИ-юрист поможет определить, какие нормы закона применимы и какие действия можно предпринять.</li>
                         </ul>
-                        <p>Также вы можете загрузить документ (PDF, DOCX, TXT, изображение), и я помогу вам его проанализировать или ответить на вопросы по его содержимому.</p>
+                        <p class="disclaimer">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Важное замечание:</strong> ИИ-юрист предоставляет справочную информацию и не заменяет полноценную юридическую консультацию от квалифицированного специалиста. Для принятия юридически значимых решений всегда обращайтесь к живому юристу.
+                        </p>
 
-                        <form id="file-upload-form">
-                            <h3>Загрузить документ</h3>
-                            <div id="drag-and-drop-area" class="drag-drop-area">
-                                <p><i class="fas fa-cloud-upload-alt"></i> Перетащите файл сюда или <span class="browse-files">выберите</span></p>
-                                <input type="file" id="file-input" accept=".pdf,.docx,.txt,image/*" style="display: none;">
-                                <span id="file-chosen">Файл не выбран</span>
-                                <button type="button" id="clear-btn" class="btn" disabled>Очистить выбор</button>
+                        <h3>Задайте ваш вопрос или загрузите документ:</h3>
+                        <form id="question-form" class="question-form">
+                            <textarea id="userQuestion" placeholder="Например: 'Какие у меня права при увольнении по собственному желанию?' или 'Проанализируй этот договор аренды.'" required></textarea>
+                            <div class="upload-card">
+                                <label for="file-upload" class="file-upload-label">
+                                    <i class="fas fa-upload"></i> Выберите файл (PDF, DOCX, JPG, PNG)
+                                </label>
+                                <input type="file" id="file-upload" accept=".pdf,.docx,.jpg,.jpeg,.png" style="display: none;">
+                                <span id="file-name" class="file-name-display">Файл не выбран</span>
                             </div>
-                            <textarea id="file-question-input" placeholder="Задайте вопрос по документу (необязательно)..." rows="3" class="chat-input"></textarea>
-                            <button type="submit" id="file-submit-btn" class="btn" disabled>
-                                <i class="fas fa-paper-plane"></i> Отправить документ
-                            </button>
-                        </form>
-
-                        <form id="main-chat-form">
-                            <h3>Задать вопрос</h3>
-                            <textarea id="userQuestion" placeholder="Введите ваш вопрос..." rows="5" class="chat-input"></textarea>
-                            <button type="submit" id="submitBtn" class="btn">
-                                <i class="fas fa-paper-plane"></i> Отправить вопрос
-                            </button>
+                            <div class="upload-footer">
+                                <input type="text" id="file-question" class="file-question-input" placeholder="Добавьте вопрос к файлу (по желанию)">
+                                <div class="action-buttons">
+                                    <button type="submit" id="submitBtn" class="btn primary-btn">Получить ответ</button>
+                                    <button type="button" id="clearFileBtn" class="btn secondary-btn">Очистить файл</button>
+                                </div>
+                            </div>
                         </form>
                     </section>
                 </div>
