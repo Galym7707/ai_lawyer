@@ -103,64 +103,39 @@ def delete_conversation(session_id):
         print(f"❌ Ошибка при удалении истории из MongoDB: {e}")
 
 def get_all_sessions_summary_mongo():
-    global db # Убедитесь, что db доступен в этой функции
-    if db is None: # Исправлено
+    global db
+    if db is None:
         print("❌ Ошибка: База данных MongoDB не инициализирована. Получение сводки невозможно.")
         return []
     try:
-        # Используем агрегационный пайплайн для получения первого сообщения пользователя и сортировки
         pipeline = [
-            # Группируем по session_id и находим первое сообщение пользователя для каждой сессии
             {"$group": {
                 "_id": "$session_id",
-                "first_user_message_content": {
-                    "$first": "$content" # Это будет первое сообщение в сессии, независимо от роли
-                },
-                "first_user_message_role": {
-                    "$first": "$role"
-                },
-                "first_message_timestamp": {
-                    "$first": "$timestamp"
-                }
+                "first_user_message_content": {"$first": "$content"},
+                "first_user_message_role": {"$first": "$role"},
+                "first_message_timestamp": {"$first": "$timestamp"}
             }},
-            # Добавляем поле для определения, есть ли пользовательское сообщение в начале
             {"$addFields": {
                 "first_user_message_content": {
-                    "$cond": [
-                        {"$eq": ["$first_user_message_role", "user"]},
-                        "$first_user_message_content",
-                        "$$REMOVE" # Удаляем поле, если первое сообщение не от пользователя
-                    ]
+                    "$cond": [{"$eq": ["$first_user_message_role", "user"]}, "$first_user_message_content", "$$REMOVE"]
                 }
             }},
-            # Удаляем сессии без пользовательских сообщений (если таковые есть после $$REMOVE)
             {"$match": {"first_user_message_content": {"$exists": True}}},
-            # Проекция для формирования нужного формата
             {"$project": {
                 "id": "$_id",
-                "title": {
-                    "$cond": [
-                        {"$ne": ["$first_user_message_content", None]},
-                        # Обрезаем заголовок до 50 символов и добавляем "..." если длиннее
-                        {"$concat": [
-                            {"$substrCP": ["$first_user_message_content", 0, 50]},
-                            {"$cond": [
-                                {"$gt": [{"$strLenCP": "$first_user_message_content"}, 50]},
-                                "...",
-                                ""
-                            ]}
-                        ]},
-                        "Новый чат"
-                    ]
-                },
+                "title": {"$cond": [
+                    {"$ne": ["$first_user_message_content", None]},
+                    {"$concat": [{"$substrCP": ["$first_user_message_content", 0, 50]}, "..."]},
+                    "Новый чат"
+                ]},
                 "_id": 0
             }},
-            {"$sort": {"id": 1}} # Сортируем по session_id для стабильного порядка
+            {"$sort": {"id": 1}}
         ]
         
         sessions_summary = list(db.conversations.aggregate(pipeline))
-        print(f"✅ Получена сводка всех сессий: {len(sessions_summary)} сессий.")
         return sessions_summary
     except Exception as e:
         print(f"❌ Ошибка при получении сводки сессий из MongoDB: {e}")
         return []
+
