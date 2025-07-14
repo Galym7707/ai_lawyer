@@ -17,6 +17,7 @@ async function safeJson(res) {
 /* =========   MAIN SCRIPT   ========= */
 document.addEventListener('DOMContentLoaded', () => {
   /* ----------  DOM ---------- */
+  const clearFilesButton = document.getElementById('clear-files-button');
   const initialSections      = document.getElementById('initial-sections');
   const currentChatContainer = document.getElementById('current-chat-container');
   const chatMessagesDisplay  = document.getElementById('chat-messages-display');
@@ -182,7 +183,11 @@ document.addEventListener('DOMContentLoaded', () => {
         fileSpinner.style.display = 'none';
     }
 
-    
+    clearFilesButton.onclick = () => {
+      clearFile();  // Очистить всё при нажатии на кнопку очистки
+      clearFilesButton.style.display = 'none';  // Скрыть кнопку "Очистить"
+    };
+
     
     const messageText = uploadedFile ? fileQuestionInput.value || text : text; // Prioritize fileQuestionInput if file exists
     addMessage(messageText, 'user-message');
@@ -274,8 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
       clearFile();
     }
   };
+  
+  clearFileBtn.onclick = () => {
+    clearFile();  // Очистить всё при нажатии на кнопку очистки
+    clearFilesButton.style.display = 'none';  // Скрыть кнопку "Очистить"
+  };
 
-  clearFileBtn.onclick = clearFile;
 
   // NEW: SPA Navigation handlers
   homeLink.onclick = e => {
