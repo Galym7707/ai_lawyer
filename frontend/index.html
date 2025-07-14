@@ -50,14 +50,21 @@
                     <section id="upload-section" class="upload-card">
                         <h2>Загрузите документ для анализа</h2>
                         <div id="drop-area" class="drop-area">
-                            <input type="file" id="file-upload" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
-                            <label for="file-upload" class="drop-label">
+                            <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
+                            <label for="fileInput" class="drop-label">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <p>Перетащите файл сюда или нажмите, чтобы выбрать</p>
                                 <p class="file-types">Поддерживаемые форматы: PDF, DOCX, TXT, PNG, JPG</p>
                             </label>
                             <div id="file-list" class="file-list"></div>
                         </div>
+                    
+                        <!-- Отображение имени файла и кнопки очистки -->
+                        <div id="file-info" style="display:none;">
+                            <span id="file-name">Файл не выбран</span>
+                            <button id="clearFileBtn" type="button">Очистить</button>
+                        </div>
+                    
                         <textarea id="file-question" class="file-question-input" placeholder="Задайте вопрос по документу (необязательно)"></textarea>
                         <div class="upload-footer">
                             <button id="upload-button" class="btn primary-btn" disabled><i class="fas fa-upload"></i> Загрузить</button>
@@ -65,7 +72,6 @@
                         </div>
                     </section>
 
-                    
 
                     <section id="help-section">
                         <h2 id="help-link">✨ Как получить юридическую помощь?</h2>
