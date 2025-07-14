@@ -283,6 +283,18 @@ def ask_route():
         logging.error(f"❌ Ошибка в /ask: {e}")
         return jsonify({"error": f"Ошибка сервера при обработке запроса: {str(e)}"}), 500
 
+@app.route('/get-all-sessions-summary', methods=["GET"])
+def get_all_sessions_summary_route():
+    try:
+        sessions_summary = get_all_sessions_summary_mongo()  # Получение сводки сессий из MongoDB
+        if sessions_summary:
+            return jsonify({"sessions": sessions_summary}), 200
+        else:
+            return jsonify({"sessions": []}), 200
+    except Exception as e:
+        return jsonify({"error": f"Ошибка при получении сводки сессий: {str(e)}"}), 500
+
+
 # --- Маршрут для загрузки документов ---
 @app.route("/upload-document", methods=["POST"])
 def upload_document_route():
