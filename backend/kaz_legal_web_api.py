@@ -1,4 +1,3 @@
-# kaz_legal_web_api.py (Версия 4.9 — Улучшенное форматирование ответов AI)
 from memory import init_db, save_message, load_conversation, delete_conversation, get_all_sessions_summary_mongo
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 import google.generativeai as genai
@@ -6,13 +5,13 @@ import os
 import json
 import re
 from flask_cors import CORS
-import bleach # Для очистки HTML от XSS
-from concurrent.futures import ThreadPoolExecutor # Для асинхронных вызовов
-from PIL import Image # Для обработки изображений
-import io # Для работы с байтовыми потоками
-from docx import Document # Для чтения .docx
-from PyPDF2 import PdfReader # Для чтения .pdf
-import logging # Для логирования
+import bleach  # Для очистки HTML от XSS
+from concurrent.futures import ThreadPoolExecutor  # Для асинхронных вызовов
+from PIL import Image  # Для обработки изображений
+import io  # Для работы с байтовыми потоками
+from docx import Document  # Для чтения .docx
+from PyPDF2 import PdfReader  # Для чтения .pdf
+import logging  # Для логирования
 
 # --- НОВОЕ: Импортируем helpers ---
 from helpers import expand_keywords, build_snippet
@@ -21,71 +20,27 @@ from helpers import expand_keywords, build_snippet
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024 # 1 GB (1 ГБ)
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB (1 ГБ)
 CORS(app, origins=["https://ai-lawyer-tau.vercel.app", "http://localhost:5000", "http://127.0.0.1:5000"])
 
 # --- Инициализация AI и Базы Законов ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "text/plain", "temperature": 0.7}) # Установили temperature 0.7
-vision_model = genai.GenerativeModel('gemini-1.5-flash') # Модель для анализа изображений
+model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "text/plain", "temperature": 0.7})
+vision_model = genai.GenerativeModel('gemini-1.5-flash')  # Модель для анализа изображений
 
-LAW_DB = [] # Теперь это будет использоваться как кэш или для специализированного поиска
+LAW_DB = []  # Теперь это будет использоваться как кэш или для специализированного поиска
 
-# --- УЛУЧШЕНИЕ: Максимально расширенный словарь синонимов (с добавлением налоговых терминов) ---
-LEGAL_SYNONYMS = {
-    # Трудовые отношения
-    'увольнение': ['уволен', 'увольнять', 'расторжение трудового договора', 'прекращение трудовых отношений'],
-    'трудовой договор': ['контракт', 'трудовое соглашение', 'соглашение о найме'],
-    'заработная плата': ['зарплата', 'оплата труда', 'оклад', 'выплаты', 'вознаграждение'],
-    'отпуск': ['отдых', 'ежегодный отпуск', 'трудовой отпуск', 'отгул'],
-    'рабочее время': ['график работы', 'часы работы', 'трудовой распорядок'],
-    'больничный': ['временная нетрудоспособность', 'листок нетрудоспособности', 'пособие по временной нетрудоспособности'],
-    # Гражданское право
-    'договор': ['соглашение', 'контракт', 'сделка', 'акт'],
-    'собственность': ['имущество', 'владение', 'право собственности', 'принадлежность'],
-    'наследование': ['наследство', 'завещание', 'наследники', 'вступление в наследство'],
-    'возмещение ущерба': ['компенсация', 'убытки', 'взыскание', 'вреда'],
-    'сделка': ['транзакция', 'договор купли-продажи', 'обмен'],
-    # Административное право
-    'штраф': ['административное взыскание', 'пеня', 'санкция', 'взыскание'],
-    'лицензия': ['разрешение', 'допущение', 'право на деятельность'],
-    'государственная услуга': ['публичная услуга', 'услуга ЦОН', 'госуслуга'],
-    # Уголовное право (базовые)
-    'преступление': ['правонарушение', 'уголовное деяние', 'криминал'],
-    'наказание': ['мера пресечения', 'приговор', 'санкция'],
-    # Налоговое право (расширение)
-    'налог': ['сбор', 'пошлина', 'отчисления', 'обязательный платеж'],
-    'НДС': ['налог на добавленную стоимость', 'VAT'],
-    'ИПН': ['индивидуальный подоходный налог', 'подоходный налог с физических лиц'],
-    'КПН': ['корпоративный подоходный налог', 'налог на прибыль'],
-    'налоговая отчетность': ['декларация', 'налоговый отчет', 'отчетность по налогам'],
-    'налоговая проверка': ['аудит', 'камеральный контроль', 'выездная проверка'],
-    'налоговый резидент': ['резидент', 'налогоплательщик'],
-    'ЕНПФ': ['Единый накопительный пенсионный фонд', 'пенсионные отчисления'],
-    'СО': ['социальные отчисления', 'соцотчисления'],
-    'ОСМС': ['обязательное социальное медицинское страхование', 'медстраховка'],
-    # Процессуальное право
-    'иск': ['исковое заявление', 'претензия', 'судебный иск'],
-    'суд': ['судебный орган', 'правосудие', 'трибунал'],
-    'решение суда': ['приговор', 'постановление суда', 'судебный акт'],
-    'процесс': ['судебный процесс', 'разбирательство', 'слушание'],
-    # Другое
-    'закон': ['кодекс', 'нормативный акт', 'постановление', 'акт законодательства', 'правило', 'предписание'],
-    'нормативно-правовой акт': ['НПА', 'законодательный акт'],
-    'консультация': ['совет', 'разъяснение', 'помощь', 'мнение'],
-    'юрист': ['адвокат', 'правовед', 'законник', 'юрисконсульт'],
-    'Казахстан': ['РК', 'Республика Казахстан', 'казахстанский'],
-    'ИП': ['индивидуальный предприниматель', 'частный предприниматель', 'предприниматель'],
-    'ТОО': ['товарищество с ограниченной ответственностью', 'ООО'],
-    'регистрация': ['оформление', 'учет', 'постановка на учет'],
-    'документ': ['справка', 'бумага', 'акт', 'бланк'],
-}
+# --- Инициализация MongoDB ---
+MONGO_URI = os.getenv("MONGO_URI")
+if MONGO_URI:
+    init_db()  # Инициализируем MongoDB соединение при старте приложения
+else:
+    logging.error("❌ Ошибка: Переменная окружения MONGO_URI не установлена. Подключение к MongoDB невозможно.")
 
-init_db() # Инициализируем MongoDB соединение при старте приложения
-executor = ThreadPoolExecutor(max_workers=4) # Пул потоков для асинхронной обработки
+executor = ThreadPoolExecutor(max_workers=4)  # Пул потоков для асинхронной обработки
 
-# Загрузка базы законов (если используется локально)
+# --- Загрузка базы законов ---
 def load_law_db(path="laws/kazakh_laws_db.json"):
     global LAW_DB
     if os.path.exists(path):
@@ -97,80 +52,35 @@ def load_law_db(path="laws/kazakh_laws_db.json"):
 
 load_law_db()
 
+# --- Функция поиска релевантных законов ---
 def find_relevant_laws(query: str) -> list:
-    """
-    Ищет релевантные статьи в LAW_DB на основе запроса, расширенного синонимами.
-    """
     query_lower = query.lower()
-    query_keywords = set(re.findall(r'\b\w+\b', query_lower)) # Извлекаем слова из запроса
+    query_keywords = set(re.findall(r'\b\w+\b', query_lower))  # Извлекаем слова из запроса
     expanded_keywords = expand_keywords(query_keywords, LEGAL_SYNONYMS)
 
     relevant_articles = []
     for article in LAW_DB:
         content_lower = article.get('content', '').lower()
         title_lower = article.get('title', '').lower()
-        
+
         # Проверяем на наличие хотя бы одного расширенного ключевого слова в контенте или заголовке
         if any(kw in content_lower or kw in title_lower for kw in expanded_keywords):
-            # Улучшение: Использование build_snippet для создания более информативного сниппета
             snippet = build_snippet(article.get('content', ''), expanded_keywords)
             relevant_articles.append({
                 "title": article.get('title', 'Без названия'),
                 "link": article.get('link', '#'),
                 "snippet": snippet
             })
-    
-    # Сортировка по релевантности (по количеству совпадений или другой метрике)
-    # Здесь простая сортировка: статьи, содержащие больше ключевых слов, будут выше
+
     relevant_articles.sort(key=lambda x: sum(kw in x['snippet'].lower() for kw in expanded_keywords), reverse=True)
-    
-    return relevant_articles[:5] # Возвращаем до 5 самых релевантных статей
 
+    return relevant_articles[:5]  # Возвращаем до 5 самых релевантных статей
+
+# --- Функция очистки HTML от XSS ---
 def sanitize_html_output(text):
-    """Очищает текст, разрешая безопасные HTML-теги для форматирования."""
-    # Расширенный список разрешенных тегов и атрибутов
-    # Убедитесь, что этот список соответствует ожиданиям фронтенда и является безопасным
-    allowed_tags = [
-        'a', 'abbr', 'acronym', 'b', 'blockquote', 'br', 'code', 'em', 'i', 'li', 'ol', 'p',
-        'strong', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'span', 'div',
-        'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'hr', 's', 'del', 'ins', 'img'
-    ]
-    allowed_attrs = {
-        '*': ['class', 'style'], # Разрешаем class и style для всех тегов (осторожно!)
-        'a': ['href', 'title'],
-        'img': ['src', 'alt', 'width', 'height']
-    }
+    allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'br', 'code', 'em', 'i', 'li', 'ol', 'p', 'strong', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'span', 'div', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'hr', 's', 'del', 'ins', 'img']
+    allowed_attrs = {'*': ['class', 'style'], 'a': ['href', 'title'], 'img': ['src', 'alt', 'width', 'height']}
     return bleach.clean(text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
-
-
-# --- Вспомогательная функция для обработки загруженных файлов ---
-def process_file_content(file_stream, mimetype):
-    text_content = ""
-    try:
-        if mimetype == 'application/pdf':
-            reader = PdfReader(file_stream)
-            for page in reader.pages:
-                text_content += page.extract_text() or ""
-        elif mimetype == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-            document = Document(file_stream)
-            for paragraph in document.paragraphs:
-                text_content += paragraph.text + "\n"
-        elif mimetype.startswith('image/'):
-            # Для изображений используем Gemini Vision Model
-            image = Image.open(file_stream)
-            # Отправляем изображение в модель для описания
-            response = vision_model.generate_content(["Опиши этот документ или изображение. Извлеки весь текст и информацию, которая может быть релевантна для юридического анализа. Если это документ, прочти его полностью. Если это график, опиши данные.", image])
-            text_content = response.text
-        elif mimetype.startswith('text/'):
-            text_content = file_stream.read().decode('utf-8')
-        else:
-            logging.warning(f"⚠️ Неподдерживаемый тип файла: {mimetype}")
-            return None
-    except Exception as e:
-        logging.error(f"❌ Ошибка при обработке файла {mimetype}: {e}")
-        return None
-    return text_content
-
 
 # --- Маршрут для обработки текстовых запросов ---
 @app.route("/ask", methods=["POST"])
@@ -185,7 +95,7 @@ def ask_route():
 
         # Загружаем историю для текущей сессии
         history = load_conversation(session_id)
-        
+
         # Добавляем текущий вопрос пользователя в историю
         full_history = history + [{"role": "user", "parts": [user_question]}]
 
@@ -195,10 +105,10 @@ def ask_route():
         if relevant_laws:
             law_context = "\n\nРелевантные статьи законодательства Казахстана:\n"
             for law in relevant_laws:
-                law_context += f"- **{law['title']}**: {law['snippet']}}]\n"
+                law_context += f"- **{law['title']}**: {law['snippet']}\n"
             logging.info(f"🔍 Найдены релевантные законы для запроса: {user_question}")
-        
-        # Добавляем контекст законов к запросу для AI, если они есть
+
+        # Добавляем контекст законов к запросу для AI
         system_instruction = f"""Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
             Твоя задача — давать точные, полные и основанные на законодательстве ответы.
             Всегда ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
@@ -298,25 +208,17 @@ def ask_route():
         
         """
 
-        # Добавляем системную инструкцию в начало истории для модели
-        # Важно: системная инструкция должна быть частью history для каждой генерации
         messages_for_model = [{"role": "system", "parts": [system_instruction]}] + full_history
 
-        # Генерируем ответ, используя потоковую передачу
         def generate_stream():
             ai_response_content = ""
             try:
-                # Если в full_history последний элемент - пользовательское сообщение, отправляем его
-                # иначе, отправляем всю историю как контекст и генерируем новый ответ
-                # Для chat-модели достаточно передать всю историю
                 for chunk in model.generate_content(messages_for_model, stream=True):
                     if chunk.text:
-                        # Очищаем каждый чанк от потенциально опасного HTML
                         cleaned_chunk = sanitize_html_output(chunk.text)
                         ai_response_content += cleaned_chunk
                         yield cleaned_chunk
-                
-                # Сохраняем полный ответ AI в историю только после завершения стриминга
+
                 save_message(session_id, "model", ai_response_content)
                 logging.info(f"✅ Ответ AI сохранен для сессии {session_id}")
 
@@ -324,11 +226,11 @@ def ask_route():
                 logging.error(f"❌ Запрос заблокирован: {e}")
                 save_message(session_id, "model", "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.")
                 yield "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента."
+
             except Exception as e:
                 logging.error(f"❌ Ошибка генерации ответа: {e}")
                 save_message(session_id, "model", "Произошла ошибка при генерации ответа. Попробуйте еще раз.")
                 yield "Произошла ошибка при генерации ответа. Попробуйте еще раз."
-
 
         return Response(stream_with_context(generate_stream()), mimetype='text/html')
 
@@ -336,17 +238,17 @@ def ask_route():
         logging.error(f"❌ Ошибка в /ask: {e}")
         return jsonify({"error": f"Ошибка сервера при обработке запроса: {str(e)}"}), 500
 
-# --- НОВЫЙ Маршрут для обработки загрузки документов ---
+# --- Маршрут для загрузки документов ---
 @app.route("/upload-document", methods=["POST"])
 def upload_document_route():
     try:
         user_file = request.files.get('file')
-        user_question = request.form.get("question", "") # Вопрос, сопровождающий файл
+        user_question = request.form.get("question", "")  # Вопрос, сопровождающий файл
         session_id = request.form.get("session_id", "default")
 
         if not user_file:
             return jsonify({"error": "Файл не предоставлен"}), 400
-        
+
         file_mimetype = user_file.mimetype
         logging.info(f"📁 Получен файл: {user_file.filename} с MIME-типом: {file_mimetype}")
 
@@ -356,35 +258,31 @@ def upload_document_route():
             return jsonify({"error": "Неподдерживаемый или поврежденный тип файла."}), 400
 
         # Добавляем содержимое файла в историю сообщений как часть пользовательского ввода
-        # Это позволит AI видеть контекст документа
-        file_message_content = f"Пользователь загрузил документ ({user_file.filename}). Содержимое документа:\n```\n{file_content_text[:2000]}...\n```\n" # Ограничим для логов
-        
+        file_message_content = f"Пользователь загрузил документ ({user_file.filename}). Содержимое документа:\n```\n{file_content_text[:2000]}...\n```\n"  # Ограничим для логов
+
         # Загружаем историю для текущей сессии
         history = load_conversation(session_id)
-        
+
         # Добавляем содержимое файла и вопрос пользователя в историю
         full_history = history + [
             {"role": "user", "parts": [file_message_content]},
-            {"role": "user", "parts": [user_question]} # Отдельно вопрос пользователя
-        ] if user_question else history + [{"role": "user", "parts": [file_message_content]}]
+            {"role": "user", "parts": [user_question]} if user_question else history
+        ]
 
         # Поиск релевантных законов на основе содержимого файла и вопроса
         combined_text_for_search = file_content_text + " " + user_question
         relevant_laws = find_relevant_laws(combined_text_for_search)
+
         law_context = ""
         if relevant_laws:
             law_context = "\n\nРелевантные статьи законодательства Казахстана:\n"
             for law in relevant_laws:
-                law_context += f"- **{law['title']}**: {law['snippet']}}]\n"
+                law_context += f"- **{law['title']}**: {law['snippet']}\n"
             logging.info(f"🔍 Найдены релевантные законы для документа и запроса.")
 
         system_instruction = f"""Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
             Твоя задача — давать точные, полные и основанные на законодательстве ответы.
             Всегда ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
-            Если информация отсутствует в предоставленных данных или базе знаний, прямо укажи это.
-            Приоритизируй уточняющие вопросы, если запрос пользователя неоднозначен или требует дополнительной информации для точного ответа.
-            Ответы форматируй в HTML для удобного отображения на веб-странице, используя <p>, <ul>, <li>, <strong>, <em>, <a> (для ссылок на законы).
-            Не используй Markdown, только чистый HTML.
             {law_context if law_context else "У тебя нет доступа к актуальной базе законодательства. Отвечай на общие юридические вопросы, основываясь на твоих знаниях, но всегда предупреждай, что информация требует проверки по актуальным законам РК."}
         """
 
@@ -398,7 +296,7 @@ def upload_document_route():
                         cleaned_chunk = sanitize_html_output(chunk.text)
                         ai_response_content += cleaned_chunk
                         yield cleaned_chunk
-                
+
                 save_message(session_id, "model", ai_response_content)
                 logging.info(f"✅ Ответ AI на документ сохранен для сессии {session_id}")
 
@@ -406,55 +304,19 @@ def upload_document_route():
                 logging.error(f"❌ Запрос (с файлом) заблокирован: {e}")
                 save_message(session_id, "model", "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.")
                 yield "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента."
+
             except Exception as e:
                 logging.error(f"❌ Ошибка генерации ответа (с файлом): {e}")
                 save_message(session_id, "model", "Произошла ошибка при генерации ответа на документ. Попробуйте еще раз.")
                 yield "Произошла ошибка при генерации ответа на документ. Попробуйте еще раз."
-        
+
         return Response(stream_with_context(generate_stream()), mimetype='text/html')
 
     except Exception as e:
         logging.error(f"❌ Ошибка в /upload-document: {e}")
         return jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"}), 500
 
-
-# --- Маршрут для загрузки истории сообщений ---
-@app.route("/get-history", methods=["GET"])
-def get_history():
-    session_id = request.args.get("session_id", "default")
-    try:
-        history = load_conversation(session_id)
-        formatted_history = []
-        for entry in history:
-            content = entry['parts'][0] if isinstance(entry['parts'], list) and entry['parts'] else ''
-            formatted_history.append({"role": entry['role'], "content": content})
-        return jsonify({"history": formatted_history})
-    except Exception as e:
-        logging.error(f"❌ Ошибка в /get-history: {e}")
-        return jsonify({"error": f"Ошибка сервера при получении истории: {str(e)}"}), 500
-
-# --- Маршрут для получения сводки всех сессий для отображения в сайдбаре ---
-@app.route("/get-all-sessions-summary", methods=["GET"])
-def get_all_sessions_summary_route():
-    try:
-        sessions_summary = get_all_sessions_summary_mongo()
-        return jsonify({"sessions": sessions_summary})
-    except Exception as e:
-        logging.error(f"❌ Ошибка в /get-all-sessions-summary: {e}")
-        return jsonify({"error": f"Ошибка сервера при получении сводки сессий: {str(e)}"}), 500
-
-# --- Маршрут для удаления истории сообщений ---
-@app.route("/clear-history", methods=["POST"])
-def clear_history_route():
-    session_id = request.json.get("session_id", "default")
-    try:
-        delete_conversation(session_id)
-        return jsonify({"message": "История очищена", "session_id": session_id})
-    except Exception as e:
-        logging.error(f"❌ Ошибка в /clear-history: {e}")
-        return jsonify({"error": f"Ошибка сервера при очистке истории: {str(e)}"}), 500
-
-# --- Маршрут для главной страницы (обслуживание frontend) ---
+# --- Основной маршрут для фронтенда ---
 @app.route('/')
 def serve_index():
     return send_from_directory(app.static_folder, 'index.html')
@@ -464,9 +326,6 @@ def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
 
 if __name__ == '__main__':
-    # В production используйте Gunicorn или другой WSGI-сервер
-    # В разработке можно запускать так:
-    # app.run(debug=True, host='0.0.0.0', port=5000)
     # Для Railway:
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
