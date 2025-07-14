@@ -60,10 +60,15 @@ document.addEventListener('DOMContentLoaded', () => {
     currentChatContainer.style.display = 'none';
   };
 
+  // MODIFIED: Use marked.parse() for AI responses
   const addMessage = (html, cssClass = 'ai-response') => {
     const div = document.createElement('div');
     div.classList.add('chat-bubble', cssClass);
-    div.innerHTML = html;
+    if (cssClass === 'ai-response') {
+        div.innerHTML = marked.parse(html); // Render Markdown for AI responses
+    } else {
+        div.innerHTML = `<p>${html}</p>`; // Wrap user queries in a paragraph
+    }
     chatMessagesDisplay.appendChild(div);
     scrollToBottom();
   };
@@ -79,7 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.history?.length) {
         data.history.forEach(msg =>
-          addMessage(`<p>${msg.content}</p>`, msg.role === 'user' ? 'user-query' : 'ai-response'));
+          // MODIFIED: Ensure historical AI messages are also rendered with Markdown
+          addMessage(msg.content, msg.role === 'user' ? 'user-query' : 'ai-response'));
       } else {
         addMessage(welcomeMessage, 'ai-response');
       }
@@ -102,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data.sessions.sort((a, b) => b.id.localeCompare(a.id));
         data.sessions.forEach(s => {
           const li = document.createElement('li');
-          li.textContent       = s.title || 'Без названия';
+          li.textContent     = s.title || 'Без названия';
           li.dataset.sessionId = s.id;
           li.onclick = () => {
             currentSessionId = s.id;
@@ -145,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!msg) return;
 
     showChatArea();
-    addMessage(`<p>${msg}</p>`, 'user-query');
+    addMessage(msg, 'user-query'); // User queries are not Markdown
     userQuestionTextarea.value = chatInput.value = '';
     spinner.style.display = 'block';
 
@@ -161,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (data.error) {
         addMessage(`<p class="error-message">${data.error}</p>`, 'ai-response');
       } else {
-        addMessage(`<p>${data.answer}</p>`, 'ai-response');
+        addMessage(data.answer, 'ai-response'); // AI answers are Markdown
         currentSessionId = data.session_id;
         localStorage.setItem('currentSessionId', currentSessionId);
         loadChatSessions();
@@ -211,8 +217,8 @@ document.addEventListener('DOMContentLoaded', () => {
     showChatArea();
     const q  = fileQuestionInput.value.trim();
     addMessage(
-      `<p><strong>Документ:</strong> ${currentFile.name}</p>` +
-      (q ? `<p><strong>Вопрос:</strong> ${q}</p>` : ''),
+      `**Документ:** ${currentFile.name}` +
+      (q ? `\n**Вопрос:** ${q}` : ''),
       'user-query'
     );
     fileSpinner.style.display = 'block';
@@ -231,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addMessage(`<p class="error-message">${data.error}</p>`, 'ai-response');
       } else {
         const answerText = data.answer ?? data.response ?? data.text ?? '';
-        if (answerText) addMessage(`<p>${answerText}</p>`, 'ai-response');
+        if (answerText) addMessage(answerText, 'ai-response'); // AI answers are Markdown
 
         if (data.session_id) {
           currentSessionId = data.session_id;
