@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024 # 1 GB (1 ГБ)
-CORS(app, origins=["https://ai-lawyer-tau.vercel.app", "http://localhost:5000"]) # Добавьте ваш локальный адрес для разработки
+CORS(app, origins=["https://ai-lawyer-tau.vercel.app", "http://localhost:5000", "http://127.0.0.1:5000"])
 
 # --- Инициализация AI и Базы Законов ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
