@@ -28,260 +28,252 @@ document.addEventListener('DOMContentLoaded', () => {
   const spinner              = document.getElementById('spinner');
   const fileSpinner          = document.getElementById('fileSpinner');
   const chatList             = document.getElementById('chat-list');
+  const fileUploadInput      = document.getElementById('file-upload');
+  const fileNameDisplay      = document.getElementById('file-name');
+  const clearFileBtn         = document.getElementById('clearFileBtn');
+  const fileQuestionInput    = document.getElementById('file-question');
+  const homeLink             = document.getElementById('home-link'); // NEW: Home link element
+  const aboutLinkNav         = document.getElementById('about-link-nav'); // NEW: About link in nav
 
-  /* ----------  FILE-UPLOAD DOM ---------- */
-  const dragArea          = document.getElementById('drag-and-drop-area');
-  const fileInput         = document.getElementById('file-input');
-  const fileQuestionInput = document.getElementById('file-question-input');
-  const fileSubmitBtn     = document.getElementById('file-submit-btn');
-  const fileChosenSpan    = document.getElementById('file-chosen');
-  const clearBtn          = document.getElementById('clear-btn');
 
-  const logoLink = document.getElementById('logo-link');
-  const aboutLinkNav = document.getElementById('about-link-nav');
-  
-  /* ----------  CONSTANTS & STATE ---------- */
-  const MAX_FILE_MB    = 1024;
-  const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
-  const welcomeMessage = '<p>👋 Привет! Я ваш ИИ-юрист. Задайте вопрос или загрузите документ.</p>';
-
+  /* ----------  STATE ---------- */
   let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
-  let currentFile      = null;
+  let uploadedFile = null;
 
   /* ----------  HELPERS ---------- */
-  const scrollToBottom = () => {
-    chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
-  };
-
-  const showChatArea = () => {
-    initialSections.style.display = 'none';
-    currentChatContainer.style.display = 'block';
-  };
-
-  const showInitialSections = () => {
+  function showInitialSections() {
     initialSections.style.display = 'block';
     currentChatContainer.style.display = 'none';
-  };
-
-  // MODIFIED: Use marked.parse() for AI responses
-  const addMessage = (html, cssClass = 'ai-response') => {
-    const div = document.createElement('div');
-    div.classList.add('chat-bubble', cssClass);
-    if (cssClass === 'ai-response') {
-        div.innerHTML = marked.parse(html); // Render Markdown for AI responses
-    } else {
-        div.innerHTML = `<p>${html}</p>`; // Wrap user queries in a paragraph
-    }
-    chatMessagesDisplay.appendChild(div);
-    scrollToBottom();
-  };
-
-  function goHome() {
-    currentSessionId = 'default';
-    localStorage.setItem('currentSessionId', 'default');
-    highlightSession(null);
-    showInitialSections();
-    chatMessagesDisplay.innerHTML = '';
-    userQuestionTextarea.value = chatInput.value = '';
-    fileQuestionInput.value = '';
+    clearChatMessages();
+    userQuestionTextarea.value = ''; // Clear initial question area
+    chatInput.value = ''; // Clear chat input area
     clearFile();
-    addMessage(welcomeMessage, 'ai-response');
   }
 
-  logoLink.onclick = goHome;
-  aboutLinkNav.onclick = (e) => {
-      e.preventDefault();
-      goHome();
-  };
-  
-  /* ----------  CHAT HISTORY ---------- */
-  async function loadChatHistory(sessionId) {
-    chatMessagesDisplay.innerHTML = '';
-    spinner.style.display = 'block';
-    try {
-      const res   = await apiFetch(`/get-history?session_id=${encodeURIComponent(sessionId)}`);
-      const data  = await safeJson(res);
-      spinner.style.display = 'none';
+  function showChatContainer() {
+    initialSections.style.display = 'none';
+    currentChatContainer.style.display = 'flex';
+  }
 
-      if (data.history?.length) {
-        data.history.forEach(msg =>
-          // MODIFIED: Ensure historical AI messages are also rendered with Markdown
-          addMessage(msg.content, msg.role === 'user' ? 'user-query' : 'ai-response'));
-      } else {
-        addMessage(welcomeMessage, 'ai-response');
-      }
-    } catch (e) {
-      spinner.style.display = 'none';
-      console.error(e);
-      addMessage(`<p class="error-message">Ошибка загрузки истории: ${e.message}</p>`, 'ai-response');
+  function clearChatMessages() {
+    chatMessagesDisplay.innerHTML = `
+      <div id="spinner" style="display: none;">
+          <p>ИИ-юрист анализирует ваш запрос...</p>
+          <div class="loader"></div>
+      </div>
+      <div id="fileSpinner" style="display: none;">
+          <p>ИИ-юрист анализирует ваш документ...</p>
+          <div class="loader"></div>
+      </div>
+    `;
+  }
+
+  // Modified addMessage to check for existing HTML tags
+  function addMessage(text, senderClass) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('chat-bubble', senderClass);
+
+    // Check if the text already contains common HTML tags.
+    // If it does, assume it's HTML and append directly.
+    // Otherwise, parse as Markdown.
+    const hasHtmlTags = /<[a-z][\s\S]*>/i.test(text);
+    if (senderClass === 'ai-response' && !hasHtmlTags) {
+        messageElement.innerHTML = marked.parse(text); // Still parse markdown if no HTML
+    } else {
+        messageElement.innerHTML = text; // Assume it's already HTML or plain text
     }
+    
+    chatMessagesDisplay.appendChild(messageElement);
+    chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight; // Auto-scroll
   }
-  
-  /* ----------  SIDEBAR SESSIONS ---------- */
-  async function loadChatSessions() {
-    chatList.innerHTML = '<p>Загрузка...</p>';
-    try {
-      const res  = await apiFetch('/get-all-sessions-summary');
-      const data = await safeJson(res);
-      chatList.innerHTML = '';
 
-      if (data.sessions?.length) {
-        data.sessions.sort((a, b) => b.id.localeCompare(a.id));
-        data.sessions.forEach(s => {
+  async function loadChatSessions() {
+    chatList.innerHTML = '<p>Загрузка истории...</p>';
+    try {
+      const res = await apiFetch('/get-all-sessions-summary');
+      const data = await safeJson(res);
+      chatList.innerHTML = ''; // Clear loading message
+
+      if (data.sessions && data.sessions.length > 0) {
+        data.sessions.forEach(session => {
           const li = document.createElement('li');
-          li.textContent     = s.title || 'Без названия';
-          li.dataset.sessionId = s.id;
-          li.onclick = () => {
-            currentSessionId = s.id;
-            localStorage.setItem('currentSessionId', s.id);
-            highlightSession(s.id);
-            loadChatHistory(s.id);
-            showChatArea();
-          };
+          li.dataset.sessionId = session.id;
+          li.textContent = session.title;
+          li.addEventListener('click', () => loadConversation(session.id));
           chatList.appendChild(li);
         });
       } else {
-        chatList.innerHTML = '<p>Чатов нет</p>';
+        chatList.innerHTML = '<p>История чатов пуста.</p>';
       }
     } catch (e) {
-      console.error(e);
-      chatList.innerHTML = '<p class="error-message">Ошибка списка чатов</p>';
+      console.error('Ошибка загрузки сессий:', e);
+      chatList.innerHTML = `<p class="error-message">Ошибка загрузки истории: ${e.message}</p>`;
     }
   }
 
-  const highlightSession = id => {
-    document.querySelectorAll('#chat-list li')
-      .forEach(li => li.classList.toggle('active', li.dataset.sessionId === id));
-  };
+  async function loadConversation(sessionId) {
+    currentSessionId = sessionId;
+    localStorage.setItem('currentSessionId', currentSessionId);
+    showChatContainer();
+    clearChatMessages();
+    highlightSession(sessionId);
 
-  /* ----------  NEW CHAT ---------- */
-  const startNewChat = () => {
-    currentSessionId = 'default';
-    localStorage.setItem('currentSessionId', 'default');
-    highlightSession(null);
-    showInitialSections();
-    chatMessagesDisplay.innerHTML = '';
-    userQuestionTextarea.value = chatInput.value = '';
+    try {
+      const res = await apiFetch(`/get-history?session_id=${sessionId}`);
+      const data = await safeJson(res);
+
+      if (data.history) {
+        data.history.forEach(msg => {
+          addMessage(msg.content, msg.role === 'user' ? 'user-message' : 'ai-response');
+        });
+      }
+    } catch (e) {
+      console.error('Ошибка загрузки истории беседы:', e);
+      addMessage(`<p class="error-message">Ошибка загрузки истории беседы: ${e.message}</p>`, 'ai-response');
+    }
+  }
+
+  function highlightSession(sessionId) {
+    document.querySelectorAll('#chat-list li').forEach(li => {
+      li.classList.remove('active');
+    });
+    const activeLi = document.querySelector(`[data-session-id="${sessionId}"]`);
+    if (activeLi) {
+      activeLi.classList.add('active');
+    }
+  }
+
+  async function startNewChat() {
+    currentSessionId = crypto.randomUUID(); // Generate a new UUID for the session
+    localStorage.setItem('currentSessionId', currentSessionId);
+    showChatContainer();
+    clearChatMessages();
+    highlightSession(currentSessionId); // Highlight new session if it appears in list, otherwise clear highlight
+    await loadChatSessions(); // Reload sessions to show new chat
+    highlightSession(currentSessionId); // Re-highlight if it's there
+  }
+
+  function clearFile() {
+    uploadedFile = null;
+    fileUploadInput.value = '';
+    fileNameDisplay.textContent = 'Файл не выбран';
     fileQuestionInput.value = '';
-    clearFile();
-  };
-
-  /* ----------  SEND TEXT ---------- */
-  async function sendText(msg) {
-    msg = msg.trim();
-    if (!msg) return;
-
-    showChatArea();
-    addMessage(msg, 'user-query'); // User queries are not Markdown
-    userQuestionTextarea.value = chatInput.value = '';
-    spinner.style.display = 'block';
-
-    try {
-      const res = await apiFetch('/ask', {
-        method : 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body   : JSON.stringify({question: msg, session_id: currentSessionId})
-      });
-      const data = await safeJson(res);
-      spinner.style.display = 'none';
-
-      if (data.error) {
-        addMessage(`<p class="error-message">${data.error}</p>`, 'ai-response');
-      } else {
-        addMessage(data.answer, 'ai-response'); // AI answers are Markdown
-        currentSessionId = data.session_id;
-        localStorage.setItem('currentSessionId', currentSessionId);
-        loadChatSessions();
-      }
-    } catch (e) {
-      spinner.style.display = 'none';
-      console.error(e);
-      addMessage(`<p class="error-message">Ошибка: ${e.message}</p>`, 'ai-response');
-    }
   }
 
-  /* ----------  FILE UPLOAD ---------- */
-  const clearFile = () => {
-    currentFile      = null;
-    fileInput.value  = '';
-    fileChosenSpan.textContent = 'Файл не выбран';
-    fileSubmitBtn.disabled = clearBtn.disabled = true;
-  };
+  async function sendText(text) {
+    if (!text.trim() && !uploadedFile) return;
 
-  const pickFile = file => {
-    if (file.size > MAX_FILE_BYTES) {
-      alert(`Файл > ${MAX_FILE_MB} МБ, выберите другой.`);
-      clearFile();
-      return;
+    // Show appropriate spinner and hide the other
+    if (uploadedFile) {
+        fileSpinner.style.display = 'block';
+        spinner.style.display = 'none';
+    } else {
+        spinner.style.display = 'block';
+        fileSpinner.style.display = 'none';
     }
-    currentFile = file;
-    fileChosenSpan.textContent = file.name;
-    fileSubmitBtn.disabled = clearBtn.disabled = false;
-    fileQuestionInput.focus();
-  };
 
-  dragArea.ondragover = e => { e.preventDefault(); dragArea.classList.add('highlight'); };
-  dragArea.ondragleave = () => dragArea.classList.remove('highlight');
-  dragArea.ondrop = e => {
-    e.preventDefault();
-    dragArea.classList.remove('highlight');
-    if (e.dataTransfer.files[0]) pickFile(e.dataTransfer.files[0]);
-  };
-
-  fileInput.onchange = e => e.target.files[0] && pickFile(e.target.files[0]);
-  clearBtn.onclick   = clearFile;
-
-  fileSubmitBtn.onclick = async e => {
-    e.preventDefault();
-    if (!currentFile) return;
-
-    showChatArea();
-    const q  = fileQuestionInput.value.trim();
-    addMessage(
-      `**Документ:** ${currentFile.name}` +
-      (q ? `\n**Вопрос:** ${q}` : ''),
-      'user-query'
-    );
-    fileSpinner.style.display = 'block';
-
+    const messageText = uploadedFile ? fileQuestionInput.value || text : text; // Prioritize fileQuestionInput if file exists
+    addMessage(messageText, 'user-message');
+    userQuestionTextarea.value = '';
+    chatInput.value = '';
+    
     try {
-      const fd = new FormData();
-      fd.append('file', currentFile);
-      fd.append('question', q);
-      fd.append('session_id', currentSessionId);
+      let res;
+      if (uploadedFile) {
+        const formData = new FormData();
+        formData.append('file', uploadedFile);
+        formData.append('question', messageText); // Send the text alongside the file
+        formData.append('session_id', currentSessionId);
 
-      const res  = await apiFetch('/upload-document', {method: 'POST', body: fd});
-      const data = await safeJson(res);
+        res = await apiFetch('/upload-document', {
+          method: 'POST',
+          body: formData
+        });
+      } else {
+        res = await apiFetch('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: text, session_id: currentSessionId })
+        });
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let aiFullResponse = '';
+
+      // Hide spinners once first chunk arrives
+      spinner.style.display = 'none';
       fileSpinner.style.display = 'none';
 
-      if (data.error) {
-        addMessage(`<p class="error-message">${data.error}</p>`, 'ai-response');
-      } else {
-        const answerText = data.answer ?? data.response ?? data.text ?? '';
-        if (answerText) addMessage(answerText, 'ai-response'); // AI answers are Markdown
+      const aiMessageElement = document.createElement('div');
+      aiMessageElement.classList.add('chat-bubble', 'ai-response');
+      chatMessagesDisplay.appendChild(aiMessageElement);
 
-        if (data.session_id) {
-          currentSessionId = data.session_id;
-          localStorage.setItem('currentSessionId', currentSessionId);
-        }
-        loadChatSessions();
-        highlightSession(currentSessionId);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        aiFullResponse += chunk;
+        aiMessageElement.innerHTML = aiFullResponse; // Update in real-time
+        chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
       }
+      
+      // After stream finishes, re-set innerHTML to ensure Markdown parsing (if needed)
+      // This part now relies on the `addMessage` function logic which checks for HTML.
+      // So, aiMessageElement.innerHTML = aiFullResponse should be sufficient if backend sends HTML.
+      // If backend sends Markdown, the initial rendering will be raw Markdown, then this final
+      // assignment might re-trigger browser's rendering, but for safety, we rely on addMessage.
+      // For now, if the backend sends HTML, this will just re-assign the same HTML.
+      // If the backend were to send Markdown and we wanted it parsed, we'd need to re-run marked.parse() here,
+      // but based on instructions, backend sends HTML.
+
+      if (aiFullResponse.includes("Ошибка:")) { // Simple error check
+        aiMessageElement.innerHTML = `<p class="error-message">${aiFullResponse}</p>`;
+      }
+
+      loadChatSessions();
+      highlightSession(currentSessionId);
+      
     } catch (e) {
+      spinner.style.display = 'none';
       fileSpinner.style.display = 'none';
       console.error(e);
       addMessage(`<p class="error-message">Ошибка: ${e.message}</p>`, 'ai-response');
     }
-    clearFile();
+    clearFile(); // Clear file input after sending
   };
 
   /* ----------  EVENTS ---------- */
-  submitBtn.onclick      = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
-  sendButton.onclick     = e => { e.preventDefault(); sendText(chatInput.value); };
-  newChatBtn.onclick     = startNewChat;
+  submitBtn.onclick  = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
+  sendButton.onclick = e => { e.preventDefault(); sendText(chatInput.value); };
+  newChatBtn.onclick = startNewChat;
 
   chatInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(chatInput.value); } };
   userQuestionTextarea.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(userQuestionTextarea.value); } };
+
+  fileUploadInput.onchange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      uploadedFile = file;
+      fileNameDisplay.textContent = file.name;
+    } else {
+      clearFile();
+    }
+  };
+
+  clearFileBtn.onclick = clearFile;
+
+  // NEW: SPA Navigation handlers
+  homeLink.onclick = e => {
+    e.preventDefault();
+    showInitialSections();
+  };
+
+  aboutLinkNav.onclick = e => {
+    e.preventDefault();
+    document.getElementById('about').scrollIntoView({ behavior: 'smooth' });
+    showInitialSections(); // Ensure initial sections are visible if coming from chat
+  };
 
   /* ----------  INIT ---------- */
   showInitialSections();
@@ -290,10 +282,9 @@ document.addEventListener('DOMContentLoaded', () => {
       currentSessionId !== 'default' && 
       document.querySelector(`[data-session-id="${currentSessionId}"]`)
     ) {
-      loadChatHistory(currentSessionId);
-      showChatArea();
+      loadConversation(currentSessionId);
     } else {
-      addMessage(welcomeMessage, 'ai-response');
+      startNewChat(); // Start a new chat if no valid session found
     }
   });
 });
