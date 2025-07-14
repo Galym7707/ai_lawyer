@@ -21,7 +21,7 @@ from helpers import expand_keywords, build_snippet
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB (1 ГБ)
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024 # 1 GB (1 ГБ)
 CORS(app, origins=["https://ai-lawyer-tau.vercel.app", "http://localhost:5000"]) # Добавьте ваш локальный адрес для разработки
 
 # --- Инициализация AI и Базы Законов ---
@@ -202,7 +202,7 @@ def find_laws_by_keywords(question, max_snippet_chars: int = 4000):
         snippet = build_snippet(law.get('text', ''), expanded_keywords)
 
         law_entry = {
-            "title":   law.get('title', ''),
+            "title":    law.get('title', ''),
             "article": law.get('article', ''),
             "text":    snippet
         }
@@ -216,7 +216,7 @@ def find_laws_by_keywords(question, max_snippet_chars: int = 4000):
         selected.append(law_entry)
         total += size
 
-        if len(selected) >= 8:   # максимум 8 статей на запрос (можно настроить)
+        if len(selected) >= 8:    # максимум 8 статей на запрос (можно настроить)
             logging.info(f"🛑 Достигнут лимит по количеству статей. Выбрано {len(selected)} статей.")
             break
 
@@ -380,7 +380,7 @@ def generate_response(chat_history_formatted, user_question, relevant_laws_info=
             # Добавляем текущий вопрос пользователя для текстовых документов
             final_user_question = f"Мой вопрос: {user_question}"
             prompt_parts.append({"role": "user", "parts": [{"text": final_user_question}]})
-            logging.info("Отправляем текстовый запрос с документом.")
+            logging.info("Отправляем текстовый запрос без документа.")
             response = model.generate_content(prompt_parts)
     else: # Если документа нет, просто добавляем вопрос пользователя
         final_user_question = f"Мой вопрос: {user_question}"
