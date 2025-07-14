@@ -34,11 +34,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileQuestionInput    = document.getElementById('file-question');
   const homeLink             = document.getElementById('home-link'); // NEW: Home link element
   const aboutLinkNav         = document.getElementById('about-link-nav'); // NEW: About link in nav
-  
+  const fileInfo = document.getElementById('file-info');
+  const uploadButton = document.getElementById('upload-button');
 
   /* ----------  STATE ---------- */
   let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
   let uploadedFile = null;
+
+  clearFileBtn.onclick = () => {
+    clearFile();  // Очистить всё при нажатии на кнопку очистки
+  };
+
+  uploadButton.disabled = !uploadedFile;
 
   /* ----------  HELPERS ---------- */
   function showInitialSections() {
@@ -132,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addMessage(`<p class="error-message">Ошибка загрузки истории беседы: ${e.message}</p>`, 'ai-response');
     }
   }
-
+  
   function highlightSession(sessionId) {
     document.querySelectorAll('#chat-list li').forEach(li => {
       li.classList.remove('active');
@@ -158,8 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fileUploadInput.value = '';
     fileNameDisplay.textContent = 'Файл не выбран';
     fileQuestionInput.value = '';
+    fileInfo.style.display = 'none';  // Скрыть блок
+    uploadButton.disabled = true;
   }
-
+  
   async function sendText(text) {
     showChatContainer();
     if (!text.trim() && !uploadedFile) return;
@@ -173,6 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
         fileSpinner.style.display = 'none';
     }
 
+    
+    
     const messageText = uploadedFile ? fileQuestionInput.value || text : text; // Prioritize fileQuestionInput if file exists
     addMessage(messageText, 'user-message');
     userQuestionTextarea.value = '';
@@ -257,6 +268,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (file) {
       uploadedFile = file;
       fileNameDisplay.textContent = file.name;
+      fileInfo.style.display = 'block';  // Показать блок
+      uploadButton.disabled = false; 
     } else {
       clearFile();
     }
