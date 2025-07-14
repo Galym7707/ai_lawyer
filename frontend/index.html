@@ -11,7 +11,7 @@
 </head>
 <body>
     <header>
-        <h1 id="home-link">Kaz Legal Bot</h1>
+        <h1>Kaz Legal Bot</h1>
         <nav>
             <a href="#about-link" id="about-link-nav">О проекте</a>
             <a href="#help-link">Юридическая помощь</a>
@@ -34,40 +34,45 @@
             <div class="main-content-area">
                 <div id="initial-sections">
                     <section id="about" class="intro-section">
-                        <h2 id="about-link">О проекте</h2>
-                        <p><strong>Kaz Legal Bot</strong> — ваш надежный помощник в мире законодательства Республики Казахстан. Наш ИИ-юрист, основанный на передовых моделях искусственного интеллекта, разработан специально для предоставления точных и актуальных юридических консультаций, соответствующих нормам права РК. Он обучен на обширной базе законодательных актов Казахстана и постоянно совершенствуется, чтобы предложить вам максимально полную и полезную информацию.</p>
-                        <p>Мы стремимся сделать юридическую помощь доступной и понятной каждому, предоставляя быстрые и достоверные ответы на широкий круг вопросов, от трудового и гражданского права до административных и налоговых нюансов.</p>
+                        <h2 id="about-link">🤖 О проекте</h2>
+                        <p><strong>Kaz Legal Bot</strong> — это инновационный AI-юрист, разработанный специально для граждан Казахстана. Он предоставляет мгновенные и точные юридические консультации на основе действующего законодательства Республики Казахстан. Наша цель — сделать юридическую помощь доступной и понятной для каждого.</p>
+                        <p>Бот обучен на обширной базе данных, включающей законы, нормативно-правовые акты и судебную практику РК. Он способен анализировать сложные юридические вопросы и предлагать решения, максимально соответствующие требованиям казахстанского законодательства.</p>
                     </section>
 
                     <section id="help" class="intro-section">
-                        <h2 id="help-link">Юридическая помощь</h2>
-                        <p>ИИ-юрист предоставит вам следующие виды помощи:</p>
+                        <h2 id="help-link">⚖️ Юридическая помощь</h2>
+                        <p>Вы можете задать любой юридический вопрос, касающийся законодательства Казахстана. Например:</p>
                         <ul>
-                            <li><strong>Разъяснение законодательства:</strong> Получите четкие и понятные объяснения статей и положений законов Республики Казахстан.</li>
-                            <li><strong>Консультации по правовым вопросам:</strong> Задавайте вопросы по различным областям права — гражданскому, трудовому, административному, налоговому и другим.</li>
-                            <li><strong>Помощь в понимании документов:</strong> Загрузите документ (например, договор, уведомление, акт), и ИИ-юрист поможет вам понять его содержание и правовые последствия.</li>
-                            <li><strong>Анализ ситуаций:</strong> Опишите вашу ситуацию, и ИИ-юрист поможет определить, какие нормы закона применимы и какие действия можно предпринять.</li>
+                            <li>"Каковы мои права при увольнении по собственному желанию?"</li>
+                            <li>"Как оспорить штраф за нарушение ПДД в Казахстане?"</li>
+                            <li>"Какие документы нужны для регистрации ИП в РК?"</li>
+                            <li>"Что такое брачный договор и как его заключить?"</li>
+                            <li>"Поясните статью 25 Закона РК 'О жилищных отношениях'."</li>
                         </ul>
-                        <p class="disclaimer">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <strong>Важное замечание:</strong> ИИ-юрист предоставляет справочную информацию и не заменяет полноценную юридическую консультацию от квалифицированного специалиста. Для принятия юридически значимых решений всегда обращайтесь к живому юристу.
-                        </p>
-
-                        <h3>Задайте ваш вопрос или загрузите документ:</h3>
-                        <form id="question-form" class="question-form">
-                            <textarea id="userQuestion" placeholder="Например: 'Какие у меня права при увольнении по собственному желанию?' или 'Проанализируй этот договор аренды.'" required></textarea>
+                        <p>Вы также можете загрузить документ (например, договор, постановление, исковое заявление) в форматах PDF, DOCX, JPG или PNG, и задать вопрос по его содержанию.</p>
+                        <form id="chat-form">
+                            <textarea id="userQuestion" placeholder="Напишите ваш вопрос здесь..."></textarea>
                             <div class="upload-card">
                                 <label for="file-upload" class="file-upload-label">
-                                    <i class="fas fa-upload"></i> Выберите файл (PDF, DOCX, JPG, PNG)
+                                    <i class="fas fa-paperclip"></i> Прикрепить документ
+                                    <input type="file" id="file-upload" accept=".pdf,.docx,.jpg,.png" style="display: none;">
                                 </label>
-                                <input type="file" id="file-upload" accept=".pdf,.docx,.jpg,.jpeg,.png" style="display: none;">
                                 <span id="file-name" class="file-name-display">Файл не выбран</span>
+                                <button type="button" id="clear-file" class="clear-file-button" style="display: none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
                             <div class="upload-footer">
-                                <input type="text" id="file-question" class="file-question-input" placeholder="Добавьте вопрос к файлу (по желанию)">
+                                <button type="submit" id="submitBtn" class="btn">
+                                    <i class="fas fa-robot"></i> Получить консультацию
+                                </button>
                                 <div class="action-buttons">
-                                    <button type="submit" id="submitBtn" class="btn primary-btn">Получить ответ</button>
-                                    <button type="button" id="clearFileBtn" class="btn secondary-btn">Очистить файл</button>
+                                    <button type="button" id="start-new-conversation-main" class="btn new-conversation-btn">
+                                        <i class="fas fa-plus"></i> Новый чат
+                                    </button>
+                                    <button type="button" id="clear-history-button" class="btn clear-history-btn">
+                                        <i class="fas fa-trash"></i> Очистить историю
+                                    </button>
                                 </div>
                             </div>
                         </form>
