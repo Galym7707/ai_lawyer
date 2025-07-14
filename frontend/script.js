@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileChosenSpan    = document.getElementById('file-chosen');
   const clearBtn          = document.getElementById('clear-btn');
 
+  const logoLink = document.getElementById('logo-link');
+  const aboutLinkNav = document.getElementById('about-link-nav');
+  
   /* ----------  CONSTANTS & STATE ---------- */
   const MAX_FILE_MB    = 1024;
   const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
@@ -73,6 +76,24 @@ document.addEventListener('DOMContentLoaded', () => {
     scrollToBottom();
   };
 
+  function goHome() {
+    currentSessionId = 'default';
+    localStorage.setItem('currentSessionId', 'default');
+    highlightSession(null);
+    showInitialSections();
+    chatMessagesDisplay.innerHTML = '';
+    userQuestionTextarea.value = chatInput.value = '';
+    fileQuestionInput.value = '';
+    clearFile();
+    addMessage(welcomeMessage, 'ai-response');
+  }
+
+  logoLink.onclick = goHome;
+  aboutLinkNav.onclick = (e) => {
+      e.preventDefault();
+      goHome();
+  };
+  
   /* ----------  CHAT HISTORY ---------- */
   async function loadChatHistory(sessionId) {
     chatMessagesDisplay.innerHTML = '';
@@ -95,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addMessage(`<p class="error-message">Ошибка загрузки истории: ${e.message}</p>`, 'ai-response');
     }
   }
-
+  
   /* ----------  SIDEBAR SESSIONS ---------- */
   async function loadChatSessions() {
     chatList.innerHTML = '<p>Загрузка...</p>';
