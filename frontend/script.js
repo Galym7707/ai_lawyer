@@ -161,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function sendText(text) {
+    showChatContainer();
     if (!text.trim() && !uploadedFile) return;
 
     // Show appropriate spinner and hide the other
