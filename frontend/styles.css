@@ -32,421 +32,564 @@ body {
     min-height: 100vh;
 }
 
+/* --- HEADER --- */
 header {
     background-color: var(--bg-header);
     color: var(--text-primary);
-    padding: 1.2rem 2.5rem; /* Увеличил padding */
+    padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
 header h1 {
     margin: 0;
-    font-size: 2rem; /* Немного увеличил размер заголовка */
+    font-size: 1.8rem;
     color: var(--accent-primary);
 }
 
 header nav a {
     color: var(--text-secondary);
     text-decoration: none;
-    margin-left: 2rem; /* Увеличил отступ между ссылками */
-    font-size: 1.05rem;
+    margin-left: 2rem;
+    font-weight: 500;
     transition: color 0.3s ease;
 }
 
 header nav a:hover {
-    color: var(--accent-secondary);
+    color: var(--accent-primary);
 }
 
+/* --- MAIN LAYOUT --- */
 main {
-    flex-grow: 1;
     display: flex;
-    justify-content: center;
-    padding: 2rem; /* Увеличил общий padding для main */
+    flex-grow: 1;
+    padding: 1rem;
+    gap: 1rem;
+    max-width: 1400px;
+    margin: 1rem auto;
 }
 
 .app-container {
     display: flex;
     width: 100%;
-    max-width: 1200px;
     background-color: var(--bg-secondary);
     border-radius: 8px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
     overflow: hidden;
 }
 
+/* --- SIDEBAR --- */
 .sidebar {
     width: var(--sidebar-width);
-    background-color: var(--bg-header);
-    padding: 1.8rem; /* Увеличил padding */
+    background-color: var(--bg-secondary);
     border-right: 1px solid var(--border-color);
+    padding: 1.5rem 1rem;
     display: flex;
     flex-direction: column;
-    gap: 1.2rem; /* Увеличил gap */
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar h2 {
-    color: var(--accent-primary);
-    font-size: 1.5rem; /* Немного увеличил размер заголовка */
+    color: var(--text-primary);
+    font-size: 1.3rem;
     margin-top: 0;
-    margin-bottom: 1.2rem; /* Увеличил margin-bottom */
+    margin-bottom: 1rem;
     text-align: center;
 }
 
 #chat-list {
-    list-style: none; /* Убрал точки */
+    list-style: none;
     padding: 0;
     margin: 0;
     flex-grow: 1;
     overflow-y: auto;
-    max-height: calc(100vh - 220px); /* Adjust based on header/footer and new padding */
+    max-height: calc(100vh - 250px); /* Adjust based on header/footer */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-primary) var(--bg-secondary);
+}
+
+#chat-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+#chat-list::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+#chat-list::-webkit-scrollbar-thumb {
+    background-color: var(--accent-primary);
+    border-radius: 10px;
+    border: 2px solid var(--bg-secondary);
 }
 
 #chat-list li {
-    padding: 0.9rem 1.2rem; /* Увеличил padding */
-    margin-bottom: 0.6rem; /* Увеличил margin-bottom */
-    background-color: var(--chat-bubble-user); /* Using user bubble color for chat items */
-    border-radius: 6px;
+    padding: 0.7rem 0.5rem;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-    white-space: nowrap;
+    color: var(--text-secondary);
+    border-radius: 5px;
+    margin-bottom: 0.4rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
     overflow: hidden;
+    white-space: nowrap;
     text-overflow: ellipsis;
-    font-size: 0.95rem;
 }
 
+#chat-list li.active,
 #chat-list li:hover {
-    background-color: #3b4d5a;
-    transform: translateY(-2px);
-}
-
-#chat-list li.active {
     background-color: var(--accent-primary);
-    color: var(--bg-header);
-    font-weight: bold;
-}
-
-.btn {
-    display: inline-block;
-    padding: 12px 20px; /* Увеличил padding */
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1.05rem; /* Немного увеличил размер шрифта */
-    font-weight: bold;
-    text-align: center;
-    text-decoration: none;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-    color: var(--bg-primary);
-    background-color: var(--accent-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px; /* Увеличил gap */
-}
-
-.btn:hover {
-    background-color: var(--accent-secondary);
-    transform: translateY(-2px);
-}
-
-.btn:disabled {
-    background-color: var(--border-color);
-    cursor: not-allowed;
-    transform: none;
+    color: #fff;
 }
 
 .new-conversation-btn {
-    background-color: var(--accent-primary);
-    color: var(--bg-header);
-    margin-top: 1.5rem; /* Увеличил margin-top */
     width: 100%;
+    padding: 0.8rem;
+    background-color: var(--accent-secondary);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .new-conversation-btn:hover {
-    background-color: var(--accent-secondary);
+    background-color: #00c766; /* Darker green */
 }
 
+/* --- MAIN CONTENT AREA --- */
 .main-content-area {
     flex-grow: 1;
-    padding: 2rem; /* Увеличил padding */
+    padding: 2rem;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Ensures input stays at bottom */
-    position: relative;
+    justify-content: center;
+    align-items: center;
+    position: relative; /* Для позиционирования спиннера */
 }
 
 #initial-sections {
+    width: 100%;
+    max-width: 800px;
     display: flex;
     flex-direction: column;
-    gap: 2.5rem; /* Увеличил gap между секциями */
-    align-items: center;
-    text-align: center;
-    max-width: 850px; /* Немного увеличил max-width */
-    margin: 0 auto;
-    padding-bottom: 180px; /* Увеличил space for the chat input area at the bottom */
+    gap: 1.5rem;
 }
 
-.intro-section { /* Изменил .initial-section на .intro-section для лучшей семантики */
-    background-color: var(--bg-header);
-    padding: 2.2rem; /* Увеличил padding */
+.input-card, .upload-card, #about-section, #help-section, #contact {
+    background-color: var(--bg-primary);
+    padding: 2rem;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     width: 100%;
     box-sizing: border-box;
 }
 
-.intro-section h2 {
-    color: var(--accent-primary);
-    font-size: 1.7rem; /* Немного увеличил размер заголовка */
-    margin-top: 0;
-    margin-bottom: 1.2rem; /* Увеличил margin-bottom */
+.input-card .greeting-message {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    text-align: center;
 }
 
-.intro-section p {
-    margin-bottom: 1.2rem; /* Увеличил margin-bottom */
-    color: var(--text-secondary);
-}
-
-.intro-section ul {
-    list-style: none; /* Убрал точки */
-    padding-left: 0; /* Убрал padding-left */
-    margin-bottom: 1.2rem; /* Увеличил margin-bottom */
-    text-align: left; /* Align list items to the left */
-}
-
-.intro-section ul li {
-    margin-bottom: 0.7rem; /* Увеличил margin-bottom */
-    color: var(--text-secondary);
-    position: relative; /* Для кастомных маркеров */
-    padding-left: 1.5em; /* Отступ для кастомных маркеров */
-}
-
-.intro-section ul li::before { /* Добавил кастомные маркеры */
-    content: "•"; /* Или любой другой символ, например, "➤" */
-    color: var(--accent-primary); /* Цвет маркера */
-    position: absolute;
-    left: 0;
-    font-size: 1.2em;
-    line-height: 1;
-}
-
-form {
+/* Text Input Form */
+#chat-form {
     display: flex;
     flex-direction: column;
-    gap: 1.2rem; /* Увеличил gap */
-    margin-top: 2rem; /* Увеличил margin-top */
+    gap: 1rem;
+    width: 100%;
 }
 
-form h3 {
-    color: var(--text-primary);
-    font-size: 1.4rem; /* Немного увеличил размер заголовка */
-    margin-top: 0;
-    margin-bottom: 0.6rem; /* Увеличил margin-bottom */
-}
-
-.chat-input {
-    width: calc(100% - 20px); /* Adjust width for padding */
-    padding: 12px; /* Увеличил padding */
+textarea#userQuestion {
+    width: 100%;
+    min-height: 120px;
+    padding: 1rem;
     border: 1px solid var(--input-border);
-    border-radius: 6px;
+    border-radius: 5px;
     background-color: var(--input-bg);
     color: var(--text-primary);
-    font-size: 1.05rem; /* Немного увеличил размер шрифта */
+    font-size: 1rem;
     box-sizing: border-box;
     resize: vertical;
-    min-height: 50px; /* Увеличил min height */
-}
-
-.chat-input::placeholder {
-    color: var(--text-secondary);
-}
-
-.chat-input:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.3);
-}
-
-.drag-drop-area {
-    border: 2px dashed var(--border-color);
-    border-radius: 8px;
-    padding: 25px; /* Увеличил padding */
-    text-align: center;
-    color: var(--text-secondary);
-    cursor: pointer;
     transition: border-color 0.3s ease;
 }
 
-.drag-drop-area.highlight {
+textarea#userQuestion:focus {
     border-color: var(--accent-primary);
-    background-color: rgba(0, 188, 212, 0.1);
+    outline: none;
 }
 
-.drag-drop-area .fas {
-    font-size: 2.2rem; /* Немного увеличил размер иконки */
-    margin-bottom: 12px; /* Увеличил margin-bottom */
-    color: var(--accent-primary);
+button.primary-btn {
+    background-color: var(--accent-primary);
+    color: #fff;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
-.drag-drop-area .browse-files {
-    color: var(--accent-secondary);
-    text-decoration: underline;
+button.primary-btn:hover {
+    background-color: #0097a7; /* Darker accent primary */
 }
 
-#file-chosen {
+/* Upload Section */
+.upload-card h2 {
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.drop-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.drop-area:hover, .drop-area.drag-over {
+    background-color: #2a2a2a;
+    border-color: var(--accent-secondary);
+}
+
+.drop-area input[type="file"] {
+    display: none;
+}
+
+.drop-area .drop-label {
     display: block;
-    margin-top: 12px; /* Увеличил margin-top */
-    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.drop-area .drop-label i {
+    font-size: 3rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.drop-area .drop-label p {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+}
+
+.drop-area .file-types {
+    font-size: 0.85rem;
+    color: #777;
+}
+
+.file-list {
+    margin-top: 1rem;
+    text-align: left;
     color: var(--text-primary);
 }
 
-#clear-btn {
-    background-color: #dc3545; /* Red for clear button */
-    color: white;
-    margin-top: 12px; /* Увеличил margin-top */
+.file-list div {
+    background-color: #2a2a2a;
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    word-break: break-all; /* Ensure long filenames wrap */
 }
 
-#clear-btn:hover {
-    background-color: #c82333;
+.file-list .remove-file {
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    cursor: pointer;
+    font-size: 1.2rem;
+    margin-left: 10px;
+    transition: color 0.2s ease;
 }
 
-/* Chat display area */
+.file-list .remove-file:hover {
+    color: #ff0000;
+}
+
+textarea#file-question {
+    width: 100%;
+    min-height: 80px;
+    padding: 1rem;
+    border: 1px solid var(--input-border);
+    border-radius: 5px;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 1rem;
+    box-sizing: border-box;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+    margin-top: 1rem;
+}
+
+textarea#file-question:focus {
+    border-color: var(--accent-primary);
+    outline: none;
+}
+
+.upload-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+button.secondary-btn {
+    background-color: #555;
+    color: #fff;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+button.secondary-btn:hover {
+    background-color: #666;
+}
+
+button.primary-btn:disabled, button.secondary-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* About and Help Sections */
+#about-section h2, #help-section h2, #contact h2 {
+    color: var(--accent-primary);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+#about-section p, #help-section p, #contact p {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    text-align: justify;
+}
+
+#help-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+#help-section li {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 5px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    color: var(--text-primary);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+#help-section li b {
+    color: var(--accent-secondary);
+}
+
+#contact a {
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+#contact a:hover {
+    text-decoration: underline;
+}
+
+/* Current Chat Display */
 #current-chat-container {
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    position: relative;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
 #chat-messages-display {
     flex-grow: 1;
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    padding: 1.5rem;
     overflow-y: auto;
-    padding-right: 15px; /* Space for scrollbar */
-    padding-bottom: 120px; /* Space for input area, adjusted for larger input */
     display: flex;
     flex-direction: column;
-    gap: 1.2rem; /* Увеличил gap между сообщениями */
-    max-height: calc(100vh - 250px); /* Adjusted based on header/footer and input */
+    gap: 1rem;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+    min-height: 400px; /* Ensures a minimum height for the chat area */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-primary) var(--bg-primary);
 }
 
-/* Chat bubbles */
+#chat-messages-display::-webkit-scrollbar {
+    width: 8px;
+}
+
+#chat-messages-display::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+#chat-messages-display::-webkit-scrollbar-thumb {
+    background-color: var(--accent-primary);
+    border-radius: 10px;
+    border: 2px solid var(--bg-primary);
+}
+
 .chat-bubble {
-    padding: 14px 20px; /* Увеличил padding */
-    border-radius: 20px; /* Немного увеличил радиус */
-    max-width: 70%; /* Немного уменьшил max-width для лучшего вида */
-    word-wrap: break-word;
-    font-size: 1.05rem; /* Немного увеличил размер шрифта */
-    line-height: 1.6; /* Увеличиваем межстрочный интервал */
+    padding: 12px 18px;
+    border-radius: 20px;
+    max-width: 75%;
+    position: relative;
+    font-size: 1rem;
+    line-height: 1.5;
+    word-wrap: break-word; /* Allows long words to break and wrap */
+    white-space: pre-wrap; /* Preserves whitespace and wraps text */
 }
 
-.user-query {
+.chat-bubble.user-message {
     background-color: var(--chat-bubble-user);
     color: var(--text-primary);
-    align-self: flex-end; /* Align to right */
-    border-bottom-right-radius: 6px; /* Немного увеличил радиус */
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
 }
 
-.ai-response {
+.chat-bubble.ai-response {
     background-color: var(--chat-bubble-ai);
     color: var(--text-primary);
-    align-self: flex-start; /* Align to left */
-    border-bottom-left-radius: 6px; /* Немного увеличил радиус */
-    text-align: left; /* Ensure text alignment for AI response */
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
 }
 
-/* Стили для HTML-тегов внутри .ai-response */
-.ai-response p {
-    margin-bottom: 1em; /* Отступ между параграфами */
-    margin-top: 0;
-}
-.ai-response p:last-child {
-    margin-bottom: 0;
+.chat-bubble p {
+    margin: 0;
 }
 
-.ai-response strong {
-    color: var(--accent-primary); /* Цвет для жирного текста */
-}
-
-.ai-response em {
-    color: var(--accent-secondary); /* Цвет для курсива */
-}
-
-.ai-response ul, .ai-response ol {
-    margin-left: 25px; /* Отступ для списков */
-    margin-bottom: 1em;
-    padding-left: 0; /* Убираем стандартный padding, используем margin-left */
-}
-
-.ai-response li {
-    margin-bottom: 0.6em; /* Отступ между элементами списка */
-}
-
-.ai-response li:last-child {
-    margin-bottom: 0;
-}
-
-.ai-response h1, .ai-response h2, .ai-response h3,
-.ai-response h4, .ai-response h5, .ai-response h6 {
+/* Markdown specific styles */
+.ai-response p { margin-bottom: 0.5em; }
+.ai-response ul, .ai-response ol { margin-left: 1.5em; margin-bottom: 0.5em; }
+.ai-response li { margin-bottom: 0.2em; }
+.ai-response h1, .ai-response h2, .ai-response h3, .ai-response h4, .ai-response h5, .ai-response h6 {
     color: var(--accent-primary);
-    margin-top: 1.2em; /* Увеличил отступ сверху */
-    margin-bottom: 0.6em; /* Увеличил отступ снизу */
-    font-weight: bold;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
 }
-.ai-response h1 { font-size: 1.6em; } /* Немного увеличил размеры заголовков */
-.ai-response h2 { font-size: 1.5em; }
-.ai-response h3 { font-size: 1.4em; }
-.ai-response h4 { font-size: 1.3em; }
-.ai-response h5 { font-size: 1.2em; }
-.ai-response h6 { font-size: 1.1em; }
+.ai-response a {
+    color: var(--accent-secondary);
+    text-decoration: none;
+}
+.ai-response a:hover {
+    text-decoration: underline;
+}
+.ai-response code {
+    background-color: #333;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    font-size: 0.9em;
+}
+.ai-response pre {
+    background-color: #222;
+    padding: 1em;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+.ai-response pre code {
+    background-color: transparent;
+    padding: 0;
+    font-size: 1em;
+}
+.ai-response blockquote {
+    border-left: 4px solid var(--accent-primary);
+    padding-left: 1em;
+    margin-left: 0;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+.ai-response table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1em;
+}
+.ai-response th, .ai-response td {
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    text-align: left;
+}
+.ai-response th {
+    background-color: #2a2a2a;
+    color: var(--text-primary);
+}
+.ai-response hr {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    margin: 1em 0;
+}
 
 
-/* Chat input area at the bottom */
+/* Chat Input Area */
 .chat-input-area {
     display: flex;
-    align-items: center;
-    gap: 12px; /* Увеличил gap */
-    padding-top: 20px; /* Увеличил padding-top */
+    padding: 1rem 0;
     border-top: 1px solid var(--border-color);
-    background-color: var(--bg-secondary); /* Ensure it has a background */
-    position: absolute; /* Stick to the bottom */
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 20px; /* Увеличил padding */
-    box-sizing: border-box;
+    background-color: var(--bg-secondary);
+    gap: 0.5rem;
+    width: 100%;
 }
 
-.chat-input-area .chat-input {
+.chat-input {
     flex-grow: 1;
-    margin-bottom: 0; /* Override form default margin */
-    min-height: 50px; /* Larger minimum height for input */
-    max-height: 180px; /* Max height to prevent it from growing too large */
+    padding: 0.8rem;
+    border: 1px solid var(--input-border);
+    border-radius: 5px;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.chat-input:focus {
+    border-color: var(--accent-primary);
+    outline: none;
 }
 
 .send-button {
     background-color: var(--accent-primary);
-    color: var(--bg-header);
+    color: #fff;
     border: none;
-    border-radius: 50%; /* Make it round */
-    width: 50px; /* Fixed width */
-    height: 50px; /* Fixed height */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border-radius: 5px;
+    padding: 0.8rem 1.2rem;
+    font-size: 1rem;
     cursor: pointer;
-    font-size: 1.3rem; /* Немного увеличил размер иконки */
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    transition: background-color 0.3s ease;
 }
 
 .send-button:hover {
-    background-color: var(--accent-secondary);
-    transform: scale(1.05);
+    background-color: #0097a7;
 }
 
 /* Spinners */
@@ -455,20 +598,29 @@ form h3 {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 25px; /* Увеличил padding */
+    padding: 20px;
+    background-color: var(--bg-primary);
     color: var(--text-secondary);
-    font-size: 1.05rem; /* Немного увеличил размер шрифта */
-    gap: 12px; /* Увеличил gap */
-    align-self: center; /* Center the spinner in the chat area */
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    margin: 20px auto;
+    max-width: 500px;
+    width: fit-content;
+}
+
+#spinner p, #fileSpinner p {
+    margin-top: 0;
+    font-size: 1.1rem;
 }
 
 .loader {
-    border: 5px solid var(--border-color); /* Немного увеличил толщину */
-    border-top: 5px solid var(--accent-primary);
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--accent-primary);
     border-radius: 50%;
-    width: 45px; /* Немного увеличил размер */
-    height: 45px;
+    width: 40px;
+    height: 40px;
     animation: spin 1s linear infinite;
+    margin-top: 10px;
 }
 
 @keyframes spin {
@@ -476,102 +628,23 @@ form h3 {
     100% { transform: rotate(360deg); }
 }
 
-/* Error message styling */
+/* Error Message */
 .error-message {
-    color: #dc3545; /* Red color for error messages */
+    color: #ff6b6b;
     font-weight: bold;
-    background-color: rgba(220, 53, 69, 0.1);
-    padding: 12px; /* Увеличил padding */
-    border-radius: 8px;
-    border: 1px solid #dc3545;
 }
 
-/* Footer */
+/* FOOTER */
 footer {
     background-color: var(--bg-header);
     color: var(--text-secondary);
     text-align: center;
-    padding: 1.2rem; /* Увеличил padding */
-    margin-top: auto; /* Push footer to the bottom */
-    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
+    margin-top: auto;
 }
 
-footer .footer-content {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-/* Specific styles for upload card and footer */
-.upload-card {
-    padding: 18px; /* Adjusted padding */
-    border: 1px solid var(--input-border);
-    border-radius: 6px;
-    background-color: var(--input-bg);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 0.5rem; /* Adjusted margin */
-}
-
-.upload-card label {
-    cursor: pointer;
-    color: var(--accent-primary);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: bold;
-}
-
-.upload-card label:hover {
-    color: var(--accent-secondary);
-}
-
-.file-name-display {
-    flex-grow: 1;
-    color: var(--text-secondary);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.clear-file-button {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 1.1rem;
-    padding: 5px;
-    border-radius: 50%;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.clear-file-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #dc3545;
-}
-
-.upload-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1.5rem; /* Increased margin-top */
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    gap: 1.2rem; /* Added gap for consistent spacing */
-}
-
-.action-buttons {
-    display: flex;
-    gap: 1rem; /* Spacing between buttons */
-    flex-wrap: wrap;
-}
-
-.action-buttons .btn {
-    flex-shrink: 0; /* Prevent buttons from shrinking */
-    min-width: 120px; /* Ensure a minimum width for buttons */
-}
-
-
-/* Responsive adjustments */
+/* --- MEDIA QUERIES --- */
 @media (max-width: 768px) {
     .app-container {
         flex-direction: column;
@@ -581,53 +654,52 @@ footer .footer-content {
         width: 100%;
         border-right: none;
         border-bottom: 1px solid var(--border-color);
-        padding-bottom: 1.5rem; /* Увеличил padding-bottom */
-        gap: 1rem;
+        padding-bottom: 1rem;
     }
 
     #chat-list {
-        max-height: 180px; /* Shorter history on mobile, adjusted for more space */
+        max-height: 150px; /* Shorter history on mobile */
     }
 
     .main-content-area {
-        padding: 1.5rem; /* Увеличил padding */
+        padding: 1rem;
     }
 
     header {
         flex-direction: column;
-        gap: 0.8rem; /* Увеличил gap */
-        padding: 1rem 1.5rem; /* Увеличил padding */
+        gap: 0.5rem;
+        padding: 0.8rem 1rem;
     }
 
     header nav a {
-        margin: 0 0.8rem; /* Увеличил margin */
+        margin: 0 0.5rem;
     }
 
     .chat-bubble {
-        font-size: 0.98rem; /* Немного увеличил размер шрифта */
-        padding: 12px 18px; /* Увеличил padding */
+        font-size: 0.95rem;
+        padding: 10px 15px;
         max-width: 90%; /* Allow bubbles to be wider on small screens */
     }
     textarea#userQuestion {
-        min-height: 90px; /* Увеличил min-height */
-        font-size: 0.98rem;
-        padding: 1rem; /* Увеличил padding */
+        min-height: 80px;
+        font-size: 0.95rem;
+        padding: 0.8rem;
     }
-    button#submitBtn {
-        font-size: 1rem; /* Немного увеличил размер шрифта */
-        padding: 12px 18px; /* Увеличил padding */
+    button#send-initial-message {
+        font-size: 0.95rem;
+        padding: 10px 15px;
     }
     .upload-card {
-        padding: 18px; /* Увеличил padding */
+        padding: 16px;
     }
     .upload-footer {
         flex-direction: column;
-        gap: 1.2rem; /* Увеличил gap */
+        gap: 1rem;
         align-items: stretch;
     }
     .action-buttons {
         flex-direction: column;
-        gap: 12px; /* Увеличил gap */
+        gap: 10px;
         width: 100%;
     }
     .action-buttons .btn {
@@ -635,33 +707,17 @@ footer .footer-content {
         margin-bottom: 0;
     }
     #fileSpinner, #spinner {
-        font-size: 1rem; /* Немного увеличил размер шрифта */
-        padding: 20px 8px; /* Увеличил padding */
+        font-size: 0.95rem;
+        padding: 18px 4px;
         max-width: 95vw;
     }
     .loader {
-        width: 32px; /* Немного увеличил размер */
-        height: 32px;
+        width: 28px;
+        height: 28px;
     }
     .file-question-input {
-        font-size: 0.98rem;
-        padding: 1rem; /* Увеличил padding */
-        min-height: 70px; /* Увеличил min-height */
-    }
-
-    .intro-section {
-        padding: 1.8rem; /* Adjusted padding for mobile */
-    }
-    .chat-input-area {
-        padding: 15px; /* Adjusted padding for mobile */
-        gap: 8px; /* Adjusted gap for mobile */
-    }
-    .chat-input-area .chat-input {
-        min-height: 45px; /* Adjusted min-height for mobile */
-    }
-    .send-button {
-        width: 45px; /* Adjusted size for mobile */
-        height: 45px;
-        font-size: 1.1rem;
+        font-size: 0.95rem;
+        padding: 0.8rem;
+        min-height: 60px;
     }
 }
