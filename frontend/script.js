@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileQuestionInput    = document.getElementById('file-question');
   const homeLink             = document.getElementById('home-link'); // NEW: Home link element
   const aboutLinkNav         = document.getElementById('about-link-nav'); // NEW: About link in nav
-
+  
 
   /* ----------  STATE ---------- */
   let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
