@@ -140,7 +140,7 @@ def ask_route():
 
         # Загружаем историю для текущей сессии
         history = load_conversation(session_id)
-
+        
         # Добавляем текущий вопрос пользователя в историю
         full_history = history + [{"role": "user", "parts": [user_question]}]
 
@@ -358,10 +358,12 @@ def upload_document_route():
             return jsonify({"error": "Неподдерживаемый или поврежденный тип файла."}), 400
 
         # Добавляем содержимое файла в историю сообщений как часть пользовательского ввода
+        # Добавляем содержимое файла в историю сообщений как часть пользовательского ввода
         file_message_content = f"Пользователь загрузил документ ({user_file.filename}). Содержимое документа:\n```\n{file_content_text[:2000]}...\n```"
+        
         # Загружаем историю для текущей сессии
         history = load_conversation(session_id)
-
+        
         # Добавляем содержимое файла и вопрос пользователя в историю
         full_history = history + [{"role": "user", "parts": [file_message_content]}]
         if user_question:
