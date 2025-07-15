@@ -97,6 +97,81 @@ def load_law_db(path="laws/kazakh_laws_db.json"):
 
 load_law_db()
 
+def clean_and_format_html(text):
+    """
+    Очищает текст от неправильного форматирования и приводит к правильному HTML
+    """
+    import re
+    
+    # Удаляем лишние пробелы и переносы строк
+    text = re.sub(r'\s+', ' ', text)
+    text = text.strip()
+    
+    # Заменяем ** на <strong> теги
+    text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+    
+    # Заменяем * на <em> теги
+    text = re.sub(r'(?<!\*)\*(?!\*)([^*]+)\*(?!\*)', r'<em>\1</em>', text)
+    
+    # Исправляем разбитые слова (как "руководи телю")
+    text = re.sub(r'(\w+)\s+(\w{1,3})\b', r'\1\2', text)
+    
+    # Обрабатываем списки: находим строки, которые выглядят как элементы списка
+    lines = text.split('.')
+    formatted_lines = []
+    in_list = False
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Проверяем, является ли строка элементом списка
+        if re.match(r'^[А-Яа-я\s]+:', line) and len(line) > 10:
+            if not in_list:
+                formatted_lines.append('<ul>')
+                in_list = True
+            # Разделяем на заголовок и описание
+            parts = line.split(':', 1)
+            if len(parts) == 2:
+                formatted_lines.append(f'<li><strong>{parts[0].strip()}:</strong> {parts[1].strip()}</li>')
+            else:
+                formatted_lines.append(f'<li>{line}</li>')
+        else:
+            if in_list:
+                formatted_lines.append('</ul>')
+                in_list = False
+            if line and not line.startswith('<'):
+                formatted_lines.append(f'<p>{line}.</p>')
+    
+    if in_list:
+        formatted_lines.append('</ul>')
+    
+    result = '\n'.join(formatted_lines)
+    
+    # Очищаем от дублирующих тегов
+    result = re.sub(r'<p>\s*</p>', '', result)
+    result = re.sub(r'<p>([^<]*)<strong>([^<]*)</strong>', r'<p><strong>\2</strong> \1', result)
+    
+    return result
+
+# Замените функцию sanitize_html_output на эту улучшенную версию:
+
+def sanitize_html_output(text):
+    """
+    Очищает и форматирует HTML текст
+    """
+    # Сначала очищаем и форматируем
+    text = clean_and_format_html(text)
+    
+    # Затем применяем стандартную очистку
+    allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'br', 'code', 'em', 'i', 'li', 'ol', 'p', 'strong', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'span', 'div', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'hr', 's', 'del', 'ins', 'img']
+    allowed_attrs = {'*': ['class', 'style'], 'a': ['href', 'title'], 'img': ['src', 'alt', 'width', 'height']}
+    
+    cleaned = bleach.clean(text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+    
+    return cleaned
+
 # --- Функция поиска релевантных законов ---
 def find_relevant_laws(query: str) -> list:
     query_lower = query.lower()
@@ -159,26 +234,64 @@ def ask_route():
             Твоя задача — давать точные, полные и основанные на законодательстве ответы.
             Всегда ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
             Всегда сначала дай четкую юридическую оценку (нарушено ли право, какая ответственность, какие законы применяются) и сразу напиши, что делать и куда обращаться — даже если не все детали известны. Если нужны детали для документа, только после этого задай уточняющие вопросы.
-            Ответы форматируй в HTML для удобного отображения на веб-странице, используя <p>, <ul>, <li>, <strong>, <em>, <a> (для ссылок на законы).
-            Не используй Markdown, только чистый HTML.
-        
-            <strong style='color:red;'>Важно:</strong> <span style="color:red; font-weight:bold;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</span>
+            КРИТИЧЕСКИ ВАЖНО: Всегда форматируй ответы ТОЛЬКО в HTML для удобного отображения на веб-странице.
+
+            ВАЖНО: Всегда форматируй ответы в HTML для удобного отображения на веб-странице.
+            
+            Используй следующие HTML теги:
+            - <p> для абзацев
+            - <ul> и <li> для списков
+            - <strong> для выделения важных частей
+            - <em> для курсива
+            - <br> для переносов строк
+            - <h3> для заголовков разделов
+            
+            Пример правильного форматирования:
+            <p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>
             <ul>
-              <li><strong>Основание увольнения:</strong> Что вам сказали в качестве причины увольнения? Какую формулировку содержит приказ об увольнении (если он вам был предоставлен)? Были ли какие-либо нарушения с вашей стороны?</li>
-              <li><strong>Ваш трудовой договор:</strong> Был ли заключен трудовой договор? Если да, то были ли в нем прописаны условия увольнения?</li>
-              <li><strong>Стаж работы:</strong> Сколько времени вы проработали на данном предприятии?</li>
-              <li><strong>Получили ли вы какие-либо документы при увольнении:</strong> Выдали ли вам трудовую книжку, расчетную ведомость с указанием всех выплат?</li>
-              <li><strong>Форма увольнения:</strong> Было ли увольнение оформлено приказом работодателя? Получили ли вы копию приказа?</li>
+            <li><strong>Описание ситуации:</strong> Пожалуйста, опишите подробно инциденты сексуального домогательства.</li>
+            <li><strong>Характер домогательств:</strong> Были ли домогательства физическими, словесными или иными?</li>
             </ul>
-        
-            <p><strong style="color:red;">Важно:</strong> После предоставления необходимой информации я смогу подготовить для вас шаблон заявления, соответствующий нормам РК.</p>
-            Вот шаблон заявления если только это нужно!: 
-            <p><strong>Претензия</strong></p>
-            <p>Я, <strong><em>ФИО</em></strong>, <em>адрес</em>, <strong>телефон</strong>, <em>email</em>, заявляю настоящую претензию в адрес <strong>название онлайн-магазина</strong>, <em>юридический адрес</em>, в связи с нарушением условий договора купли-продажи от <strong>дата</strong> (номер заказа: <em>номер заказа</em>).</p>
-            <p>Согласно договору, я заказал <strong>название товара</strong>. Однако, <strong>дата получения</strong> мне был доставлен товар <strong>название полученного товара</strong>. Прилагаю фотографии, подтверждающие несоответствие полученного товара заказанному (приложение 1).</p>
-            <p>В связи с вышеизложенным, требую <strong>заменить товар</strong> на соответствующий договору или <strong>вернуть деньги</strong>.</p>
-            <p>Прошу рассмотреть мою претензию в течение <strong>15 дней</strong> и уведомить меня о принятом решении.</p>
-            <p>Дата: ______ Подпись: ______</p>
+            
+            НЕ ИСПОЛЬЗУЙ символы ** для выделения - используй только HTML теги <strong> и <em>.
+            НЕ ИСПОЛЬЗУЙ Markdown форматирование - только чистый HTML.
+            
+            Всегда ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
+            Всегда сначала дай четкую юридическую оценку и сразу напиши, что делать и куда обращаться.
+            
+            При ответе строго следуй этим правилам:
+            
+            1. Если для ответа недостаточно данных, оформи запрос информации в HTML:
+               <p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>
+               <ul>
+               <li><strong>Пункт 1:</strong> Описание...</li>
+               <li><strong>Пункт 2:</strong> Описание...</li>
+               </ul>
+            
+            2. Для экстренных контактов используй:
+               <p><strong>Экстренные контакты:</strong></p>
+               <ul>
+               <li>Полиция: <strong>102</strong></li>
+               <li>Единый номер экстренных служб: <strong>112</strong></li>
+               </ul>
+            
+            3. Каждый абзац обязательно заключай в теги <p></p>
+            
+            4. Списки всегда оформляй как <ul><li>...</li></ul>
+
+            ШАБЛОН для запроса информации:
+            <p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>
+            <ul>
+            <li><strong>Название пункта:</strong> Описание того, что нужно узнать</li>
+            <li><strong>Другой пункт:</strong> Другое описание</li>
+            </ul>
+            
+            ШАБЛОН для экстренных контактов:
+            <p><strong>В экстренных случаях обращайтесь:</strong></p>
+            <ul>
+            <li>Полиция: <strong>102</strong></li>
+            <li>Единый номер экстренных служб: <strong>112</strong></li>
+            </ul>
             
             При ответе строго следуй этим правилам:
     
@@ -275,31 +388,55 @@ def ask_route():
 
         def generate_stream():
             ai_response_content = ""
+            accumulated_text = ""
+            
             try:
                 for chunk in model.generate_content(messages_for_model, stream=True):
                     if chunk.text:
-                        cleaned_chunk = sanitize_html_output(chunk.text)
-                        ai_response_content += cleaned_chunk
-                        yield cleaned_chunk
+                        accumulated_text += chunk.text
+                        
+                        # Проверяем, есть ли завершенные предложения или блоки
+                        if '.' in accumulated_text or '\n' in accumulated_text or len(accumulated_text) > 150:
+                            # Обрабатываем накопленный текст
+                            cleaned_chunk = sanitize_html_output(accumulated_text)
+                            
+                            # Если текст не содержит HTML тегов, оборачиваем в <p>
+                            if not re.search(r'<[^>]+>', cleaned_chunk) and cleaned_chunk.strip():
+                                cleaned_chunk = f'<p>{cleaned_chunk}</p>'
+                            
+                            ai_response_content += cleaned_chunk
+                            yield cleaned_chunk
+                            accumulated_text = ""
+
+                # Обрабатываем оставшийся текст
+                if accumulated_text.strip():
+                    cleaned_chunk = sanitize_html_output(accumulated_text)
+                    if not re.search(r'<[^>]+>', cleaned_chunk):
+                        cleaned_chunk = f'<p>{cleaned_chunk}</p>'
+                    ai_response_content += cleaned_chunk
+                    yield cleaned_chunk
 
                 save_message(session_id, "model", ai_response_content)
                 logging.info(f"✅ Ответ AI сохранен для сессии {session_id}")
 
             except genai.types.BlockedPromptException as e:
                 logging.error(f"❌ Запрос заблокирован: {e}")
-                save_message(session_id, "model", "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.")
-                yield "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента."
+                error_message = "<p>Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.</p>"
+                save_message(session_id, "model", error_message)
+                yield error_message
 
             except Exception as e:
                 logging.error(f"❌ Ошибка генерации ответа: {e}")
-                save_message(session_id, "model", "Произошла ошибка при генерации ответа. Попробуйте еще раз.")
-                yield "Произошла ошибка при генерации ответа. Попробуйте еще раз."
+                error_message = "<p>Произошла ошибка при генерации ответа. Попробуйте еще раз.</p>"
+                save_message(session_id, "model", error_message)
+                yield error_message
 
         return Response(stream_with_context(generate_stream()), mimetype='text/html')
 
     except Exception as e:
         logging.error(f"❌ Ошибка в /ask: {e}")
         return jsonify({"error": f"Ошибка сервера при обработке запроса: {str(e)}"}), 500
+        
 
 @app.route('/get-all-sessions-summary', methods=["GET"])
 def get_all_sessions_summary_route():
@@ -408,31 +545,48 @@ def upload_document_route():
 
         def generate_stream():
             ai_response_content = ""
+            accumulated_text = ""  # Накапливаем текст для лучшей обработки
+            
             try:
-                for chunk in vision_model.generate_content(messages_for_model, stream=True):
+                for chunk in model.generate_content(messages_for_model, stream=True):
                     if chunk.text:
-                        cleaned_chunk = sanitize_html_output(chunk.text)
-                        ai_response_content += cleaned_chunk
-                        yield cleaned_chunk
-
+                        accumulated_text += chunk.text
+                        
+                        # Проверяем, есть ли завершенные предложения или блоки
+                        if '.' in accumulated_text or '\n' in accumulated_text or len(accumulated_text) > 100:
+                            # Обрабатываем накопленный текст
+                            cleaned_chunk = sanitize_html_output(accumulated_text)
+                            
+                            # Если текст не содержит HTML тегов, оборачиваем в <p>
+                            if not re.search(r'<[^>]+>', cleaned_chunk):
+                                cleaned_chunk = f'<p>{cleaned_chunk}</p>'
+                            
+                            ai_response_content += cleaned_chunk
+                            yield cleaned_chunk
+                            accumulated_text = ""  # Сбрасываем накопленный текст
+                
+                # Обрабатываем оставшийся текст
+                if accumulated_text:
+                    cleaned_chunk = sanitize_html_output(accumulated_text)
+                    if not re.search(r'<[^>]+>', cleaned_chunk):
+                        cleaned_chunk = f'<p>{cleaned_chunk}</p>'
+                    ai_response_content += cleaned_chunk
+                    yield cleaned_chunk
+        
                 save_message(session_id, "model", ai_response_content)
-                logging.info(f"✅ Ответ AI на документ сохранен для сессии {session_id}")
-
+                logging.info(f"✅ Ответ AI сохранен для сессии {session_id}")
+        
             except genai.types.BlockedPromptException as e:
-                logging.error(f"❌ Запрос (с файлом) заблокирован: {e}")
-                save_message(session_id, "model", "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.")
-                yield "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента."
-
+                logging.error(f"❌ Запрос заблокирован: {e}")
+                error_message = "<p>Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.</p>"
+                save_message(session_id, "model", error_message)
+                yield error_message
+        
             except Exception as e:
-                logging.error(f"❌ Ошибка генерации ответа (с файлом): {e}")
-                save_message(session_id, "model", "Произошла ошибка при генерации ответа на документ. Попробуйте еще раз.")
-                yield "Произошла ошибка при генерации ответа на документ. Попробуйте еще раз."
-
-        return Response(stream_with_context(generate_stream()), mimetype='text/html')
-
-    except Exception as e:
-        logging.error(f"❌ Ошибка в /upload-document: {e}")
-        return jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"}), 500
+                logging.error(f"❌ Ошибка генерации ответа: {e}")
+                error_message = "<p>Произошла ошибка при генерации ответа. Попробуйте еще раз.</p>"
+                save_message(session_id, "model", error_message)
+                yield error_message
 
 # --- Основной маршрут для фронтенда ---
 @app.route('/')
@@ -463,6 +617,54 @@ def get_history_route():
 @app.route('/<path:filename>')
 def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
+
+def post_process_ai_response(response_text):
+    """
+    Дополнительная обработка ответа AI для исправления форматирования
+    """
+    # Удаляем двойные пробелы
+    response_text = re.sub(r'\s+', ' ', response_text)
+    
+    # Исправляем разбитые слова
+    response_text = re.sub(r'(\w+)\s+(\w{1,3})\b', r'\1\2', response_text)
+    
+    # Если в тексте нет HTML тегов, создаем структуру
+    if not re.search(r'<[^>]+>', response_text):
+        # Разбиваем на абзацы
+        paragraphs = response_text.split('\n\n')
+        formatted_paragraphs = []
+        
+        for paragraph in paragraphs:
+            paragraph = paragraph.strip()
+            if not paragraph:
+                continue
+                
+            # Проверяем, является ли это списком
+            if ':' in paragraph and len(paragraph.split(':')) > 1:
+                lines = paragraph.split('\n')
+                if len(lines) > 1:
+                    # Это список
+                    formatted_paragraphs.append('<ul>')
+                    for line in lines:
+                        line = line.strip()
+                        if ':' in line:
+                            parts = line.split(':', 1)
+                            formatted_paragraphs.append(f'<li><strong>{parts[0].strip()}:</strong> {parts[1].strip()}</li>')
+                        elif line:
+                            formatted_paragraphs.append(f'<li>{line}</li>')
+                    formatted_paragraphs.append('</ul>')
+                else:
+                    formatted_paragraphs.append(f'<p>{paragraph}</p>')
+            else:
+                formatted_paragraphs.append(f'<p>{paragraph}</p>')
+        
+        response_text = '\n'.join(formatted_paragraphs)
+    
+    # Исправляем специфические проблемы
+    response_text = response_text.replace('руководи телю', 'руководителю')
+    response_text = response_text.replace('свидетель ские', 'свидетельские')
+    
+    return response_text
 
 if __name__ == '__main__':
     # Для Railway:
