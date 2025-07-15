@@ -10,3 +10,4 @@ Pillow
 pymongo # ДОБАВЛЕНО
 dnspython # ДОБАВЛЕНО (необходим для mongodb+srv URI)
 bleach
+lxml==4.9.3
