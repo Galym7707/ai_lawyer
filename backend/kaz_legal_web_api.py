@@ -16,6 +16,8 @@ from lxml import html
 # --- НОВОЕ: Импортируем helpers ---
 from helpers import expand_keywords, build_snippet
 import unittest
+from dotenv import load_dotenv
+load_dotenv()
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -32,6 +34,11 @@ vision_model = genai.GenerativeModel('gemini-1.5-flash')  # Модель для 
 LAW_DB = []  # Теперь это будет использоваться как кэш или для специализированного поиска
 LAW_INDEX = {} # Инвертированный индекс для быстрого поиска
 # --- УЛУЧШЕНИЕ: Максимально расширенный словарь синонимов (с добавлением налоговых терминов) ---
+
+if not GEMINI_API_KEY:
+    logging.error("❌ GEMINI_API_KEY не установлен. Приложение не может запуститься.")
+    raise EnvironmentError("GEMINI_API_KEY is not set.")
+    
 LEGAL_SYNONYMS = {
     # Трудовые отношения
     'увольнение': ['уволен', 'увольняет', 'сокращение', 'расторжение договора', 'прекращение трудового договора', 'расчет', 'увольнение'],
@@ -84,7 +91,7 @@ else:
     logging.error("❌ Ошибка: Переменная окружения MONGO_URI не установлена. Подключение к MongoDB невозможно.")
 
 executor = ThreadPoolExecutor(max_workers=4)  # Пул потоков для асинхронной обработки
-load_law_db()
+
 # --- Загрузка базы законов ---
 def load_law_db(path="laws/kazakh_laws_db.json"):
     global LAW_DB
@@ -96,7 +103,7 @@ def load_law_db(path="laws/kazakh_laws_db.json"):
     else:
         logging.warning(f"⚠️ База законов не найдена по пути: {path}. Поиск будет ограничен.")
 
-
+load_law_db()
 
 class TestHTMLFormatting(unittest.TestCase):
     def test_clean_and_format_html(self):
@@ -302,32 +309,29 @@ def ask_route():
         system_instruction = f"""
             Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
             Твоя задача — давать точные, полные и основанные на законодательстве ответы.
+            Всегда сначала дай четкую юридическую оценку и сразу напиши, что делать и куда обращаться.
             Всегда ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
             Всегда сначала дай четкую юридическую оценку (нарушено ли право, какая ответственность, какие законы применяются) и сразу напиши, что делать и куда обращаться — даже если не все детали известны. Если нужны детали для документа, только после этого задай уточняющие вопросы.
-            КРИТИЧЕСКИ ВАЖНО: Всегда форматируй ответы ТОЛЬКО в HTML для удобного отображения на веб-странице.
 
-            ВАЖНО: Всегда форматируй ответы в HTML для удобного отображения на веб-странице.
-            
-            Используй следующие HTML теги:
-            - <p> для абзацев
-            - <ul> и <li> для списков
-            - <strong> для выделения важных частей
-            - <em> для курсива
-            - <br> для переносов строк
-            - <h3> для заголовков разделов
-            
-            Пример правильного форматирования:
-            <p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>
+            КРИТИЧЕСКИ ВАЖНО: Форматируй ответы ТОЛЬКО в чистом HTML, без использования Markdown, звездочек (* или **), или plain text. Каждый абзац заключай в <p></p>. Списки оформляй в <ul><li>...</li></ul>. Заголовки оформляй в <h3>. Используй <strong> для выделения текста. Пример:
+
+            <p><strong>Юридическая оценка:</strong> Увольнение без законных оснований является нарушением.</p>
             <ul>
-            <li><strong>Описание ситуации:</strong> Пожалуйста, опишите подробно инциденты сексуального домогательства.</li>
-            <li><strong>Характер домогательств:</strong> Были ли домогательства физическими, словесными или иными?</li>
+            <li><strong>Действие:</strong> Обратитесь в суд.</li>
             </ul>
             
-            НЕ ИСПОЛЬЗУЙ символы ** для выделения - используй только HTML теги <strong> и <em>.
-            НЕ ИСПОЛЬЗУЙ Markdown форматирование - только чистый HTML.
+            Если для ответа недостаточно данных:
+            <p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>
+            <ul>
+            <li><strong>Пункт 1:</strong> Описание...</li>
+            </ul>
             
-            Всегда ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
-            Всегда сначала дай четкую юридическую оценку и сразу напиши, что делать и куда обращаться.
+            Экстренные контакты:
+            <p><strong>В экстренных случаях обращайтесь:</strong></p>
+            <ul>
+            <li>Полиция: <strong>102</strong></li>
+            <li>Единый номер экстренных служб: <strong>112</strong></li>
+            </ul>
             
             При ответе строго следуй этим правилам:
             
@@ -515,40 +519,37 @@ def process_file_content(file_stream, mimetype):
     text_content = ""
     try:
         if mimetype == 'application/pdf':
-            # Для PDF используем PyPDF2
             reader = PdfReader(file_stream)
             for page in reader.pages:
                 extracted = page.extract_text()
                 if extracted:
                     text_content += extracted + "\n"
         elif mimetype == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-            # Для DOCX используем python-docx
             document = Document(file_stream)
             for paragraph in document.paragraphs:
                 text_content += paragraph.text + "\n"
         elif mimetype.startswith('image/'):
-            # Для изображений используем Gemini Vision Model
-            try:
-                image = Image.open(file_stream)
-                # Отправляем изображение в модель для описания
-                response = vision_model.generate_content(
-                    ["Опиши этот документ или изображение. Извлеки весь текст и информацию, которая может быть полезна для юриста."],
-                    image=image
-                )
-                text_content = response.text
-            except Exception as e:
-                logging.error(f"Ошибка обработки изображения: {e}")
-                return None
+            image = Image.open(file_stream)
+            response = vision_model.generate_content(
+                ["Опиши этот документ или изображение. Извлеки весь текст и информацию, которая может быть полезна для юриста."],
+                image=image
+            )
+            text_content = response.text
         elif mimetype.startswith('text/'):
-            # Текстовые файлы
             text_content = file_stream.read().decode('utf-8', errors='ignore')
         else:
             logging.warning(f"⚠️ Неподдерживаемый тип файла: {mimetype}")
             return None
+    except PyPDF2.errors.PdfReadError as e:
+        logging.error(f"❌ Ошибка чтения PDF: {e}")
+        return None
+    except PIL.UnidentifiedImageError as e:
+        logging.error(f"❌ Ошибка обработки изображения: {e}")
+        return None
     except Exception as e:
         logging.error(f"❌ Ошибка при обработке файла {mimetype}: {e}")
         return None
-    return text_content
+    return text_contentt
 
 
 @app.route("/upload-document", methods=["POST"])
@@ -581,61 +582,47 @@ def upload_document_route():
 
         law_context = ""
         if relevant_laws:
-            law_context = "\n\nРелевантные статьи законодательства Казахстана:\n"
+            law_context = "<ul>"
             for law in relevant_laws:
-                law_context += f"- **{law['title']}**: {law['snippet']}\n"
+                law_context += f"<li><strong>{law['title']}</strong>: {law['snippet']}</li>"
+            law_context += "</ul>"
             logging.info(f"🔍 Найдены релевантные законы для документа и запроса.")
 
-        system_instruction = f"""Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
-            Твоя задача — давать точные, полные и основанные на законодательстве ответы.
-            Всегда ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
-            {law_context if law_context else "У тебя нет доступа к актуальной базе законодательства. Отвечай на общие юридические вопросы, основываясь на твоих знаниях, но всегда предупреждай, что информация требует проверки по актуальным законам РК."}
+        system_instruction = f"""
+        Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
+        Твоя задача — давать точные, полные и основанные на законодательстве ответы.
+        Всегда ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
+
+        КРИТИЧЕСКИ ВАЖНО: Форматируй ответы ТОЛЬКО в чистом HTML, без использования Markdown, звездочек (* или **), или plain text. Каждый абзац заключай в <p></p>. Списки оформляй в <ul><li>...</li></ul>. Заголовки оформляй в <h3>. Используй <strong> для выделения текста. Пример:
+
+        <p><strong>Юридическая оценка:</strong> Увольнение без законных оснований является нарушением.</p>
+        <ul>
+        <li><strong>Действие:</strong> Обратитесь в суд.</li>
+        </ul>
+
+        Если для ответа недостаточно данных:
+        <p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>
+        <ul>
+        <li><strong>Пункт 1:</strong> Описание...</li>
+        </ul>
+
+        Экстренные контакты:
+        <p><strong>В экстренных случаях обращайтесь:</strong></p>
+        <ul>
+        <li>Полиция: <strong>102</strong></li>
+        <li>Единый номер экстренных служб: <strong>112</strong></li>
+        </ul>
+
+        {law_context if law_context else "У тебя нет доступа к актуальной базе законодательства. Отвечай на общие юридические вопросы, основываясь на твоих знаниях, но всегда предупреждай, что информация требует проверки по актуальным законам РК."}
         """
 
         messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
 
-        def generate_document_stream():
-            ai_response_content = ""
-            accumulated_text = ""
-            try:
-                for chunk in model.generate_content(messages_for_model, stream=True):
-                    if chunk.text:
-                        accumulated_text += chunk.text
-                        if '.' in accumulated_text or '\n' in accumulated_text or len(accumulated_text) > 100:
-                            cleaned_chunk = sanitize_html_output(accumulated_text)
-                            if not re.search(r'<[^>]+>', cleaned_chunk):
-                                cleaned_chunk = f'<p>{cleaned_chunk}</p>'
-                            ai_response_content += cleaned_chunk
-                            yield cleaned_chunk
-                            accumulated_text = ""
-                if accumulated_text:
-                    cleaned_chunk = sanitize_html_output(accumulated_text)
-                    if not re.search(r'<[^>]+>', cleaned_chunk):
-                        cleaned_chunk = f'<p>{cleaned_chunk}</p>'
-                    ai_response_content += cleaned_chunk
-                    yield cleaned_chunk
-                save_message(session_id, "model", ai_response_content)
-                logging.info(f"✅ Ответ AI сохранен для сессии {session_id}")
-            except genai.types.BlockedPromptException as e:
-                logging.error(f"❌ Запрос заблокирован: {e}")
-                error_message = "<p>Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.</p>"
-                save_message(session_id, "model", error_message)
-                yield error_message
-            except Exception as e:
-                logging.error(f"❌ Ошибка генерации ответа: {e}")
-                error_message = "<p>Произошла ошибка при генерации ответа. Попробуйте еще раз.</p>"
-                save_message(session_id, "model", error_message)
-                yield error_message
-        
-        return Response(stream_with_context(generate_document_stream()), mimetype='text/html')
+        return Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
     except Exception as e:
         logging.error(f"❌ Ошибка в /upload-document: {e}")
         return jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"}), 500
 
-# --- Основной маршрут для фронтенда ---
-@app.route('/')
-def serve_index():
-    return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/get-history', methods=["GET"])
 def get_history_route():
@@ -657,10 +644,6 @@ def get_history_route():
         return jsonify({"history": formatted}), 200
     except Exception as e:
         return jsonify({"error": f"Ошибка при получении истории: {str(e)}"}), 500
-
-@app.route('/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(app.static_folder, filename)
 
 def post_process_ai_response(response_text):
     """
