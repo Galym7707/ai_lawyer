@@ -253,7 +253,7 @@ def ask_route():
         
         """
 
-        messages_for_model = [{"role": "system", "parts": [system_instruction]}] + full_history
+        messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
 
         def generate_stream():
             ai_response_content = ""
@@ -386,7 +386,7 @@ def upload_document_route():
             {law_context if law_context else "У тебя нет доступа к актуальной базе законодательства. Отвечай на общие юридические вопросы, основываясь на твоих знаниях, но всегда предупреждай, что информация требует проверки по актуальным законам РК."}
         """
 
-        messages_for_model = [{"role": "system", "parts": [system_instruction]}] + full_history
+        messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
 
         def generate_stream():
             ai_response_content = ""
