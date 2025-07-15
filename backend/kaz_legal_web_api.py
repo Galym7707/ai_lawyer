@@ -388,7 +388,7 @@ def ask_route():
 
         def generate_stream():
             ai_response_content = ""
-            accumulated_text = ""
+            accumulated_text = ""  # Накапливаем текст для лучшей обработки
             
             try:
                 for chunk in model.generate_content(messages_for_model, stream=True):
@@ -406,7 +406,7 @@ def ask_route():
                             
                             ai_response_content += cleaned_chunk
                             yield cleaned_chunk
-                            accumulated_text = ""
+                            accumulated_text = ""  # Сбрасываем накопленный текст
 
                 # Обрабатываем оставшийся текст
                 if accumulated_text.strip():
