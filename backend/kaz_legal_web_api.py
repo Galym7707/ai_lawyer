@@ -12,15 +12,15 @@ import io  # Для работы с байтовыми потоками
 from docx import Document  # Для чтения .docx
 from PyPDF2 import PdfReader  # Для чтения .pdf
 import logging  # Для логирования
-
+from lxml import html
 # --- НОВОЕ: Импортируем helpers ---
 from helpers import expand_keywords, build_snippet
-
+import unittest
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB (1 ГБ)
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 100  #(100 МБ)
 CORS(app, origins=["https://ai-lawyer-tau.vercel.app", "http://localhost:5000", "http://127.0.0.1:5000"])
 
 # --- Инициализация AI и Базы Законов ---
@@ -84,7 +84,7 @@ else:
     logging.error("❌ Ошибка: Переменная окружения MONGO_URI не установлена. Подключение к MongoDB невозможно.")
 
 executor = ThreadPoolExecutor(max_workers=4)  # Пул потоков для асинхронной обработки
-
+load_law_db()
 # --- Загрузка базы законов ---
 def load_law_db(path="laws/kazakh_laws_db.json"):
     global LAW_DB
@@ -92,10 +92,34 @@ def load_law_db(path="laws/kazakh_laws_db.json"):
         with open(path, 'r', encoding='utf-8') as f:
             LAW_DB = json.load(f)
         logging.info(f"✅ Загружено {len(LAW_DB)} статей из базы законов.")
+        build_law_index()
     else:
         logging.warning(f"⚠️ База законов не найдена по пути: {path}. Поиск будет ограничен.")
 
-load_law_db()
+
+
+class TestHTMLFormatting(unittest.TestCase):
+    def test_clean_and_format_html(self):
+        input_text = """
+        Юридическая оценка ситуации
+
+        Увольнение без законных оснований является нарушением.
+
+        Что делать:
+        - Запросить документы
+        - Обратиться в суд
+        """
+        expected = """
+        <h3>Юридическая оценка ситуации</h3>
+        <p>Увольнение без законных оснований является нарушением.</p>
+        <h3>Что делать</h3>
+        <ul>
+        <li>Запросить документы</li>
+        <li>Обратиться в суд</li>
+        </ul>
+        """
+        result = clean_and_format_html(input_text)
+        self.assertEqual(result.strip(), expected.strip())
 
 def clean_and_format_html(text):
     # Удаляем лишние пробелы и переносы строк
@@ -159,50 +183,94 @@ def clean_and_format_html(text):
 
 # Замените функцию sanitize_html_output на эту улучшенную версию:
 
+
+
+def validate_html(text):
+    try:
+        html.fromstring(text)
+        return True
+    except Exception as e:
+        logging.warning(f"⚠️ Неверный HTML: {e}")
+        return False
+
 def sanitize_html_output(text):
-    """
-    Очищает и форматирует HTML текст
-    """
-    # Сначала очищаем и форматируем
     text = clean_and_format_html(text)
-    
-    # Затем применяем стандартную очистку
-    allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'br', 'code', 'em', 'i', 'li', 'ol', 'p', 'strong', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'span', 'div', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'hr', 's', 'del', 'ins', 'img']
-    allowed_attrs = {'*': ['class', 'style'], 'a': ['href', 'title'], 'img': ['src', 'alt', 'width', 'height']}
-    
-    cleaned = bleach.clean(text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
-    
-    return cleaned
-
-# --- Функция поиска релевантных законов ---
-def find_relevant_laws(query: str) -> list:
-    query_lower = query.lower()
-    query_keywords = set(re.findall(r'\b\w+\b', query_lower))  # Извлекаем слова из запроса
-    expanded_keywords = expand_keywords(query_keywords, LEGAL_SYNONYMS)
-
-    relevant_articles = []
-    for article in LAW_DB:
-        content_lower = article.get('content', '').lower()
-        title_lower = article.get('title', '').lower()
-
-        # Проверяем на наличие хотя бы одного расширенного ключевого слова в контенте или заголовке
-        if any(kw in content_lower or kw in title_lower for kw in expanded_keywords):
-            snippet = build_snippet(article.get('content', ''), expanded_keywords)
-            relevant_articles.append({
-                "title": article.get('title', 'Без названия'),
-                "link": article.get('link', '#'),
-                "snippet": snippet
-            })
-
-    relevant_articles.sort(key=lambda x: sum(kw in x['snippet'].lower() for kw in expanded_keywords), reverse=True)
-
-    return relevant_articles[:5]  # Возвращаем до 5 самых релевантных статей
-
-# --- Функция очистки HTML от XSS ---
-def sanitize_html_output(text):
+    text = post_process_ai_response(text)
+    if not validate_html(text):
+        logging.warning("⚠️ Исправление неверного HTML")
+        text = f'<p>{text}</p>'  # Fallback to wrapping in <p> if invalid
     allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'br', 'code', 'em', 'i', 'li', 'ol', 'p', 'strong', 'ul', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'span', 'div', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'hr', 's', 'del', 'ins', 'img']
     allowed_attrs = {'*': ['class', 'style'], 'a': ['href', 'title'], 'img': ['src', 'alt', 'width', 'height']}
     return bleach.clean(text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+
+def generate_response_stream(model, messages, session_id):
+    ai_response_content = ""
+    accumulated_text = ""
+    try:
+        for chunk in model.generate_content(messages, stream=True):
+            if chunk.text:
+                accumulated_text += chunk.text
+                if re.search(r'</(p|ul|h3)>', accumulated_text) or len(accumulated_text) > 150:
+                    cleaned_chunk = sanitize_html_output(accumulated_text)
+                    if cleaned_chunk.strip() and not re.search(r'<[^>]+>', cleaned_chunk):
+                        cleaned_chunk = f'<p>{cleaned_chunk}</p>'
+                    ai_response_content += cleaned_chunk
+                    yield cleaned_chunk
+                    accumulated_text = ""
+        if accumulated_text:
+            cleaned_chunk = sanitize_html_output(accumulated_text)
+            if cleaned_chunk.strip() and not re.search(r'<[^>]+>', cleaned_chunk):
+                cleaned_chunk = f'<p>{cleaned_chunk}</p>'
+            ai_response_content += cleaned_chunk
+            yield cleaned_chunk
+        save_message(session_id, "model", ai_response_content)
+        logging.info(f"✅ Ответ AI сохранен для сессии {session_id}")
+    except genai.types.BlockedPromptException as e:
+        logging.error(f"❌ Запрос заблокирован: {e}")
+        error_message = "<p>Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.</p>"
+        save_message(session_id, "model", error_message)
+        yield error_message
+    except Exception as e:
+        logging.error(f"❌ Ошибка генерации ответа: {e}")
+        error_message = "<p>Произошла ошибка при генерации ответа. Попробуйте еще раз.</p>"
+        save_message(session_id, "model", error_message)
+        yield error_message
+
+def build_law_index():
+    global LAW_INDEX
+    LAW_INDEX = {}
+    for article in LAW_DB:
+        content_lower = article.get('content', '').lower()
+        title_lower = article.get('title', '').lower()
+        words = set(re.findall(r'\b\w+\b', content_lower + " " + title_lower))
+        for word in words:
+            if word not in LAW_INDEX:
+                LAW_INDEX[word] = []
+            LAW_INDEX[word].append(article)
+
+def find_relevant_laws(query: str) -> list:
+    if not LAW_INDEX:
+        build_law_index()
+    query_lower = query.lower()
+    query_keywords = set(re.findall(r'\b\w+\b', query_lower))
+    expanded_keywords = expand_keywords(query_keywords, LEGAL_SYNONYMS)
+
+    relevant_articles = []
+    seen_articles = set()
+    for kw in expanded_keywords:
+        for article in LAW_INDEX.get(kw, []):
+            article_id = article.get('id', article.get('title', ''))
+            if article_id not in seen_articles:
+                snippet = build_snippet(article.get('content', ''), expanded_keywords)
+                relevant_articles.append({
+                    "title": article.get('title', 'Без названия'),
+                    "link": article.get('link', '#'),
+                    "snippet": snippet
+                })
+                seen_articles.add(article_id)
+
+    relevant_articles.sort(key=lambda x: sum(kw in x['snippet'].lower() for kw in expanded_keywords), reverse=True)
+    return relevant_articles[:5]
 
 # --- Маршрут для обработки текстовых запросов ---
 @app.route("/ask", methods=["POST"])
@@ -380,7 +448,6 @@ def ask_route():
         
         6.  **Язык и тон:** Используй официальный, но понятный язык. Будь вежливым и профессиональным.
         7.  **Цензура:** **Не используй звездочки (*) для цензуры.** Если какой-то термин считается чувствительным, постарайся перефразировать ответ, либо, если это юридический термин, используй его как есть, так как это важно для юридической точности.
-        8.  **Ограничения:** Не придумывай информацию. Если у тебя нет данных по конкретному вопросу, так и скажи, предложив обратиться к профильному юристу или официальным источникам.
         
         {law_context if law_context else "У тебя нет доступа к актуальной базе законодательства. Отвечай на общие юридические вопросы, основываясь на твоих знаниях."}
             
@@ -390,43 +457,32 @@ def ask_route():
 
         def generate_stream():
             ai_response_content = ""
-            accumulated_text = ""  # Накапливаем текст для лучшей обработки
-            
+            accumulated_text = ""
             try:
                 for chunk in model.generate_content(messages_for_model, stream=True):
                     if chunk.text:
                         accumulated_text += chunk.text
-                        
-                        # Проверяем, есть ли завершенные предложения или блоки
-                        if '.' in accumulated_text or '\n' in accumulated_text or len(accumulated_text) > 150:
-                            # Обрабатываем накопленный текст
+                        # Проверяем, есть ли завершенные HTML-структуры
+                        if re.search(r'</(p|ul|h3)>', accumulated_text) or len(accumulated_text) > 150:
                             cleaned_chunk = sanitize_html_output(accumulated_text)
-                            
-                            # Если текст не содержит HTML тегов, оборачиваем в <p>
-                            if not re.search(r'<[^>]+>', cleaned_chunk) and cleaned_chunk.strip():
+                            if cleaned_chunk.strip() and not re.search(r'<[^>]+>', cleaned_chunk):
                                 cleaned_chunk = f'<p>{cleaned_chunk}</p>'
-                            
                             ai_response_content += cleaned_chunk
                             yield cleaned_chunk
-                            accumulated_text = ""  # Сбрасываем накопленный текст
-
-                # Обрабатываем оставшийся текст
-                if accumulated_text.strip():
+                            accumulated_text = ""
+                if accumulated_text:
                     cleaned_chunk = sanitize_html_output(accumulated_text)
-                    if not re.search(r'<[^>]+>', cleaned_chunk):
+                    if cleaned_chunk.strip() and not re.search(r'<[^>]+>', cleaned_chunk):
                         cleaned_chunk = f'<p>{cleaned_chunk}</p>'
                     ai_response_content += cleaned_chunk
                     yield cleaned_chunk
-
                 save_message(session_id, "model", ai_response_content)
                 logging.info(f"✅ Ответ AI сохранен для сессии {session_id}")
-
             except genai.types.BlockedPromptException as e:
                 logging.error(f"❌ Запрос заблокирован: {e}")
                 error_message = "<p>Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.</p>"
                 save_message(session_id, "model", error_message)
                 yield error_message
-
             except Exception as e:
                 logging.error(f"❌ Ошибка генерации ответа: {e}")
                 error_message = "<p>Произошла ошибка при генерации ответа. Попробуйте еще раз.</p>"
