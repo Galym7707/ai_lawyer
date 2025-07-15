@@ -360,16 +360,14 @@ def upload_document_route():
             return jsonify({"error": "Неподдерживаемый или поврежденный тип файла."}), 400
 
         # Добавляем содержимое файла в историю сообщений как часть пользовательского ввода
-        file_message_content = f"Пользователь загрузил документ ({user_file.filename}). Содержимое документа:\n```\n{file_content_text[:2000]}...\n```\n"  # Ограничим для логов
-
+        file_message_content = f"Пользователь загрузил документ ({user_file.filename}). Содержимое документа:\n```\n{file_content_text[:2000]}...\n```"
         # Загружаем историю для текущей сессии
         history = load_conversation(session_id)
 
         # Добавляем содержимое файла и вопрос пользователя в историю
-        full_history = history + [
-            {"role": "user", "parts": [file_message_content]},
-            {"role": "user", "parts": [user_question]} if user_question else history
-        ]
+        full_history = history + [{"role": "user", "parts": [file_message_content]}]
+        if user_question:
+            full_history.append({"role": "user", "parts": [user_question]})
 
         # Поиск релевантных законов на основе содержимого файла и вопроса
         combined_text_for_search = file_content_text + " " + user_question
