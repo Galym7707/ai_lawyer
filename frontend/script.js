@@ -75,12 +75,13 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
 
-  // Modified addMessage to ensure proper HTML formatting
+  
+// Modified addMessage to ensure proper HTML formatting
 function addMessage(text, senderClass) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('chat-bubble', senderClass);
 
-    // Ensure that the text is properly interpreted as HTML
+    // Ensure that the text is properly interpreted as HTML (already sanitized on backend)
     messageElement.innerHTML = text; // We assume the text is sanitized HTML
 
     chatMessagesDisplay.appendChild(messageElement);
@@ -88,9 +89,10 @@ function addMessage(text, senderClass) {
 
     // Check for errors in the message
     if (text.includes("Ошибка:")) { 
-        messageElement.innerHTML = `<p class="error-message">${text}</p>`;
+        messageElement.innerHTML = `<p class="error-message">${text}</p>`; // Handle error formatting
     }
 }
+
 
   async function loadChatSessions() {
     chatList.innerHTML = '<p>Загрузка истории...</p>';
