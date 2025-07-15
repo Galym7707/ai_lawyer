@@ -493,7 +493,6 @@ def process_file_content(file_stream, mimetype):
     return text_content
 
 
-# --- Маршрут для загрузки документов ---
 @app.route("/upload-document", methods=["POST"])
 def upload_document_route():
     try:
@@ -512,19 +511,13 @@ def upload_document_route():
         if file_content_text is None:
             return jsonify({"error": "Неподдерживаемый или поврежденный тип файла."}), 400
 
-        # Добавляем содержимое файла в историю сообщений как часть пользовательского ввода
-        # Добавляем содержимое файла в историю сообщений как часть пользовательского ввода
         file_message_content = f"Пользователь загрузил документ ({user_file.filename}). Содержимое документа:\n```\n{file_content_text[:2000]}...\n```"
         
-        # Загружаем историю для текущей сессии
         history = load_conversation(session_id)
-        
-        # Добавляем содержимое файла и вопрос пользователя в историю
         full_history = history + [{"role": "user", "parts": [file_message_content]}]
         if user_question:
             full_history.append({"role": "user", "parts": [user_question]})
 
-        # Поиск релевантных законов на основе содержимого файла и вопроса
         combined_text_for_search = file_content_text + " " + user_question
         relevant_laws = find_relevant_laws(combined_text_for_search)
 
@@ -545,50 +538,41 @@ def upload_document_route():
 
         def generate_document_stream():
             ai_response_content = ""
-            accumulated_text = ""  # Накапливаем текст для лучшей обработки
-            
+            accumulated_text = ""
             try:
                 for chunk in model.generate_content(messages_for_model, stream=True):
                     if chunk.text:
                         accumulated_text += chunk.text
-                        
-                        # Проверяем, есть ли завершенные предложения или блоки
                         if '.' in accumulated_text or '\n' in accumulated_text or len(accumulated_text) > 100:
-                            # Обрабатываем накопленный текст
                             cleaned_chunk = sanitize_html_output(accumulated_text)
-                            
-                            # Если текст не содержит HTML тегов, оборачиваем в <p>
                             if not re.search(r'<[^>]+>', cleaned_chunk):
                                 cleaned_chunk = f'<p>{cleaned_chunk}</p>'
-                            
                             ai_response_content += cleaned_chunk
                             yield cleaned_chunk
-                            accumulated_text = ""  # Сбрасываем накопленный текст
-                
-                # Обрабатываем оставшийся текст
+                            accumulated_text = ""
                 if accumulated_text:
                     cleaned_chunk = sanitize_html_output(accumulated_text)
                     if not re.search(r'<[^>]+>', cleaned_chunk):
                         cleaned_chunk = f'<p>{cleaned_chunk}</p>'
                     ai_response_content += cleaned_chunk
                     yield cleaned_chunk
-        
                 save_message(session_id, "model", ai_response_content)
                 logging.info(f"✅ Ответ AI сохранен для сессии {session_id}")
-        
             except genai.types.BlockedPromptException as e:
                 logging.error(f"❌ Запрос заблокирован: {e}")
                 error_message = "<p>Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента.</p>"
                 save_message(session_id, "model", error_message)
                 yield error_message
-        
             except Exception as e:
                 logging.error(f"❌ Ошибка генерации ответа: {e}")
                 error_message = "<p>Произошла ошибка при генерации ответа. Попробуйте еще раз.</p>"
                 save_message(session_id, "model", error_message)
                 yield error_message
         
-        return Response(stream_with_context(generate_stream()), mimetype='text/html')
+        return Response(stream_with_context(generate_document_stream()), mimetype='text/html')
+    except Exception as e:
+        logging.error(f"❌ Ошибка в /upload-document: {e}")
+        return jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"}), 500
 
 # --- Основной маршрут для фронтенда ---
 @app.route('/')
