@@ -17,7 +17,6 @@ async function safeJson(res) {
 /* =========   MAIN SCRIPT   ========= */
 document.addEventListener('DOMContentLoaded', () => {
   /* ----------  DOM ---------- */
-  const clearFilesButton = document.getElementById('clear-files-button');
   const initialSections      = document.getElementById('initial-sections');
   const currentChatContainer = document.getElementById('current-chat-container');
   const chatMessagesDisplay  = document.getElementById('chat-messages-display');
@@ -42,9 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
   let uploadedFile = null;
 
-  clearFileBtn.onclick = () => {
-    clearFile();  // Очистить всё при нажатии на кнопку очистки
-  };
+  if (clearFileBtn) {
+    clearFileBtn.onclick = clearFile;
+  }
 
   uploadButton.disabled = !uploadedFile;
 
@@ -166,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fileUploadInput.value = '';
     fileNameDisplay.textContent = 'Файл не выбран';
     fileQuestionInput.value = '';
-    fileInfo.style.display = 'none';  // Скрыть блок
+    fileInfo.style.display = 'none';
     uploadButton.disabled = true;
   }
   
@@ -183,12 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fileSpinner.style.display = 'none';
     }
 
-    clearFilesButton.onclick = () => {
-      clearFile();  // Очистить всё при нажатии на кнопку очистки
-      clearFilesButton.style.display = 'none';  // Скрыть кнопку "Очистить"
-    };
 
-    
     const messageText = uploadedFile ? fileQuestionInput.value || text : text; // Prioritize fileQuestionInput if file exists
     addMessage(messageText, 'user-message');
     userQuestionTextarea.value = '';
@@ -268,13 +262,14 @@ document.addEventListener('DOMContentLoaded', () => {
   chatInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(chatInput.value); } };
   userQuestionTextarea.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(userQuestionTextarea.value); } };
 
+  
   fileUploadInput.onchange = (event) => {
     const file = event.target.files[0];
     if (file) {
       uploadedFile = file;
       fileNameDisplay.textContent = file.name;
-      fileInfo.style.display = 'block';  // Показать блок
-      uploadButton.disabled = false; 
+      fileInfo.style.display = 'block';
+      uploadButton.disabled = false;
     } else {
       clearFile();
     }
@@ -282,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   clearFileBtn.onclick = () => {
     clearFile();  // Очистить всё при нажатии на кнопку очистки
-    clearFilesButton.style.display = 'none';  // Скрыть кнопку "Очистить"
   };
 
 
