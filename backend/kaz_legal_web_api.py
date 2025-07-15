@@ -543,7 +543,7 @@ def upload_document_route():
 
         messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
 
-        def generate_stream():
+        def generate_document_stream():
             ai_response_content = ""
             accumulated_text = ""  # Накапливаем текст для лучшей обработки
             
@@ -587,6 +587,8 @@ def upload_document_route():
                 error_message = "<p>Произошла ошибка при генерации ответа. Попробуйте еще раз.</p>"
                 save_message(session_id, "model", error_message)
                 yield error_message
+        
+        return Response(stream_with_context(generate_stream()), mimetype='text/html')
 
 # --- Основной маршрут для фронтенда ---
 @app.route('/')
