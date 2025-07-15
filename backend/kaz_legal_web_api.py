@@ -443,6 +443,27 @@ def upload_document_route():
 def serve_index():
     return send_from_directory(app.static_folder, 'index.html')
 
+@app.route('/get-history', methods=["GET"])
+def get_history_route():
+    try:
+        session_id = request.args.get("session_id", "default")
+        history = load_conversation(session_id)
+        # Привести к простому виду (user/model + content) для фронта:
+        formatted = []
+        for msg in history:
+            # msg["parts"] может быть списком словарей или строк
+            if isinstance(msg["parts"], list):
+                if isinstance(msg["parts"][0], dict) and "text" in msg["parts"][0]:
+                    content = msg["parts"][0]["text"]
+                else:
+                    content = msg["parts"][0]
+            else:
+                content = msg["parts"]
+            formatted.append({"role": msg["role"], "content": content})
+        return jsonify({"history": formatted}), 200
+    except Exception as e:
+        return jsonify({"error": f"Ошибка при получении истории: {str(e)}"}), 500
+
 @app.route('/<path:filename>')
 def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
