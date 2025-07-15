@@ -75,24 +75,22 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
 
-  // Modified addMessage to check for existing HTML tags
-  function addMessage(text, senderClass) {
+  // Modified addMessage to ensure proper HTML formatting
+function addMessage(text, senderClass) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('chat-bubble', senderClass);
 
-    // Check if the text already contains common HTML tags.
-    // If it does, assume it's HTML and append directly.
-    // Otherwise, parse as Markdown.
-    const hasHtmlTags = /<[a-z][\s\S]*>/i.test(text);
-    if (senderClass === 'ai-response' && !hasHtmlTags) {
-        messageElement.innerHTML = marked.parse(text); // Still parse markdown if no HTML
-    } else {
-        messageElement.innerHTML = text; // Assume it's already HTML or plain text
-    }
-    
+    // Ensure that the text is properly interpreted as HTML
+    messageElement.innerHTML = text; // We assume the text is sanitized HTML
+
     chatMessagesDisplay.appendChild(messageElement);
     chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight; // Auto-scroll
-  }
+
+    // Check for errors in the message
+    if (text.includes("Ошибка:")) { 
+        messageElement.innerHTML = `<p class="error-message">${text}</p>`;
+    }
+}
 
   async function loadChatSessions() {
     chatList.innerHTML = '<p>Загрузка истории...</p>';
