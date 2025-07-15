@@ -98,14 +98,8 @@ def load_law_db(path="laws/kazakh_laws_db.json"):
 load_law_db()
 
 def clean_and_format_html(text):
-    """
-    Очищает текст от неправильного форматирования и приводит к правильному HTML
-    """
-    import re
-    
     # Удаляем лишние пробелы и переносы строк
-    text = re.sub(r'\s+', ' ', text)
-    text = text.strip()
+    text = re.sub(r'\s+', ' ', text).strip()
     
     # Заменяем ** на <strong> теги
     text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
@@ -113,45 +107,53 @@ def clean_and_format_html(text):
     # Заменяем * на <em> теги
     text = re.sub(r'(?<!\*)\*(?!\*)([^*]+)\*(?!\*)', r'<em>\1</em>', text)
     
-    # Исправляем разбитые слова (как "руководи телю")
+    # Исправляем разбитые слова (как "руководи телю" или "скан-копи ю")
     text = re.sub(r'(\w+)\s+(\w{1,3})\b', r'\1\2', text)
     
-    # Обрабатываем списки: находим строки, которые выглядят как элементы списка
-    lines = text.split('.')
+    # Разбиваем текст на абзацы и списки
+    paragraphs = text.split('\n\n')
     formatted_lines = []
     in_list = False
     
-    for line in lines:
-        line = line.strip()
-        if not line:
+    for paragraph in paragraphs:
+        paragraph = paragraph.strip()
+        if not paragraph:
             continue
             
-        # Проверяем, является ли строка элементом списка
-        if re.match(r'^[А-Яа-я\s]+:', line) and len(line) > 10:
+        # Проверяем, является ли это заголовком (например, "Юридическая оценка ситуации")
+        if re.match(r'^[А-Я][А-Яа-я\s]+$', paragraph):
+            formatted_lines.append(f'<h3>{paragraph}</h3>')
+            continue
+            
+        # Проверяем, является ли это началом списка
+        if re.match(r'^[А-Яа-я\s]+:', paragraph) or paragraph.startswith('-'):
             if not in_list:
                 formatted_lines.append('<ul>')
                 in_list = True
-            # Разделяем на заголовок и описание
-            parts = line.split(':', 1)
-            if len(parts) == 2:
+            # Удаляем начальный дефис, если есть
+            paragraph = paragraph.lstrip('- ').strip()
+            if ':' in paragraph:
+                parts = paragraph.split(':', 1)
                 formatted_lines.append(f'<li><strong>{parts[0].strip()}:</strong> {parts[1].strip()}</li>')
             else:
-                formatted_lines.append(f'<li>{line}</li>')
+                formatted_lines.append(f'<li>{paragraph}</li>')
         else:
             if in_list:
                 formatted_lines.append('</ul>')
                 in_list = False
-            if line and not line.startswith('<'):
-                formatted_lines.append(f'<p>{line}.</p>')
+            formatted_lines.append(f'<p>{paragraph}</p>')
     
     if in_list:
         formatted_lines.append('</ul>')
     
     result = '\n'.join(formatted_lines)
     
-    # Очищаем от дублирующих тегов
+    # Очищаем от пустых тегов и дублирующих пробелов
     result = re.sub(r'<p>\s*</p>', '', result)
-    result = re.sub(r'<p>([^<]*)<strong>([^<]*)</strong>', r'<p><strong>\2</strong> \1', result)
+    result = re.sub(r'<p>\s*(<strong>[^<]+</strong>)\s*([^<]+)', r'<p>\1 \2</p>', result)
+    
+    # Исправляем обрезанные слова
+    result = result.replace('скан-копи ю', 'скан-копию')
     
     return result
 
