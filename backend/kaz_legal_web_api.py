@@ -142,9 +142,7 @@ def ask_route():
         history = load_conversation(session_id)
 
         # Добавляем текущий вопрос пользователя в историю
-        full_history = history + [{"role": "user", "parts": [file_message_content]}]
-        if user_question:
-            full_history.append({"role": "user", "parts": [user_question]})
+        full_history = history + [{"role": "user", "parts": [user_question]}]
 
         # Поиск релевантных законов на основе вопроса
         relevant_laws = find_relevant_laws(user_question)
