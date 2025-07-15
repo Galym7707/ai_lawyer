@@ -142,7 +142,9 @@ def ask_route():
         history = load_conversation(session_id)
 
         # Добавляем текущий вопрос пользователя в историю
-        full_history = history + [{"role": "user", "parts": [user_question]}]
+        full_history = history + [{"role": "user", "parts": [file_message_content]}]
+        if user_question:
+            full_history.append({"role": "user", "parts": [user_question]})
 
         # Поиск релевантных законов на основе вопроса
         relevant_laws = find_relevant_laws(user_question)
@@ -293,6 +295,49 @@ def get_all_sessions_summary_route():
             return jsonify({"sessions": []}), 200
     except Exception as e:
         return jsonify({"error": f"Ошибка при получении сводки сессий: {str(e)}"}), 500
+
+def process_file_content(file_stream, mimetype):
+    """
+    Обрабатывает файл по его MIME-типу и возвращает извлечённый текст.
+    Поддерживает PDF, DOCX, текстовые файлы и изображения.
+    """
+    text_content = ""
+    try:
+        if mimetype == 'application/pdf':
+            # Для PDF используем PyPDF2
+            reader = PdfReader(file_stream)
+            for page in reader.pages:
+                extracted = page.extract_text()
+                if extracted:
+                    text_content += extracted + "\n"
+        elif mimetype == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+            # Для DOCX используем python-docx
+            document = Document(file_stream)
+            for paragraph in document.paragraphs:
+                text_content += paragraph.text + "\n"
+        elif mimetype.startswith('image/'):
+            # Для изображений используем Gemini Vision Model
+            try:
+                image = Image.open(file_stream)
+                # Отправляем изображение в модель для описания
+                response = vision_model.generate_content(
+                    ["Опиши этот документ или изображение. Извлеки весь текст и информацию, которая может быть полезна для юриста."],
+                    image=image
+                )
+                text_content = response.text
+            except Exception as e:
+                logging.error(f"Ошибка обработки изображения: {e}")
+                return None
+        elif mimetype.startswith('text/'):
+            # Текстовые файлы
+            text_content = file_stream.read().decode('utf-8', errors='ignore')
+        else:
+            logging.warning(f"⚠️ Неподдерживаемый тип файла: {mimetype}")
+            return None
+    except Exception as e:
+        logging.error(f"❌ Ошибка при обработке файла {mimetype}: {e}")
+        return None
+    return text_content
 
 
 # --- Маршрут для загрузки документов ---
