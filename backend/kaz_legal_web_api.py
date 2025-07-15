@@ -148,10 +148,10 @@ def ask_route():
         relevant_laws = find_relevant_laws(user_question)
         law_context = ""
         if relevant_laws:
-            law_context = "\n\nРелевантные статьи законодательства Казахстана:\n"
+            law_context = "<ul>"
             for law in relevant_laws:
-                law_context += f"- **{law['title']}**: {law['snippet']}\n"
-            logging.info(f"🔍 Найдены релевантные законы для запроса: {user_question}")
+                law_context += f"<li><strong>{law['title']}</strong>: {law['snippet']}</li>"
+            law_context += "</ul>"
 
         # Добавляем контекст законов к запросу для AI
         system_instruction = f"""
