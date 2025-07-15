@@ -471,6 +471,10 @@ button.primary-btn:disabled, button.secondary-btn:disabled {
     white-space: pre-wrap; /* Preserves whitespace and wraps text */
 }
 
+.user-message {
+    background-color: #e6f7ff;
+}
+
 .chat-bubble.user-message {
     background-color: var(--chat-bubble-user);
     color: var(--text-primary);
