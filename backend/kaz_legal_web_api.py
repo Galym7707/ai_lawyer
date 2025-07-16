@@ -105,14 +105,26 @@ def clean_and_format_html(text):
     
     # Исправляем разбитые слова
     text = re.sub(r'(\w+)\s+(\w{1,3})\b', r'\1\2', text)
-    text = text.replace('услугис', 'услуги с')
-    text = text.replace('стороныкак', 'стороны как')
-    text = text.replace('законодательствоРК', 'законодательство РК')
-    text = text.replace('запрещатьвам', 'запрещать вам')
-    text = text.replace('вероисповеданиявыи', 'вероисповедания вы и')
-    text = text.replace('одеждув', 'одежду в')
-    text = text.replace('обучениеит', 'обучение и т')
-    text = text.replace('Естьли', 'Есть ли')
+    text = re.sub(r'(\w+)([а-яА-Я]{1,3})\b', r'\1 \2', text)  # Дополнительная проверка для кириллицы
+    replacements = {
+        'заработнойпла ты': 'заработной платы',
+        'влечетза собой': 'влечёт за собой',
+        'Трудового кодексаРК': 'Трудового кодекса РК',
+        'административнуюи': 'административную и',
+        'работникув': 'работнику в',
+        'обратитьсяк': 'обратиться к',
+        'требова ниемо': 'требованием о',
+        'сумми сроков': 'сумм и сроков',
+        'письмас': 'письма с',
+        'обратитесьв': 'обратитесь в',
+        'трудаи': 'труда и',
+        'социальной защитыРК': 'социальной защиты РК',
+        'пении': 'пени и',
+        'листкиит': 'листки и т',
+        'зарабо тной': 'заработной'
+    }
+    for wrong, correct in replacements.items():
+        text = text.replace(wrong, correct)
     
     # Разбиваем текст на строки
     lines = text.split('\n\n')
@@ -125,7 +137,7 @@ def clean_and_format_html(text):
             continue
             
         # Проверяем заголовки
-        if re.match(r'^SECTION:\s*[А-Я][А-Яа-я\s]+$', line.strip()):
+        if re.match(r'^SECTION:\s*[А-Я][А-Яа-я\s]+$', line.strip()) or line.strip() in ['Юридическая оценка', 'Действие', 'Рекомендации', 'Необходимая информация', 'Экстренные контакты']:
             if in_list:
                 formatted_lines.append('</ul>')
                 in_list = False
@@ -133,7 +145,7 @@ def clean_and_format_html(text):
             formatted_lines.append(f'<h3>{heading}</h3>')
             continue
             
-        # Проверяем списки (LIST_ITEM, дефисы, номера)
+        # Проверяем списки
         if line.startswith('LIST_ITEM:') or line.startswith('-') or re.match(r'^\d+\.\s+', line):
             if not in_list:
                 formatted_lines.append('<ul>')
@@ -309,102 +321,18 @@ def ask_route():
         system_instruction = """
         Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
         Твоя задача — давать точные, полные и основанные на законодательстве ответы в виде простого текста.
-        Форматируй ответ с четкими разделами, используя маркеры "SECTION:" для заголовков и "LIST_ITEM:" для элементов списков.
+        Форматируй ответ с четкими разделами, используя маркер "SECTION:" для каждого заголовка и "LIST_ITEM:" для каждого элемента списка. НИКОГДА не пропускай эти маркеры.
         Всегда начинай с раздела "SECTION: Юридическая оценка" и укажи, нарушено ли право, какая ответственность, какие законы применяются.
         Затем добавь "SECTION: Действие" с рекомендациями, что делать и куда обращаться, даже если данных мало.
-        Если применимо, добавь "SECTION: Рекомендации" с подробными шагами.
-        Если данных недостаточно, добавь "SECTION: Необходимая информация" со списком вопросов, где каждый вопрос начинается с "LIST_ITEM:".
+        Если применимо, добавь "SECTION: Рекомендации" с подробными шагами, используя "LIST_ITEM:" для каждого пункта.
+        Если данных недостаточно, добавь "SECTION: Необходимая информация" со списком вопросов, каждый с "LIST_ITEM:".
         Всегда заканчивай разделом "SECTION: Экстренные контакты" с номерами:
         LIST_ITEM: Полиция: 102
         LIST_ITEM: Единый номер экстренных служб: 112
         Ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
         Используй официальный, но понятный язык. Не используй звездочки для цензуры; перефразируй, если нужно.
         Предоставляй практические советы и шаблоны документов, если применимо.
-        Не используй HTML или Markdown, только простой текст с маркерами SECTION: и LIST_ITEM:.
-
-        Пример ответа:
-        SECTION: Юридическая оценка
-        Увольнение без законных оснований является нарушением.
-        
-        SECTION: Действие
-        Обратитесь в суд.
-        
-        SECTION: Рекомендации
-        LIST_ITEM: Направьте работодателю письменное требование.
-        LIST_ITEM: Обратитесь в инспекцию труда.
-        
-        SECTION: Необходимая информация
-        LIST_ITEM: Ваш трудовой договор: Предоставьте копию.
-        LIST_ITEM: Приказ об увольнении: Укажите дату и причину.
-        
-        SECTION: Экстренные контакты
-        LIST_ITEM: Полиция: 102
-        LIST_ITEM: Единый номер экстренных служб: 112
-        
-        {law_context if law_context else "У тебя нет доступа к актуальной базе законодательства. Отвечай на общие юридические вопросы, основываясь на твоих знаниях, но предупреждай, что информация требует проверки по актуальным законам РК."}
-        """
-
-        messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
-
-        return Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
-    except Exception as e:
-        logging.error(f"❌ Ошибка в /ask: {e}")
-        return jsonify({"error": f"Ошибка сервера при обработке запроса: {str(e)}"}), 500
-
-@app.route("/upload-document", methods=["POST"])
-def upload_document_route():
-    logging.info("🚀 Обработка запроса на /upload-document")
-    try:
-        user_file = request.files.get('file')
-        user_question = request.form.get("question", "")
-        session_id = request.form.get("session_id", "default")
-
-        if not validate_session_id(session_id):
-            return jsonify({"error": "Недопустимый session_id"}), 400
-
-        if not user_file:
-            return jsonify({"error": "Файл не предоставлен"}), 400
-
-        file_mimetype = user_file.mimetype
-        logging.info(f"📁 Получен файл: {user_file.filename} с MIME-типом: {file_mimetype}")
-
-        file_content_text = process_file_content(user_file.stream, file_mimetype)
-
-        if file_content_text is None:
-            return jsonify({"error": "Неподдерживаемый или поврежденный тип файла."}), 400
-
-        file_message_content = f"SECTION: Загруженный документ\nПользователь загрузил документ ({user_file.filename}). Содержимое документа:\n{file_content_text[:2000]}...\n"
-        
-        history = load_conversation(session_id)
-        full_history = history + [{"role": "user", "parts": [file_message_content]}]
-        if user_question:
-            full_history.append({"role": "user", "parts": [user_question]})
-
-        combined_text_for_search = file_content_text + " " + user_question
-        relevant_laws = find_relevant_laws(combined_text_for_search)
-
-        law_context = ""
-        if relevant_laws:
-            law_context = "SECTION: Релевантные законы\n"
-            for law in relevant_laws:
-                law_context += f"LIST_ITEM: {law['title']}: {law['snippet']}\n"
-            law_context += "\n"
-
-        system_instruction = """
-        Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
-        Твоя задача — давать точные, полные и основанные на законодательстве ответы в виде простого текста.
-        Форматируй ответ с четкими разделами, используя маркеры "SECTION:" для заголовков и "LIST_ITEM:" для элементов списков.
-        Всегда начинай с раздела "SECTION: Юридическая оценка" и укажи, нарушено ли право, какая ответственность, какие законы применяются.
-        Затем добавь "SECTION: Действие" с рекомендациями, что делать и куда обращаться, даже если данных мало.
-        Если применимо, добавь "SECTION: Рекомендации" с подробными шагами.
-        Если данных недостаточно, добавь "SECTION: Необходимая информация" со списком вопросов, где каждый вопрос начинается с "LIST_ITEM:".
-        Всегда заканчивай разделом "SECTION: Экстренные контакты" с номерами:
-        LIST_ITEM: Полиция: 102
-        LIST_ITEM: Единый номер экстренных служб: 112
-        Ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
-        Используй официальный, но понятный язык. Не используй звездочки для цензуры; перефразируй, если нужно.
-        Предоставляй практические советы и шаблоны документов, если применимо.
-        Не используй HTML или Markdown, только простой текст с маркерами SECTION: и LIST_ITEM:.
+        НИКОГДА не используй HTML, Markdown, номера (1., 2.), или дефисы (-) для списков — только "SECTION:" и "LIST_ITEM:".
 
         Пример ответа:
         SECTION: Юридическая оценка
@@ -517,6 +445,90 @@ def upload_document_route():
 
         return Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
     except Exception as e:
+        logging.error(f"❌ Ошибка в /ask: {e}")
+        return jsonify({"error": f"Ошибка сервера при обработке запроса: {str(e)}"}), 500
+
+@app.route("/upload-document", methods=["POST"])
+def upload_document_route():
+    logging.info("🚀 Обработка запроса на /upload-document")
+    try:
+        user_file = request.files.get('file')
+        user_question = request.form.get("question", "")
+        session_id = request.form.get("session_id", "default")
+
+        if not validate_session_id(session_id):
+            return jsonify({"error": "Недопустимый session_id"}), 400
+
+        if not user_file:
+            return jsonify({"error": "Файл не предоставлен"}), 400
+
+        file_mimetype = user_file.mimetype
+        logging.info(f"📁 Получен файл: {user_file.filename} с MIME-типом: {file_mimetype}")
+
+        file_content_text = process_file_content(user_file.stream, file_mimetype)
+
+        if file_content_text is None:
+            return jsonify({"error": "Неподдерживаемый или поврежденный тип файла."}), 400
+
+        file_message_content = f"SECTION: Загруженный документ\nПользователь загрузил документ ({user_file.filename}). Содержимое документа:\n{file_content_text[:2000]}...\n"
+        
+        history = load_conversation(session_id)
+        full_history = history + [{"role": "user", "parts": [file_message_content]}]
+        if user_question:
+            full_history.append({"role": "user", "parts": [user_question]})
+
+        combined_text_for_search = file_content_text + " " + user_question
+        relevant_laws = find_relevant_laws(combined_text_for_search)
+
+        law_context = ""
+        if relevant_laws:
+            law_context = "SECTION: Релевантные законы\n"
+            for law in relevant_laws:
+                law_context += f"LIST_ITEM: {law['title']}: {law['snippet']}\n"
+            law_context += "\n"
+
+        system_instruction = """
+        Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
+        Твоя задача — давать точные, полные и основанные на законодательстве ответы в виде простого текста.
+        Форматируй ответ с четкими разделами, используя маркер "SECTION:" для каждого заголовка и "LIST_ITEM:" для каждого элемента списка. НИКОГДА не пропускай эти маркеры.
+        Всегда начинай с раздела "SECTION: Юридическая оценка" и укажи, нарушено ли право, какая ответственность, какие законы применяются.
+        Затем добавь "SECTION: Действие" с рекомендациями, что делать и куда обращаться, даже если данных мало.
+        Если применимо, добавь "SECTION: Рекомендации" с подробными шагами, используя "LIST_ITEM:" для каждого пункта.
+        Если данных недостаточно, добавь "SECTION: Необходимая информация" со списком вопросов, каждый с "LIST_ITEM:".
+        Всегда заканчивай разделом "SECTION: Экстренные контакты" с номерами:
+        LIST_ITEM: Полиция: 102
+        LIST_ITEM: Единый номер экстренных служб: 112
+        Ссылайся на конкретные статьи законов или нормативные акты РК, если это возможно.
+        Используй официальный, но понятный язык. Не используй звездочки для цензуры; перефразируй, если нужно.
+        Предоставляй практические советы и шаблоны документов, если применимо.
+        НИКОГДА не используй HTML, Markdown, номера (1., 2.), или дефисы (-) для списков — только "SECTION:" и "LIST_ITEM:".
+
+        Пример ответа:
+        SECTION: Юридическая оценка
+        Увольнение без законных оснований является нарушением.
+        
+        SECTION: Действие
+        Обратитесь в суд.
+        
+        SECTION: Рекомендации
+        LIST_ITEM: Направьте работодателю письменное требование.
+        LIST_ITEM: Обратитесь в инспекцию труда.
+        
+        SECTION: Необходимая информация
+        LIST_ITEM: Ваш трудовой договор: Предоставьте копию.
+        LIST_ITEM: Приказ об увольнении: Укажите дату и причину.
+        
+        SECTION: Экстренные контакты
+        LIST_ITEM: Полиция: 102
+        LIST_ITEM: Единый номер экстренных служб: 112
+        
+        {law_context if law_context else "У тебя нет доступа к актуальной базе законодательства. Отвечай на общие юридические вопросы, основываясь на твоих знаниях, но предупреждай, что информация требует проверки по актуальным законам РК."}
+        """
+
+        messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
+
+        return Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
+    except Exception as e:
         logging.error(f"❌ Ошибка в /upload-document: {e}")
         return jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"}), 500
 
@@ -561,20 +573,41 @@ def post_process_ai_response(response_text):
     
     # Исправляем разбитые слова
     response_text = re.sub(r'(\w+)\s+(\w{1,3})\b', r'\1\2', response_text)
-    response_text = response_text.replace('услугис', 'услуги с')
-    response_text = response_text.replace('стороныкак', 'стороны как')
-    response_text = response_text.replace('законодательствоРК', 'законодательство РК')
-    response_text = response_text.replace('запрещатьвам', 'запрещать вам')
-    response_text = response_text.replace('вероисповеданиявыи', 'вероисповедания вы и')
-    response_text = response_text.replace('одеждув', 'одежду в')
-    response_text = response_text.replace('обучениеит', 'обучение и т')
-    response_text = response_text.replace('Естьли', 'Есть ли')
+    response_text = re.sub(r'(\w+)([а-яА-Я]{1,3})\b', r'\1 \2', response_text)
+    replacements = {
+        'заработнойпла ты': 'заработной платы',
+        'влечетза собой': 'влечёт за собой',
+        'Трудового кодексаРК': 'Трудового кодекса РК',
+        'административнуюи': 'административную и',
+        'работникув': 'работнику в',
+        'обратитьсяк': 'обратиться к',
+        'требова ниемо': 'требованием о',
+        'сумми сроков': 'сумм и сроков',
+        'письмас': 'письма с',
+        'обратитесьв': 'обратитесь в',
+        'трудаи': 'труда и',
+        'социальной защитыРК': 'социальной защиты РК',
+        'пении': 'пени и',
+        'листкиит': 'листки и т',
+        'зарабо тной': 'заработной'
+    }
+    for wrong, correct in replacements.items():
+        response_text = response_text.replace(wrong, correct)
     
     # Разбиваем текст на разделы
     sections = response_text.split('\n\n')
     formatted_sections = []
     in_list = False
     current_section = None
+    
+    # Список ожидаемых заголовков
+    expected_sections = {
+        'юридическая оценка': 'Юридическая оценка ситуации',
+        'действие': 'Действие',
+        'рекомендации': 'Рекомендации',
+        'необходимая информация': 'Необходимая информация',
+        'экстренные контакты': 'Экстренные контакты'
+    }
     
     for section in sections:
         section = section.strip()
@@ -583,71 +616,59 @@ def post_process_ai_response(response_text):
             
         # Определяем тип раздела
         section_lower = section.lower()
-        if section_lower.startswith('section: юридическая оценка'):
+        section_name = None
+        if section_lower.startswith('section:'):
+            section_name = section[len('SECTION:'):].strip()
+        elif section_lower in [k.lower() for k in expected_sections]:
+            section_name = section
+        
+        if section_name and section_name.lower() in [k.lower() for k in expected_sections]:
             if in_list:
                 formatted_sections.append('</ul>')
                 in_list = False
-            formatted_sections.append('<h3>Юридическая оценка ситуации</h3>')
-            content = section[len('SECTION: Юридическая оценка'):].strip()
-            formatted_sections.append(f'<p><strong>Юридическая оценка:</strong> {content}</p>')
-            current_section = 'evaluation'
-        elif section_lower.startswith('section: действие'):
-            if in_list:
-                formatted_sections.append('</ul>')
-                in_list = False
-            formatted_sections.append('<h3>Действие</h3>')
-            content = section[len('SECTION: Действие'):].strip()
-            formatted_sections.append(f'<p>{content}</p>')
-            current_section = 'action'
-        elif section_lower.startswith('section: рекомендации'):
-            if in_list:
-                formatted_sections.append('</ul>')
-                in_list = False
-            formatted_sections.append('<h3>Рекомендации</h3>')
-            current_section = 'recommendations'
-        elif section_lower.startswith('section: необходимая информация'):
-            if in_list:
-                formatted_sections.append('</ul>')
-                in_list = False
-            formatted_sections.append('<h3>Необходимая информация</h3>')
-            formatted_sections.append('<p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>')
-            current_section = 'information'
-        elif section_lower.startswith('section: нормативная база'):
-            if in_list:
-                formatted_sections.append('</ul>')
-                in_list = False
-            formatted_sections.append('<h3>Нормативная база</h3>')
-            content = section[len('SECTION: Нормативная база'):].strip()
-            formatted_sections.append(f'<p>{content}</p>')
-            current_section = 'laws'
-        elif section_lower.startswith('section: экстренные контакты'):
-            if in_list:
-                formatted_sections.append('</ul>')
-                in_list = False
-            formatted_sections.append('<h3>Экстренные контакты</h3>')
-            formatted_sections.append('<p><strong>В экстренных случаях обращайтесь:</strong></p>')
-            current_section = 'contacts'
-        else:
-            # Обработка содержимого
-            if current_section in ['information', 'contacts', 'recommendations'] or section.startswith('LIST_ITEM:') or section.startswith('-') or re.match(r'^\d+\.\s+', section):
-                if not in_list:
-                    formatted_sections.append('<ul>')
-                    in_list = True
-                section = re.sub(r'^\d+\.\s+', '', section.lstrip('- ').strip())  # Удаляем номера или дефисы
-                section = section.replace('LIST_ITEM:', '').strip()
-                if ':' in section and len(section.split(':', 1)) > 1:
-                    parts = section.split(':', 1)
-                    label = parts[0].strip()
-                    if current_section == 'information':
-                        label = {'скольковамлет': 'Возраст', 'какого вероисповедания': 'Вероисповедание', 'вчём конкретно': 'Детали запрета', 'есть ли': 'Письменное подтверждение', 'какую форму': 'Предпочитаемая форма обучения', 'какие конкретные статьи': 'Нормативная база'}.get(label.lower(), label)
-                    formatted_sections.append(f'<li><strong>{label}:</strong> {parts[1].strip()}</li>')
-                else:
-                    formatted_sections.append(f'<li>{section}</li>')
+            formatted_sections.append(f'<h3>{expected_sections.get(section_name.lower(), section_name)}</h3>')
+            current_section = section_name.lower()
+            if current_section == 'необходимая информация':
+                formatted_sections.append('<p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>')
+            elif current_section == 'экстренные контакты':
+                formatted_sections.append('<p><strong>В экстренных случаях обращайтесь:</strong></p>')
+            continue
+        
+        # Обработка содержимого
+        if current_section == 'юридическая оценка':
+            formatted_sections.append(f'<p><strong>Юридическая оценка:</strong> {section}</p>')
+        elif current_section in ['рекомендации', 'необходимая информация', 'экстренные контакты'] or section.startswith('LIST_ITEM:') or section.startswith('-') or re.match(r'^\d+\.\s+', section):
+            if not in_list:
+                formatted_sections.append('<ul>')
+                in_list = True
+            section = re.sub(r'^\d+\.\s+', '', section.lstrip('- ').strip())
+            section = section.replace('LIST_ITEM:', '').strip()
+            if ':' in section and len(section.split(':', 1)) > 1:
+                parts = section.split(':', 1)
+                label = parts[0].strip()
+                if current_section == 'рекомендации':
+                    label = {
+                        'напишите работодателю': 'Письменное требование',
+                        'обратитесь в территориальное': 'Обращение в инспекцию труда',
+                        'подготовьте исковое': 'Исковое заявление',
+                        'собирайте все': 'Документы'
+                    }.get(label.lower(), label)
+                elif current_section == 'необходимая информация':
+                    label = {
+                        'ваш трудовой договор': 'Трудовой договор',
+                        'точная сумма задолженности': 'Сумма задолженности',
+                        'дата последней выплаты': 'Дата последней выплаты',
+                        'наличие каких-либо соглашений': 'Соглашения о задержке',
+                        'причины задержки': 'Причины задержки'
+                    }.get(label.lower(), label)
+                formatted_sections.append(f'<li><strong>{label}:</strong> {parts[1].strip()}</li>')
             else:
-                if in_list:
-                    formatted_sections.append('</ul>')
-                    in_list = False
-                formatted_sections.append(f'<p>{section}</p>')
+                formatted_sections.append(f'<li>{section}</li>')
+        else:
+            if in_list:
+                formatted_sections.append('</ul>')
+                in_list = False
+            formatted_sections.append(f'<p>{section}</p>')
     
     if in_list:
         formatted_sections.append('</ul>')
@@ -660,11 +681,18 @@ class TestHTMLFormatting(unittest.TestCase):
     def test_clean_and_format_html(self):
         input_text = """
         SECTION: Юридическая оценка
-        Запрет на посещение школы является нарушением права на образование.
+        Невыплата заработной платы является нарушением.
+        
+        SECTION: Действие
+        Обратитесь в суд.
+        
+        SECTION: Рекомендации
+        LIST_ITEM: Направьте работодателю письменное требование.
+        LIST_ITEM: Обратитесь в инспекцию труда.
         
         SECTION: Необходимая информация
-        LIST_ITEM: Сколько вам лет?
-        LIST_ITEM: Какого вероисповедания вы и ваши родители?
+        LIST_ITEM: Ваш трудовой договор: Предоставьте копию.
+        LIST_ITEM: Точная сумма задолженности: Укажите сумму.
         
         SECTION: Экстренные контакты
         LIST_ITEM: Полиция: 102
@@ -672,12 +700,19 @@ class TestHTMLFormatting(unittest.TestCase):
         """
         expected = """
         <h3>Юридическая оценка ситуации</h3>
-        <p><strong>Юридическая оценка:</strong> Запрет на посещение школы является нарушением права на образование.</p>
+        <p><strong>Юридическая оценка:</strong> Невыплата заработной платы является нарушением.</p>
+        <h3>Действие</h3>
+        <p>Обратитесь в суд.</p>
+        <h3>Рекомендации</h3>
+        <ul>
+        <li><strong>Письменное требование:</strong> Направьте работодателю письменное требование.</li>
+        <li><strong>Обращение в инспекцию труда:</strong> Обратитесь в инспекцию труда.</li>
+        </ul>
         <h3>Необходимая информация</h3>
         <p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>
         <ul>
-        <li><strong>Возраст:</strong> Сколько вам лет?</li>
-        <li><strong>Вероисповедание:</strong> Какого вероисповедания вы и ваши родители?</li>
+        <li><strong>Трудовой договор:</strong> Предоставьте копию.</li>
+        <li><strong>Сумма задолженности:</strong> Укажите сумму.</li>
         </ul>
         <h3>Экстренные контакты</h3>
         <p><strong>В экстренных случаях обращайтесь:</strong></p>
