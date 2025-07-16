@@ -1,10 +1,29 @@
+
 /* =========   GLOBAL API HELPERS   ========= */
 const API_BASE = window.location.hostname.includes('vercel.app')
   ? 'https://ai-lawyer.up.railway.app'   // production backend
   : 'http://localhost:5000';             // local dev
 
-function apiFetch(path, options = {}) {
-  return fetch(`${API_BASE}${path}`, options);
+async function apiFetch(path, options = {}, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        credentials: 'include', // Include cookies for sessions if needed
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
+      return response;
+    } catch (e) {
+      if (i < retries) {
+        console.warn(`Retry ${i + 1}/${retries} for ${path}: ${e.message}`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        continue;
+      }
+      throw e;
+    }
+  }
 }
 
 async function safeJson(res) {
@@ -32,10 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileNameDisplay      = document.getElementById('file-name');
   const clearFileBtn         = document.getElementById('clearFileBtn');
   const fileQuestionInput    = document.getElementById('file-question');
-  const homeLink             = document.getElementById('home-link'); // NEW: Home link element
-  const aboutLinkNav         = document.getElementById('about-link-nav'); // NEW: About link in nav
-  const fileInfo = document.getElementById('file-info');
-  const uploadButton = document.getElementById('upload-button');
+  const homeLink             = document.getElementById('home-link');
+  const aboutLinkNav         = document.getElementById('about-link-nav');
+  const fileInfo             = document.getElementById('file-info');
+  const uploadButton         = document.getElementById('upload-button');
 
   /* ----------  STATE ---------- */
   let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
@@ -52,8 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initialSections.style.display = 'block';
     currentChatContainer.style.display = 'none';
     clearChatMessages();
-    userQuestionTextarea.value = ''; // Clear initial question area
-    chatInput.value = ''; // Clear chat input area
+    userQuestionTextarea.value = '';
+    chatInput.value = '';
     clearFile();
   }
 
@@ -75,31 +94,23 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
 
-  
-// Modified addMessage to ensure proper HTML formatting
-function addMessage(text, senderClass) {
+  function addMessage(text, senderClass) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('chat-bubble', senderClass);
-
-    // Ensure that the text is properly interpreted as HTML (already sanitized on backend)
-    messageElement.innerHTML = text; // We assume the text is sanitized HTML
-
+    messageElement.innerHTML = text;
     chatMessagesDisplay.appendChild(messageElement);
-    chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight; // Auto-scroll
-
-    // Check for errors in the message
-    if (text.includes("Ошибка:")) { 
-        messageElement.innerHTML = `<p class="error-message">${text}</p>`; // Handle error formatting
+    chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
+    if (text.includes("Ошибка:")) {
+      messageElement.innerHTML = `<p class="error-message">${text}</p>`;
     }
-}
-
+  }
 
   async function loadChatSessions() {
     chatList.innerHTML = '<p>Загрузка истории...</p>';
     try {
       const res = await apiFetch('/get-all-sessions-summary');
       const data = await safeJson(res);
-      chatList.innerHTML = ''; // Clear loading message
+      chatList.innerHTML = '';
 
       if (data.sessions && data.sessions.length > 0) {
         data.sessions.forEach(session => {
@@ -114,7 +125,7 @@ function addMessage(text, senderClass) {
       }
     } catch (e) {
       console.error('Ошибка загрузки сессий:', e);
-      chatList.innerHTML = `<p class="error-message">Ошибка загрузки истории: ${e.message}</p>`;
+      chatList.innerHTML = `<p class="error-message">Ошибка загрузки истории: ${e.message}. Проверьте подключение к серверу или настройки CORS.</p>`;
     }
   }
 
@@ -136,10 +147,10 @@ function addMessage(text, senderClass) {
       }
     } catch (e) {
       console.error('Ошибка загрузки истории беседы:', e);
-      addMessage(`<p class="error-message">Ошибка загрузки истории беседы: ${e.message}</p>`, 'ai-response');
+      addMessage(`<p class="error-message">Ошибка загрузки истории беседы: ${e.message}. Проверьте подключение к серверу или настройки CORS.</p>`, 'ai-response');
     }
   }
-  
+
   function highlightSession(sessionId) {
     document.querySelectorAll('#chat-list li').forEach(li => {
       li.classList.remove('active');
@@ -151,13 +162,13 @@ function addMessage(text, senderClass) {
   }
 
   async function startNewChat() {
-    currentSessionId = crypto.randomUUID(); // Generate a new UUID for the session
+    currentSessionId = crypto.randomUUID();
     localStorage.setItem('currentSessionId', currentSessionId);
     showChatContainer();
     clearChatMessages();
-    highlightSession(currentSessionId); // Highlight new session if it appears in list, otherwise clear highlight
-    await loadChatSessions(); // Reload sessions to show new chat
-    highlightSession(currentSessionId); // Re-highlight if it's there
+    highlightSession(currentSessionId);
+    await loadChatSessions();
+    highlightSession(currentSessionId);
   }
 
   function clearFile() {
@@ -168,32 +179,30 @@ function addMessage(text, senderClass) {
     fileInfo.style.display = 'none';
     uploadButton.disabled = true;
   }
-  
+
   async function sendText(text) {
     showChatContainer();
     if (!text.trim() && !uploadedFile) return;
 
-    // Show appropriate spinner and hide the other
     if (uploadedFile) {
-        fileSpinner.style.display = 'block';
-        spinner.style.display = 'none';
+      fileSpinner.style.display = 'block';
+      spinner.style.display = 'none';
     } else {
-        spinner.style.display = 'block';
-        fileSpinner.style.display = 'none';
+      spinner.style.display = 'block';
+      fileSpinner.style.display = 'none';
     }
 
-
-    const messageText = uploadedFile ? fileQuestionInput.value || text : text; // Prioritize fileQuestionInput if file exists
+    const messageText = uploadedFile ? fileQuestionInput.value || text : text;
     addMessage(messageText, 'user-message');
     userQuestionTextarea.value = '';
     chatInput.value = '';
-    
+
     try {
       let res;
       if (uploadedFile) {
         const formData = new FormData();
         formData.append('file', uploadedFile);
-        formData.append('question', messageText); // Send the text alongside the file
+        formData.append('question', messageText);
         formData.append('session_id', currentSessionId);
 
         res = await apiFetch('/upload-document', {
@@ -212,7 +221,6 @@ function addMessage(text, senderClass) {
       const decoder = new TextDecoder();
       let aiFullResponse = '';
 
-      // Hide spinners once first chunk arrives
       spinner.style.display = 'none';
       fileSpinner.style.display = 'none';
 
@@ -225,44 +233,33 @@ function addMessage(text, senderClass) {
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         aiFullResponse += chunk;
-        aiMessageElement.innerHTML = aiFullResponse; // Update in real-time
+        aiMessageElement.innerHTML = aiFullResponse;
         chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
       }
-      
-      // After stream finishes, re-set innerHTML to ensure Markdown parsing (if needed)
-      // This part now relies on the `addMessage` function logic which checks for HTML.
-      // So, aiMessageElement.innerHTML = aiFullResponse should be sufficient if backend sends HTML.
-      // If backend sends Markdown, the initial rendering will be raw Markdown, then this final
-      // assignment might re-trigger browser's rendering, but for safety, we rely on addMessage.
-      // For now, if the backend sends HTML, this will just re-assign the same HTML.
-      // If the backend were to send Markdown and we wanted it parsed, we'd need to re-run marked.parse() here,
-      // but based on instructions, backend sends HTML.
 
-      if (aiFullResponse.includes("Ошибка:")) { // Simple error check
+      if (aiFullResponse.includes("Ошибка:")) {
         aiMessageElement.innerHTML = `<p class="error-message">${aiFullResponse}</p>`;
       }
 
-      loadChatSessions();
+      await loadChatSessions();
       highlightSession(currentSessionId);
-      
     } catch (e) {
       spinner.style.display = 'none';
       fileSpinner.style.display = 'none';
       console.error(e);
-      addMessage(`<p class="error-message">Ошибка: ${e.message}</p>`, 'ai-response');
+      addMessage(`<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу или настройки CORS.</p>`, 'ai-response');
     }
-    clearFile(); // Clear file input after sending
-  };
+    clearFile();
+  }
 
   /* ----------  EVENTS ---------- */
-  submitBtn.onclick  = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
+  submitBtn.onclick = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
   sendButton.onclick = e => { e.preventDefault(); sendText(chatInput.value); };
   newChatBtn.onclick = startNewChat;
 
   chatInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(chatInput.value); } };
   userQuestionTextarea.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(userQuestionTextarea.value); } };
 
-  
   fileUploadInput.onchange = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -274,13 +271,9 @@ function addMessage(text, senderClass) {
       clearFile();
     }
   };
-  
-  clearFileBtn.onclick = () => {
-    clearFile();  // Очистить всё при нажатии на кнопку очистки
-  };
 
+  clearFileBtn.onclick = clearFile;
 
-  // NEW: SPA Navigation handlers
   homeLink.onclick = e => {
     e.preventDefault();
     showInitialSections();
@@ -289,7 +282,7 @@ function addMessage(text, senderClass) {
   aboutLinkNav.onclick = e => {
     e.preventDefault();
     document.getElementById('about').scrollIntoView({ behavior: 'smooth' });
-    showInitialSections(); // Ensure initial sections are visible if coming from chat
+    showInitialSections();
   };
 
   /* ----------  INIT ---------- */
@@ -301,7 +294,7 @@ function addMessage(text, senderClass) {
     ) {
       loadConversation(currentSessionId);
     } else {
-      startNewChat(); // Start a new chat if no valid session found
+      startNewChat();
     }
   });
 });
