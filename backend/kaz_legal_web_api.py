@@ -1,4 +1,3 @@
-```python
 from memory import init_db, save_message, load_conversation, delete_conversation, get_all_sessions_summary_mongo
 from flask import Flask, request, jsonify, Response, stream_with_context
 import google.generativeai as genai
@@ -727,4 +726,3 @@ class TestHTMLFormatting(unittest.TestCase):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-```
