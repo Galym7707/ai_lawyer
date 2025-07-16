@@ -1,10 +1,9 @@
 from memory import init_db, save_message, load_conversation, delete_conversation, get_all_sessions_summary_mongo
-from flask import Flask, request, jsonify, Response, stream_with_context
+from flask import Flask, request, jsonify, Response, stream_with_context, make_response
 import google.generativeai as genai
 import os
 import json
 import re
-from flask_cors import CORS
 import bleach
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
@@ -27,17 +26,31 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))  # 16 MB
 
-# Configure CORS explicitly for all routes
+# Custom CORS Middleware
 cors_origins = os.getenv('CORS_ORIGINS', 'https://ai-lawyer-tau.vercel.app,http://localhost:5000,http://127.0.0.1:5000').split(',')
 logging.info(f"✅ CORS configured for origins: {cors_origins}")
-CORS(app, resources={
-    r"/*": {
-        "origins": cors_origins,
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
-    }
-})
+
+def add_cors_headers(response):
+    origin = request.headers.get('Origin', '')
+    if origin in cors_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
+    else:
+        response.headers['Access-Control-Allow-Origin'] = cors_origins[0]  # Fallback to primary origin
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Max-Age'] = '86400'
+    logging.info(f"Response headers: {response.headers}")
+    return response
+
+@app.after_request
+def apply_cors(response):
+    return add_cors_headers(response)
+
+@app.route('/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    response = make_response()
+    return add_cors_headers(response)
 
 # Инициализация AI и Базы Законов
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -122,19 +135,12 @@ def validate_session_id(session_id):
     return bool(re.match(r'^[a-zA-Z0-9_-]+$', session_id))
 
 def clean_and_format_html(text):
-    # Удаляем лишние пробелы и переносы строк
     text = re.sub(r'\s*\n\s*\n\s*', '\n\n', text).strip()
     text = re.sub(r'\s+', ' ', text)
-    
-    # Исправляем текст с помощью JamSpell
     text = jsp.FixFragment(text)
-    
-    # Разбиваем текст на строки
     lines = text.split('\n\n')
     formatted_lines = []
     in_list = False
-    
-    # Список ожидаемых заголовков
     expected_sections = {
         'юридическая оценка': 'Юридическая оценка ситуации',
         'действие': 'Действие',
@@ -142,13 +148,10 @@ def clean_and_format_html(text):
         'необходимая информация': 'Необходимая информация',
         'экстренные контакты': 'Экстренные контакты'
     }
-    
     for line in lines:
         line = line.strip()
         if not line:
             continue
-            
-        # Проверяем заголовки
         if re.match(r'^SECTION:\s*[А-Я][А-Яа-я\s]+$', line.strip()) or line.strip().lower() in [k.lower() for k in expected_sections]:
             if in_list:
                 formatted_lines.append('</ul>')
@@ -160,8 +163,6 @@ def clean_and_format_html(text):
             elif heading.lower() == 'экстренные контакты':
                 formatted_lines.append('<p><strong>В экстренных случаях обращайтесь:</strong></p>')
             continue
-            
-        # Проверяем списки
         if line.startswith('LIST_ITEM:') or line.startswith('-') or re.match(r'^\d+\.\s+', line):
             if not in_list:
                 formatted_lines.append('<ul>')
@@ -171,7 +172,6 @@ def clean_and_format_html(text):
             if ':' in line and len(line.split(':', 1)) > 1:
                 parts = line.split(':', 1)
                 label = parts[0].strip()
-                # Нормализация меток для рекомендаций
                 if 'рекомендации' in formatted_lines[-1].lower():
                     label = {
                         'напишите работодателю': 'Письменное требование',
@@ -185,7 +185,6 @@ def clean_and_format_html(text):
                         'по возможности соберите': 'Свидетельские показания',
                         'рассмотрите возможность': 'Жалоба в органы образования'
                     }.get(label.lower(), label)
-                # Нормализация меток для необходимой информации
                 elif 'необходимая информация' in formatted_lines[-1].lower():
                     label = {
                         'ваш трудовой договор': 'Трудовой договор',
@@ -210,10 +209,8 @@ def clean_and_format_html(text):
                 formatted_lines.append(f'<p><strong>Юридическая оценка:</strong> {line}</p>')
             else:
                 formatted_lines.append(f'<p>{line}</p>')
-    
     if in_list:
         formatted_lines.append('</ul>')
-    
     result = '\n'.join(formatted_lines)
     result = re.sub(r'<p>\s*</p>', '', result)
     return result
@@ -286,7 +283,6 @@ def find_relevant_laws(query: str) -> list:
     query_lower = query.lower()
     query_keywords = set(re.findall(r'\b\w+\b', query_lower))
     expanded_keywords = expand_keywords(query_keywords, LEGAL_SYNONYMS)
-
     relevant_articles = []
     seen_articles = set()
     for kw in expanded_keywords:
@@ -300,7 +296,6 @@ def find_relevant_laws(query: str) -> list:
                     "snippet": snippet
                 })
                 seen_articles.add(article_id)
-
     relevant_articles.sort(key=lambda x: sum(kw in x['snippet'].lower() for kw in expanded_keywords), reverse=True)
     return relevant_articles[:5]
 
@@ -340,31 +335,21 @@ def process_file_content(file_stream, mimetype):
         return None
     return text_content
 
-@app.route("/ask", methods=["POST", "OPTIONS"])
+@app.route("/ask", methods=["POST"])
 def ask_route():
-    if request.method == "OPTIONS":
-        response = Response()
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response.headers["Access-Control-Max-Age"] = "86400"
-        return response
-
     logging.info("🚀 Обработка запроса на /ask")
     try:
         data = request.get_json()
         user_question = data.get("question", "")
         session_id = data.get("session_id", "default")
-
         if not validate_session_id(session_id):
-            return jsonify({"error": "Недопустимый session_id"}), 400
-
+            response = jsonify({"error": "Недопустимый session_id"})
+            return add_cors_headers(response), 400
         if not user_question:
-            return jsonify({"error": "Пустой вопрос"}), 400
-
+            response = jsonify({"error": "Пустой вопрос"})
+            return add_cors_headers(response), 400
         history = load_conversation(session_id)
         full_history = history + [{"role": "user", "parts": [user_question]}]
-
         relevant_laws = find_relevant_laws(user_question)
         law_context = ""
         if relevant_laws:
@@ -372,7 +357,6 @@ def ask_route():
             for law in relevant_laws:
                 law_context += f"LIST_ITEM: {law['title']}: {law['snippet']}\n"
             law_context += "\n"
-
         system_instruction = """
         Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
         Твоя задача — давать точные, полные и основанные на законодательстве ответы в виде простого текста.
@@ -388,176 +372,62 @@ def ask_route():
         Используй официальный, но понятный язык. Не используй звездочки для цензуры; перефразируй, если нужно.
         Предоставляй практические советы и шаблоны документов, если применимо.
         НИКОГДА не используй HTML, Markdown, номера (1., 2.), или дефисы (-) для списков — только "SECTION:" и "LIST_ITEM:".
-
         Пример ответа:
         SECTION: Юридическая оценка
         Увольнение без законных оснований является нарушением.
-        
         SECTION: Действие
         Обратитесь в суд.
-        
         SECTION: Рекомендации
         LIST_ITEM: Направьте работодателю письменное требование.
         LIST_ITEM: Обратитесь в инспекцию труда.
-        
         SECTION: Необходимая информация
         LIST_ITEM: Ваш трудовой договор: Предоставьте копию.
         LIST_ITEM: Приказ об увольнении: Укажите дату и причину.
-        
         SECTION: Экстренные контакты
         LIST_ITEM: Полиция: 102
         LIST_ITEM: Единый номер экстренных служб: 112
-
-        При ответе строго следуй этим правилам:
-    
-        1.  Если для ответа недостаточно данных, сразу пиши: "Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:" — и далее четко и простым языком формулируй необходимые вопросы к клиенту списком.
-            Будь как полноценный реальный юрист, которому клиент может полностью довериться. Никогда не говори пользователю, что ему нужно обратиться за полной информацией куда-то в ЦОН, к другому юристу либо иную организацию. Всю необходимую справочную и практическую информацию давай сам, максимально подробно и понятно.
-        2.  Точность и актуальность: Отвечай максимально точно и полно, ссылаясь на конкретные статьи законов, нормативные акты или общепринятые юридические практики РК, если это возможно.
-        3.  Уточняющие вопросы: Если вопрос нечеткий, слишком общий или требует конкретизации для применения норм РК, задавай уточняющие вопросы. Например: "Пожалуйста, уточните, какой аспект [тема] вас интересует в рамках законодательства РК (например, трудовой договор, испытательный срок, приказ о приеме на работу)?"
-        4.  Практическая помощь:
-            Шаблоны и образцы: Если запрос касается оформления документов (жалоба, заявление, договор, приказ и т.п.), и у тебя есть соответствующий шаблон или четкий алгоритм его составления в базе знаний, предложи его пользователю. Указывай, что это образец и может требовать адаптации.
-            Полезные советы/лайфхаки: Предоставляй практические советы и рекомендации, помогающие пользователю в решении юридических вопросов, избегая типичных ошибок.
-        5.  Экстренные контакты и справочная информация:
-            Если вопрос явно или косвенно касается экстренных ситуаций, правонарушений, чрезвычайных происшествий или необходимости связаться с государственными органами/службами, предоставь соответствующие контактные данные.
-            В случае необходимости, цитируй контакты из следующего списка. Указывай принадлежность контактов (Казахстан, Алматы) если это уместно.
-        
-            КОНТАКТЫ ЭКСТРЕННЫХ СЛУЖБ И СПРАВОЧНЫЕ ТЕЛЕФОНЫ (КАЗАХСТАН, АЛМАТЫ):
-            Противопожарная служба: 101
-            Полиция: 102
-            Скорая медицинская помощь: 103
-            Аварийная служба газа: 104
-            Служба спасения: 109
-            Экстренный вызов: 112
-            АЛМАТЫЛИФТ: +7 (727) 397 77 70, +7(727) 397 79 26
-            ГКП на ПХВ акимата города Алматы "Алматы Қала Жарық": +7 (727) 390 20 40, +7 (727) 390 20 60, + 7 771 718 24 39/56
-            ГКП "Алматы Су": +7 727 274-66-66, +7 727 3 777 444
-            Единый контакт-центр по вопросам оказания государственных услуг: 8 800 080 7777 (1414)
-            Бесплатная справочная служба: +7 727 333 07 07
-            Платная справочная служба Казахтелеком: 169
-            Заказы междугородних и международных переговоров: 171
-            Аэропорт (Алматы): +7 (727) 222 15 51, *727 с мобильного
-            ЖД вокзал «Алматы 1» и «Алматы 2»: 105
-            Автовокзал «Саяхат»: +7 727 380 74 44
-            Автовокзал «Сайран»: +7 727 396 70 63
-            Стол находок ДВД г. Алматы: +7 727 292 70 84
-            Бюро находок «ПАНиКа»: +7 727 390 99 66, +7 747 390 99 66
-            Национальный телефон доверия для детей и молодежи: 150
-            Телефон доверия КНБ: 110
-            Контакт-центр судебных органов: 1401
-            Единый телефон доверия МВД: 1402
-            Телефон доверия Министерства сельского хозяйства РК: +7 7172 555 763
-            Телефон доверия Агентства РК по делам противодействию коррупции: 1424
-            Департамент полиции (Алматы): +7 727 254 40 92, +7 727 254 40 42
-            УП Алатауского района: +7 727 227 55 02, +7 727 227 55 28
-            УП Алмалинского района: +7 727 254 46 12
-            УП Ауэзовского района: +7 727 298 53 02, +7 727 298 53 05 (Отдел полиции при УП Ауэзовского района)
-            УП Бостандыкского района: +7 727 254 47 02
-            УП Жетысуского района: +7 727 254 49 02, +7 727 254 49 11
-            УП Медеуского района: +7 727 254 48 02, +7 727 254 48 72 (Отдел полиции при УП Медеуского района)
-            УП Турксибского района: +7 727 298 54 02, +7 727 290 32 27, +7 727 298 54 62 (Отдел полиции при УП Турксибского района)
-            Департамент по чрезвычайным ситуациям г. Алматы: +7 727 394 57 39
-            Районные отделы по ЧС (Алматы):
-                Алмалинский: +7 727 279 48 01, +7 727 390 75 30
-                Ауэзовский: +7 727 226 99 15
-                Бостандыкский: +7 727 337 87 16
-                Жетысуский: +7 727 233 33 45
-                Медеуский: +7 727 272 48 93
-                Наурызбайский: +7 727 305 05 01
-                Турксибский: +7 727 251 59 99
-            Казселезащита, эксплуатационное управление: +7 727 269 09 64
-            Республиканский опертивно-спасательный отряд: +7 727 372 15 60
-            Контакт-центр Фонда «Даму»: 1408
-            Контакт-центр Государственный центр по выплате пенсий: 1411
-            Контакт-центр Комитет государственных доходов МФ РК: 1412
-            Контакт-центр ЕНПФ: 1418
-            Горячая линия по земельному вопросу: 1434
-            Центр поддержки потребителей Казахтелеком: 160
-            Централизованное бюро ремонта Казахтелеком: 165
-            Телефон доверия по борьбе с торговлей людьми: 116-16
-            Банки (контакт-центры):
-                ATF: 8 8000 800 283 (2424)
-                AsiaCredit Bank: 3311
-                Сбербанк: +7 727 250 30 20 (5030)
-                VTB: 5050
-                ForteBank: 7575
-                Capital Bank Kazakhstan: 6161
-                First Heartland Jýsan Bank: 7711
-                Eurasian Bank: +7 727 332 77 22
-                Kaspi: 9999
-                Altyn Bank: +7 727 35 65 777
-                Жилстройсбербанк Казахстана: 300
-                Bank RBK: 7888
-                Al Hilal Bank: 2330
-                Halyk Bank: 7111
-                Nurbank: 2552
-        
-        6.  Язык и тон: Используй официальный, но понятный язык. Будь вежливым и профессиональным.
-        
         {law_context if law_context else "У тебя нет доступа к актуальной базе законодательства. Отвечай на общие юридические вопросы, основываясь на твоих знаниях, но предупреждай, что информация требует проверки по актуальным законам РК."}
         """
-
         messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
-
         response = Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response
+        return add_cors_headers(response)
     except Exception as e:
         logging.error(f"❌ Ошибка в /ask: {e}")
         response = jsonify({"error": f"Ошибка сервера при обработке запроса: {str(e)}"})
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response, 500
+        return add_cors_headers(response), 500
 
-@app.route("/upload-document", methods=["POST", "OPTIONS"])
+@app.route("/upload-document", methods=["POST"])
 def upload_document_route():
-    if request.method == "OPTIONS":
-        response = Response()
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response.headers["Access-Control-Max-Age"] = "86400"
-        return response
-
     logging.info("🚀 Обработка запроса на /upload-document")
     try:
         user_file = request.files.get('file')
         user_question = request.form.get("question", "")
         session_id = request.form.get("session_id", "default")
-
         if not validate_session_id(session_id):
-            return jsonify({"error": "Недопустимый session_id"}), 400
-
+            response = jsonify({"error": "Недопустимый session_id"})
+            return add_cors_headers(response), 400
         if not user_file:
-            return jsonify({"error": "Файл не предоставлен"}), 400
-
+            response = jsonify({"error": "Файл не предоставлен"})
+            return add_cors_headers(response), 400
         file_mimetype = user_file.mimetype
         logging.info(f"📁 Получен файл: {user_file.filename} с MIME-типом: {file_mimetype}")
-
         file_content_text = process_file_content(file_stream=user_file.stream, mimetype=file_mimetype)
-
         if file_content_text is None:
-            return jsonify({"error": "Неподдерживаемый или поврежденный тип файла."}), 400
-
+            response = jsonify({"error": "Неподдерживаемый или поврежденный тип файла."})
+            return add_cors_headers(response), 400
         file_message_content = f"SECTION: Загруженный документ\nПользователь загрузил документ ({user_file.filename}). Содержимое документа:\n{file_content_text[:2000]}...\n"
-        
         history = load_conversation(session_id)
         full_history = history + [{"role": "user", "parts": [file_message_content]}]
         if user_question:
             full_history.append({"role": "user", "parts": [user_question]})
-
         combined_text_for_search = file_content_text + " " + user_question
         relevant_laws = find_relevant_laws(combined_text_for_search)
-
         law_context = ""
         if relevant_laws:
             law_context = "SECTION: Релевантные законы\n"
             for law in relevant_laws:
                 law_context += f"LIST_ITEM: {law['title']}: {law['snippet']}\n"
             law_context += "\n"
-
         system_instruction = """
         Ты - ИИ-юрист, специализирующийся исключительно на законодательстве Республики Казахстан.
         Твоя задача — давать точные, полные и основанные на законодательстве ответы в виде простого текста.
@@ -573,85 +443,50 @@ def upload_document_route():
         Используй официальный, но понятный язык. Не используй звездочки для цензуры; перефразируй, если нужно.
         Предоставляй практические советы и шаблоны документов, если применимо.
         НИКОГДА не используй HTML, Markdown, номера (1., 2.), или дефисы (-) для списков — только "SECTION:" и "LIST_ITEM:".
-
         Пример ответа:
         SECTION: Юридическая оценка
         Увольнение без законных оснований является нарушением.
-        
         SECTION: Действие
         Обратитесь в суд.
-        
         SECTION: Рекомендации
         LIST_ITEM: Направьте работодателю письменное требование.
         LIST_ITEM: Обратитесь в инспекцию труда.
-        
         SECTION: Необходимая информация
         LIST_ITEM: Ваш трудовой договор: Предоставьте копию.
         LIST_ITEM: Приказ об увольнении: Укажите дату и причину.
-        
         SECTION: Экстренные контакты
         LIST_ITEM: Полиция: 102
         LIST_ITEM: Единый номер экстренных служб: 112
-        
         {law_context if law_context else "У тебя нет доступа к актуальной базе законодательства. Отвечай на общие юридические вопросы, основываясь на твоих знаниях, но предупреждай, что информация требует проверки по актуальным законам РК."}
         """
-
         messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
-
         response = Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response
+        return add_cors_headers(response)
     except Exception as e:
         logging.error(f"❌ Ошибка в /upload-document: {e}")
         response = jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"})
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response, 500
+        return add_cors_headers(response), 500
 
-@app.route('/get-all-sessions-summary', methods=["GET", "OPTIONS"])
+@app.route('/get-all-sessions-summary', methods=["GET"])
 def get_all_sessions_summary_route():
-    if request.method == "OPTIONS":
-        response = Response()
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response.headers["Access-Control-Max-Age"] = "86400"
-        return response
-
     logging.info("🚀 Обработка запроса на /get-all-sessions-summary")
     try:
         sessions_summary = get_all_sessions_summary_mongo()
         response = jsonify({"sessions": sessions_summary if sessions_summary else []})
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response, 200
+        return add_cors_headers(response), 200
     except Exception as e:
         logging.error(f"❌ Ошибка при получении сводки сессий: {str(e)}")
         response = jsonify({"error": f"Ошибка при получении сводки сессий: {str(e)}"})
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response, 500
+        return add_cors_headers(response), 500
 
-@app.route('/get-history', methods=["GET", "OPTIONS"])
+@app.route('/get-history', methods=["GET"])
 def get_history_route():
-    if request.method == "OPTIONS":
-        response = Response()
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        response.headers["Access-Control-Max-Age"] = "86400"
-        return response
-
     logging.info("🚀 Обработка запроса на /get-history")
     try:
         session_id = request.args.get("session_id", "default")
         if not validate_session_id(session_id):
-            return jsonify({"error": "Недопустимый session_id"}), 400
+            response = jsonify({"error": "Недопустимый session_id"})
+            return add_cors_headers(response), 400
         history = load_conversation(session_id)
         formatted = []
         for msg in history:
@@ -664,35 +499,25 @@ def get_history_route():
                 content = msg["parts"]
             formatted.append({"role": msg["role"], "content": content})
         response = jsonify({"history": formatted})
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response, 200
+        return add_cors_headers(response), 200
     except Exception as e:
         logging.error(f"❌ Ошибка при получении истории: {str(e)}")
         response = jsonify({"error": f"Ошибка при получении истории: {str(e)}"})
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        return response, 500
+        return add_cors_headers(response), 500
 
 class TestHTMLFormatting(unittest.TestCase):
     def test_clean_and_format_html(self):
         input_text = """
         SECTION: Юридическая оценка
         Невыплата заработной платы является нарушением.
-        
         SECTION: Действие
         Обратитесь в суд.
-        
         SECTION: Рекомендации
         LIST_ITEM: Направьте работодателю письменное требование.
         LIST_ITEM: Обратитесь в инспекцию труда.
-        
         SECTION: Необходимая информация
         LIST_ITEM: Ваш трудовой договор: Предоставьте копию.
         LIST_ITEM: Точная сумма задолженности: Укажите сумму.
-        
         SECTION: Экстренные контакты
         LIST_ITEM: Полиция: 102
         LIST_ITEM: Единый номер экстренных служб: 112
