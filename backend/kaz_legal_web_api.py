@@ -1,3 +1,4 @@
+```python
 from memory import init_db, save_message, load_conversation, delete_conversation, get_all_sessions_summary_mongo
 from flask import Flask, request, jsonify, Response, stream_with_context
 import google.generativeai as genai
@@ -26,7 +27,18 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))  # 16 MB
-CORS(app, origins=os.getenv('CORS_ORIGINS', 'https://ai-lawyer-tau.vercel.app,http://localhost:5000,http://127.0.0.1:5000').split(','))
+
+# Configure CORS explicitly for all routes
+cors_origins = os.getenv('CORS_ORIGINS', 'https://ai-lawyer-tau.vercel.app,http://localhost:5000,http://127.0.0.1:5000').split(',')
+logging.info(f"✅ CORS configured for origins: {cors_origins}")
+CORS(app, resources={
+    r"/*": {
+        "origins": cors_origins,
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 # Инициализация AI и Базы Законов
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -329,8 +341,16 @@ def process_file_content(file_stream, mimetype):
         return None
     return text_content
 
-@app.route("/ask", methods=["POST"])
+@app.route("/ask", methods=["POST", "OPTIONS"])
 def ask_route():
+    if request.method == "OPTIONS":
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response.headers["Access-Control-Max-Age"] = "86400"
+        return response
+
     logging.info("🚀 Обработка запроса на /ask")
     try:
         data = request.get_json()
@@ -479,13 +499,29 @@ def ask_route():
 
         messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
 
-        return Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
+        response = Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
     except Exception as e:
         logging.error(f"❌ Ошибка в /ask: {e}")
-        return jsonify({"error": f"Ошибка сервера при обработке запроса: {str(e)}"}), 500
+        response = jsonify({"error": f"Ошибка сервера при обработке запроса: {str(e)}"})
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response, 500
 
-@app.route("/upload-document", methods=["POST"])
+@app.route("/upload-document", methods=["POST", "OPTIONS"])
 def upload_document_route():
+    if request.method == "OPTIONS":
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response.headers["Access-Control-Max-Age"] = "86400"
+        return response
+
     logging.info("🚀 Обработка запроса на /upload-document")
     try:
         user_file = request.files.get('file')
@@ -563,25 +599,55 @@ def upload_document_route():
 
         messages_for_model = [{"role": "user", "parts": [system_instruction]}] + full_history
 
-        return Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
+        response = Response(stream_with_context(generate_response_stream(model, messages_for_model, session_id)), mimetype='text/html')
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response
     except Exception as e:
         logging.error(f"❌ Ошибка в /upload-document: {e}")
-        return jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"}), 500
+        response = jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"})
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response, 500
 
-@app.route('/get-all-sessions-summary', methods=["GET"])
+@app.route('/get-all-sessions-summary', methods=["GET", "OPTIONS"])
 def get_all_sessions_summary_route():
+    if request.method == "OPTIONS":
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response.headers["Access-Control-Max-Age"] = "86400"
+        return response
+
     logging.info("🚀 Обработка запроса на /get-all-sessions-summary")
     try:
         sessions_summary = get_all_sessions_summary_mongo()
-        if sessions_summary:
-            return jsonify({"sessions": sessions_summary}), 200
-        else:
-            return jsonify({"sessions": []}), 200
+        response = jsonify({"sessions": sessions_summary if sessions_summary else []})
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response, 200
     except Exception as e:
-        return jsonify({"error": f"Ошибка при получении сводки сессий: {str(e)}"}), 500
+        logging.error(f"❌ Ошибка при получении сводки сессий: {str(e)}")
+        response = jsonify({"error": f"Ошибка при получении сводки сессий: {str(e)}"})
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response, 500
 
-@app.route('/get-history', methods=["GET"])
+@app.route('/get-history', methods=["GET", "OPTIONS"])
 def get_history_route():
+    if request.method == "OPTIONS":
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response.headers["Access-Control-Max-Age"] = "86400"
+        return response
+
     logging.info("🚀 Обработка запроса на /get-history")
     try:
         session_id = request.args.get("session_id", "default")
@@ -598,9 +664,18 @@ def get_history_route():
             else:
                 content = msg["parts"]
             formatted.append({"role": msg["role"], "content": content})
-        return jsonify({"history": formatted}), 200
+        response = jsonify({"history": formatted})
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response, 200
     except Exception as e:
-        return jsonify({"error": f"Ошибка при получении истории: {str(e)}"}), 500
+        logging.error(f"❌ Ошибка при получении истории: {str(e)}")
+        response = jsonify({"error": f"Ошибка при получении истории: {str(e)}"})
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response, 500
 
 class TestHTMLFormatting(unittest.TestCase):
     def test_clean_and_format_html(self):
@@ -652,3 +727,4 @@ class TestHTMLFormatting(unittest.TestCase):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+```
