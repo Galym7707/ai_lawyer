@@ -15,6 +15,7 @@ import logging
 from lxml import html
 from dotenv import load_dotenv
 from helpers import expand_keywords, build_snippet
+import jamspell
 import unittest
 
 # Load environment variables
@@ -35,6 +36,17 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "text/plain", "temperature": 0.7})
 vision_model = genai.GenerativeModel('gemini-1.5-flash')
+
+# Инициализация JamSpell для коррекции текста
+try:
+    jsp = jamspell.TSpellCorrector()
+    if not jsp.LoadLangModel('ru.bin'):
+        logging.error("❌ Не удалось загрузить модель JamSpell ru.bin. Убедитесь, что файл присутствует.")
+        raise FileNotFoundError("ru.bin not found")
+    logging.info("✅ Модель JamSpell успешно загружена.")
+except Exception as e:
+    logging.error(f"❌ Ошибка при загрузке JamSpell: {e}")
+    raise
 
 LAW_DB = []
 LAW_INDEX = {}
@@ -103,33 +115,22 @@ def clean_and_format_html(text):
     text = re.sub(r'\s*\n\s*\n\s*', '\n\n', text).strip()
     text = re.sub(r'\s+', ' ', text)
     
-    # Исправляем разбитые слова
-    text = re.sub(r'(\w+)\s+(\w{1,3})\b', r'\1\2', text)
-    text = re.sub(r'(\w+)([а-яА-Я]{1,3})\b', r'\1 \2', text)  # Дополнительная проверка для кириллицы
-    replacements = {
-        'заработнойпла ты': 'заработной платы',
-        'влечетза собой': 'влечёт за собой',
-        'Трудового кодексаРК': 'Трудового кодекса РК',
-        'административнуюи': 'административную и',
-        'работникув': 'работнику в',
-        'обратитьсяк': 'обратиться к',
-        'требова ниемо': 'требованием о',
-        'сумми сроков': 'сумм и сроков',
-        'письмас': 'письма с',
-        'обратитесьв': 'обратитесь в',
-        'трудаи': 'труда и',
-        'социальной защитыРК': 'социальной защиты РК',
-        'пении': 'пени и',
-        'листкиит': 'листки и т',
-        'зарабо тной': 'заработной'
-    }
-    for wrong, correct in replacements.items():
-        text = text.replace(wrong, correct)
+    # Исправляем текст с помощью JamSpell
+    text = jsp.FixFragment(text)
     
     # Разбиваем текст на строки
     lines = text.split('\n\n')
     formatted_lines = []
     in_list = False
+    
+    # Список ожидаемых заголовков
+    expected_sections = {
+        'юридическая оценка': 'Юридическая оценка ситуации',
+        'действие': 'Действие',
+        'рекомендации': 'Рекомендации',
+        'необходимая информация': 'Необходимая информация',
+        'экстренные контакты': 'Экстренные контакты'
+    }
     
     for line in lines:
         line = line.strip()
@@ -137,12 +138,16 @@ def clean_and_format_html(text):
             continue
             
         # Проверяем заголовки
-        if re.match(r'^SECTION:\s*[А-Я][А-Яа-я\s]+$', line.strip()) or line.strip() in ['Юридическая оценка', 'Действие', 'Рекомендации', 'Необходимая информация', 'Экстренные контакты']:
+        if re.match(r'^SECTION:\s*[А-Я][А-Яа-я\s]+$', line.strip()) or line.strip().lower() in [k.lower() for k in expected_sections]:
             if in_list:
                 formatted_lines.append('</ul>')
                 in_list = False
             heading = line.replace('SECTION:', '').strip()
-            formatted_lines.append(f'<h3>{heading}</h3>')
+            formatted_lines.append(f'<h3>{expected_sections.get(heading.lower(), heading)}</h3>')
+            if heading.lower() == 'необходимая информация':
+                formatted_lines.append('<p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>')
+            elif heading.lower() == 'экстренные контакты':
+                formatted_lines.append('<p><strong>В экстренных случаях обращайтесь:</strong></p>')
             continue
             
         # Проверяем списки
@@ -150,18 +155,50 @@ def clean_and_format_html(text):
             if not in_list:
                 formatted_lines.append('<ul>')
                 in_list = True
-            line = re.sub(r'^\d+\.\s+', '', line.lstrip('- ').strip())  # Удаляем номера или дефисы
+            line = re.sub(r'^\d+\.\s+', '', line.lstrip('- ').strip())
             line = line.replace('LIST_ITEM:', '').strip()
             if ':' in line and len(line.split(':', 1)) > 1:
                 parts = line.split(':', 1)
-                formatted_lines.append(f'<li><strong>{parts[0].strip()}:</strong> {parts[1].strip()}</li>')
+                label = parts[0].strip()
+                # Нормализация меток для рекомендаций
+                if 'рекомендации' in formatted_lines[-1].lower():
+                    label = {
+                        'напишите работодателю': 'Письменное требование',
+                        'обратитесь в территориальное': 'Обращение в инспекцию труда',
+                        'подготовьте исковое': 'Исковое заявление',
+                        'собирайте все': 'Документы',
+                        'сообщите о случившемся': 'Уведомление родителей',
+                        'обратитесь в полицию': 'Обращение в полицию',
+                        'обратитесь в медицинское учреждение': 'Медицинский осмотр',
+                        'сохраните все доказательства': 'Сбор доказательств',
+                        'по возможности соберите': 'Свидетельские показания',
+                        'рассмотрите возможность': 'Жалоба в органы образования'
+                    }.get(label.lower(), label)
+                # Нормализация меток для необходимой информации
+                elif 'необходимая информация' in formatted_lines[-1].lower():
+                    label = {
+                        'ваш трудовой договор': 'Трудовой договор',
+                        'точная сумма задолженности': 'Сумма задолженности',
+                        'дата последней выплаты': 'Дата последней выплаты',
+                        'наличие каких-либо соглашений': 'Соглашения о задержке',
+                        'причины задержки': 'Причины задержки',
+                        'подробное описание инцидента': 'Описание инцидента',
+                        'степень тяжести полученных травм': 'Степень травм',
+                        'свидетели': 'Свидетели',
+                        'данные об учителе': 'Данные об учителе',
+                        'данные о школе': 'Данные о школе'
+                    }.get(label.lower(), label)
+                formatted_lines.append(f'<li><strong>{label}:</strong> {parts[1].strip()}</li>')
             else:
                 formatted_lines.append(f'<li>{line}</li>')
         else:
             if in_list:
                 formatted_lines.append('</ul>')
                 in_list = False
-            formatted_lines.append(f'<p>{line}</p>')
+            if 'юридическая оценка' in formatted_lines[-1].lower():
+                formatted_lines.append(f'<p><strong>Юридическая оценка:</strong> {line}</p>')
+            else:
+                formatted_lines.append(f'<p>{line}</p>')
     
     if in_list:
         formatted_lines.append('</ul>')
@@ -180,7 +217,6 @@ def validate_html(text):
 
 def sanitize_html_output(text):
     text = clean_and_format_html(text)
-    text = post_process_ai_response(text)
     if not validate_html(text):
         logging.warning("⚠️ Исправление неверного HTML")
         text = f'<p>{text}</p>'
@@ -465,7 +501,7 @@ def upload_document_route():
         file_mimetype = user_file.mimetype
         logging.info(f"📁 Получен файл: {user_file.filename} с MIME-типом: {file_mimetype}")
 
-        file_content_text = process_file_content(user_file.stream, file_mimetype)
+        file_content_text = process_file_content(file_stream=user_file.stream, mimetype=file_mimetype)
 
         if file_content_text is None:
             return jsonify({"error": "Неподдерживаемый или поврежденный тип файла."}), 400
@@ -566,117 +602,6 @@ def get_history_route():
     except Exception as e:
         return jsonify({"error": f"Ошибка при получении истории: {str(e)}"}), 500
 
-def post_process_ai_response(response_text):
-    # Удаляем лишние пробелы и переносы строк
-    response_text = re.sub(r'\s*\n\s*\n\s*', '\n\n', response_text).strip()
-    response_text = re.sub(r'\s+', ' ', response_text)
-    
-    # Исправляем разбитые слова
-    response_text = re.sub(r'(\w+)\s+(\w{1,3})\b', r'\1\2', response_text)
-    response_text = re.sub(r'(\w+)([а-яА-Я]{1,3})\b', r'\1 \2', response_text)
-    replacements = {
-        'заработнойпла ты': 'заработной платы',
-        'влечетза собой': 'влечёт за собой',
-        'Трудового кодексаРК': 'Трудового кодекса РК',
-        'административнуюи': 'административную и',
-        'работникув': 'работнику в',
-        'обратитьсяк': 'обратиться к',
-        'требова ниемо': 'требованием о',
-        'сумми сроков': 'сумм и сроков',
-        'письмас': 'письма с',
-        'обратитесьв': 'обратитесь в',
-        'трудаи': 'труда и',
-        'социальной защитыРК': 'социальной защиты РК',
-        'пении': 'пени и',
-        'листкиит': 'листки и т',
-        'зарабо тной': 'заработной'
-    }
-    for wrong, correct in replacements.items():
-        response_text = response_text.replace(wrong, correct)
-    
-    # Разбиваем текст на разделы
-    sections = response_text.split('\n\n')
-    formatted_sections = []
-    in_list = False
-    current_section = None
-    
-    # Список ожидаемых заголовков
-    expected_sections = {
-        'юридическая оценка': 'Юридическая оценка ситуации',
-        'действие': 'Действие',
-        'рекомендации': 'Рекомендации',
-        'необходимая информация': 'Необходимая информация',
-        'экстренные контакты': 'Экстренные контакты'
-    }
-    
-    for section in sections:
-        section = section.strip()
-        if not section:
-            continue
-            
-        # Определяем тип раздела
-        section_lower = section.lower()
-        section_name = None
-        if section_lower.startswith('section:'):
-            section_name = section[len('SECTION:'):].strip()
-        elif section_lower in [k.lower() for k in expected_sections]:
-            section_name = section
-        
-        if section_name and section_name.lower() in [k.lower() for k in expected_sections]:
-            if in_list:
-                formatted_sections.append('</ul>')
-                in_list = False
-            formatted_sections.append(f'<h3>{expected_sections.get(section_name.lower(), section_name)}</h3>')
-            current_section = section_name.lower()
-            if current_section == 'необходимая информация':
-                formatted_sections.append('<p><strong style="color:red;">Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</strong></p>')
-            elif current_section == 'экстренные контакты':
-                formatted_sections.append('<p><strong>В экстренных случаях обращайтесь:</strong></p>')
-            continue
-        
-        # Обработка содержимого
-        if current_section == 'юридическая оценка':
-            formatted_sections.append(f'<p><strong>Юридическая оценка:</strong> {section}</p>')
-        elif current_section in ['рекомендации', 'необходимая информация', 'экстренные контакты'] or section.startswith('LIST_ITEM:') or section.startswith('-') or re.match(r'^\d+\.\s+', section):
-            if not in_list:
-                formatted_sections.append('<ul>')
-                in_list = True
-            section = re.sub(r'^\d+\.\s+', '', section.lstrip('- ').strip())
-            section = section.replace('LIST_ITEM:', '').strip()
-            if ':' in section and len(section.split(':', 1)) > 1:
-                parts = section.split(':', 1)
-                label = parts[0].strip()
-                if current_section == 'рекомендации':
-                    label = {
-                        'напишите работодателю': 'Письменное требование',
-                        'обратитесь в территориальное': 'Обращение в инспекцию труда',
-                        'подготовьте исковое': 'Исковое заявление',
-                        'собирайте все': 'Документы'
-                    }.get(label.lower(), label)
-                elif current_section == 'необходимая информация':
-                    label = {
-                        'ваш трудовой договор': 'Трудовой договор',
-                        'точная сумма задолженности': 'Сумма задолженности',
-                        'дата последней выплаты': 'Дата последней выплаты',
-                        'наличие каких-либо соглашений': 'Соглашения о задержке',
-                        'причины задержки': 'Причины задержки'
-                    }.get(label.lower(), label)
-                formatted_sections.append(f'<li><strong>{label}:</strong> {parts[1].strip()}</li>')
-            else:
-                formatted_sections.append(f'<li>{section}</li>')
-        else:
-            if in_list:
-                formatted_sections.append('</ul>')
-                in_list = False
-            formatted_sections.append(f'<p>{section}</p>')
-    
-    if in_list:
-        formatted_sections.append('</ul>')
-    
-    result = '\n'.join(formatted_sections)
-    result = re.sub(r'<p>\s*</p>', '', result)
-    return result
-
 class TestHTMLFormatting(unittest.TestCase):
     def test_clean_and_format_html(self):
         input_text = """
@@ -717,8 +642,8 @@ class TestHTMLFormatting(unittest.TestCase):
         <h3>Экстренные контакты</h3>
         <p><strong>В экстренных случаях обращайтесь:</strong></p>
         <ul>
-        <li>Полиция: <strong>102</strong></li>
-        <li>Единый номер экстренных служб: <strong>112</strong></li>
+        <li><strong>Полиция:</strong> 102</li>
+        <li><strong>Единый номер экстренных служб:</strong> 112</li>
         </ul>
         """
         result = clean_and_format_html(input_text)
