@@ -1,15 +1,13 @@
 
 /* =========   GLOBAL API HELPERS   ========= */
-const API_BASE = window.location.hostname.includes('vercel.app')
-  ? 'https://ai-lawyer.up.railway.app'   // production backend
-  : 'http://localhost:5000';             // local dev
+const API_BASE = '/api'; // Use Vercel proxy
 
 async function apiFetch(path, options = {}, retries = 2) {
   for (let i = 0; i <= retries; i++) {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         ...options,
-        credentials: 'include', // Include cookies for sessions if needed
+        credentials: 'include',
       });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${await response.text()}`);
@@ -111,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await apiFetch('/get-all-sessions-summary');
       const data = await safeJson(res);
       chatList.innerHTML = '';
-
       if (data.sessions && data.sessions.length > 0) {
         data.sessions.forEach(session => {
           const li = document.createElement('li');
@@ -125,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       console.error('Ошибка загрузки сессий:', e);
-      chatList.innerHTML = `<p class="error-message">Ошибка загрузки истории: ${e.message}. Проверьте подключение к серверу или настройки CORS.</p>`;
+      chatList.innerHTML = `<p class="error-message">Ошибка загрузки истории: ${e.message}. Проверьте подключение к серверу.</p>`;
     }
   }
 
@@ -135,11 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showChatContainer();
     clearChatMessages();
     highlightSession(sessionId);
-
     try {
       const res = await apiFetch(`/get-history?session_id=${sessionId}`);
       const data = await safeJson(res);
-
       if (data.history) {
         data.history.forEach(msg => {
           addMessage(msg.content, msg.role === 'user' ? 'user-message' : 'ai-response');
@@ -147,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       console.error('Ошибка загрузки истории беседы:', e);
-      addMessage(`<p class="error-message">Ошибка загрузки истории беседы: ${e.message}. Проверьте подключение к серверу или настройки CORS.</p>`, 'ai-response');
+      addMessage(`<p class="error-message">Ошибка загрузки истории беседы: ${e.message}. Проверьте подключение к серверу.</p>`, 'ai-response');
     }
   }
 
@@ -183,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
   async function sendText(text) {
     showChatContainer();
     if (!text.trim() && !uploadedFile) return;
-
     if (uploadedFile) {
       fileSpinner.style.display = 'block';
       spinner.style.display = 'none';
@@ -191,12 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
       spinner.style.display = 'block';
       fileSpinner.style.display = 'none';
     }
-
     const messageText = uploadedFile ? fileQuestionInput.value || text : text;
     addMessage(messageText, 'user-message');
     userQuestionTextarea.value = '';
     chatInput.value = '';
-
     try {
       let res;
       if (uploadedFile) {
@@ -204,7 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('file', uploadedFile);
         formData.append('question', messageText);
         formData.append('session_id', currentSessionId);
-
         res = await apiFetch('/upload-document', {
           method: 'POST',
           body: formData
@@ -216,18 +207,14 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify({ question: text, session_id: currentSessionId })
         });
       }
-
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let aiFullResponse = '';
-
       spinner.style.display = 'none';
       fileSpinner.style.display = 'none';
-
       const aiMessageElement = document.createElement('div');
       aiMessageElement.classList.add('chat-bubble', 'ai-response');
       chatMessagesDisplay.appendChild(aiMessageElement);
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -236,18 +223,16 @@ document.addEventListener('DOMContentLoaded', () => {
         aiMessageElement.innerHTML = aiFullResponse;
         chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
       }
-
       if (aiFullResponse.includes("Ошибка:")) {
         aiMessageElement.innerHTML = `<p class="error-message">${aiFullResponse}</p>`;
       }
-
       await loadChatSessions();
       highlightSession(currentSessionId);
     } catch (e) {
       spinner.style.display = 'none';
       fileSpinner.style.display = 'none';
       console.error(e);
-      addMessage(`<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу или настройки CORS.</p>`, 'ai-response');
+      addMessage(`<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу.</p>`, 'ai-response');
     }
     clearFile();
   }
@@ -256,10 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
   submitBtn.onclick = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
   sendButton.onclick = e => { e.preventDefault(); sendText(chatInput.value); };
   newChatBtn.onclick = startNewChat;
-
   chatInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(chatInput.value); } };
   userQuestionTextarea.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(userQuestionTextarea.value); } };
-
   fileUploadInput.onchange = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -271,14 +254,11 @@ document.addEventListener('DOMContentLoaded', () => {
       clearFile();
     }
   };
-
   clearFileBtn.onclick = clearFile;
-
   homeLink.onclick = e => {
     e.preventDefault();
     showInitialSections();
   };
-
   aboutLinkNav.onclick = e => {
     e.preventDefault();
     document.getElementById('about').scrollIntoView({ behavior: 'smooth' });
