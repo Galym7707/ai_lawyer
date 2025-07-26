@@ -1,35 +1,29 @@
-module.exports = async (req, res) => {
-  const backendUrl = 'https://ai-lawyer.up.railway.app';
-  // если вы ещё не удалили префикс /api, добавьте сюда .replace(/^\/api/, '')
-  const url = new URL(req.url, backendUrl).href;
+export default async function handler(req, res) {
+  const backendBase = process.env.RAILWAY_BACKEND_URL || "http://localhost:8080";
+
+  const url = `${backendBase}${req.url.replace(/^\/api/, "")}`;
+  const method = req.method;
 
   try {
-    const response = await fetch(url, {
-      method: req.method,
+    const backendResponse = await fetch(url, {
+      method,
       headers: {
-        ...req.headers,
-        Host: new URL(backendUrl).host,
+        'Content-Type': req.headers['content-type'] || 'application/json',
+        'Authorization': req.headers['authorization'] || '',
       },
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
+      body: ['POST', 'PUT', 'PATCH'].includes(method)
+        ? req.body
+        : undefined,
     });
 
-    // прочитаем тело как текст
-    const data = await response.text();
+    // Forward headers like Content-Type
+    res.setHeader('Content-Type', backendResponse.headers.get('content-type') || 'application/json');
+    res.status(backendResponse.status);
 
-    // передаём оригинальный Content-Type, чтобы safeJson понимал тип ответа
-    const backendContentType = response.headers.get('content-type');
-    if (backendContentType) {
-      res.setHeader('Content-Type', backendContentType);
-    }
-
-    // CORS‑заголовки
-    res.setHeader('Access-Control-Allow-Origin', 'https://ai-lawyer-tau.vercel.app');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-    res.status(response.status).send(data);
-  } catch (e) {
-    console.error('Proxy error:', e);
-    res.status(500).send('Proxy error: ' + e.message);
+    const data = await backendResponse.text(); // Use text to avoid premature JSON parse
+    res.send(data);
+  } catch (error) {
+    console.error("❌ Proxy error:", error);
+    res.status(502).json({ error: "Bad gateway: backend not reachable." });
   }
-};
+}
