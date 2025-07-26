@@ -31,7 +31,14 @@ import logging
 from lxml import html
 from dotenv import load_dotenv
 from helpers import expand_keywords, build_snippet
-import jamspell
+# jamspell is optional. It requires a C++ build toolchain (SWIG/gcc) which may be
+# unavailable in some deployment environments (e.g., Railway). Attempt to import
+# jamspell and fall back to None if it cannot be imported. The rest of the code
+# handles the missing spell‑corrector gracefully.
+try:
+    import jamspell  # type: ignore
+except ImportError:
+    jamspell = None
 import unittest
 
 # Загрузка переменных окружения из .env
