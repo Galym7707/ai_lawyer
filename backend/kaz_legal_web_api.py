@@ -91,23 +91,22 @@ genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "text/plain", "temperature": 0.7})
 vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
-# Инициализация JamSpell для коррекции текста
-#
-# В исходной версии загрузка ru.bin была обязательной и приводила к
-# исключению при отсутствии файла. В нашем варианте загрузка не
-# является критичной: если модель не найдена, функция FixFragment
-# заменяется на identity‑функцию. Это позволяет запускать сервер без
-# дополнительного файла ru.bin.
-try:
-    _jsp = jamspell.TSpellCorrector()
-    if _jsp.LoadLangModel('ru.bin'):
-        jsp = _jsp
-        logging.info("✅ Модель JamSpell успешно загружена.")
-    else:
-        logging.warning("⚠️ Файл ru.bin не найден. Орфографическая коррекция отключена.")
+# Инициализация JamSpell для коррекции текста.
+# Если jamspell не установлен или ru.bin отсутствует, отключаем коррекцию.
+if jamspell is not None:
+    try:
+        _jsp = jamspell.TSpellCorrector()
+        if _jsp.LoadLangModel('ru.bin'):
+            jsp = _jsp
+            logging.info("✅ Модель JamSpell успешно загружена.")
+        else:
+            logging.warning("⚠️ Файл ru.bin не найден. Орфографическая коррекция отключена.")
+            jsp = None
+    except Exception as e:
+        logging.warning(f"⚠️ Ошибка при загрузке JamSpell: {e}. Орфографическая коррекция отключена.")
         jsp = None
-except Exception as e:
-    logging.warning(f"⚠️ Ошибка при загрузке JamSpell: {e}. Орфографическая коррекция отключена.")
+else:
+    logging.warning("⚠️ Библиотека jamspell не установлена. Орфографическая коррекция отключена.")
     jsp = None
 
 LAW_DB: list = []
