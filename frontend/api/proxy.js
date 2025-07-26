@@ -1,29 +1,56 @@
-export default async function handler(req, res) {
-  const backendBase = process.env.RAILWAY_BACKEND_URL || "http://localhost:8080";
+// frontend/api/proxy.js
 
-  const url = `${backendBase}${req.url.replace(/^\/api/, "")}`;
+// Если Node < 18, загружаем node-fetch динамически
+const getFetch = async () => {
+  if (typeof fetch === 'function') return fetch;
+  const { default: nodeFetch } = await import('node-fetch');
+  return nodeFetch;
+};
+
+export default async function handler(req, res) {
+  // Адрес бэкенда: используем переменную окружения или Railway‑URL по умолчанию
+  const backendBase =
+    process.env.RAILWAY_BACKEND_URL || 'https://ai-lawyer.up.railway.app';
+
+  // Убираем префикс /api, чтобы получить исходный путь запроса
+  // и аккуратно собираем полный URL (с учётом query‑параметров)
+  const backendUrl = new URL(
+    req.url.replace(/^\/api/, ''),
+    backendBase
+  ).toString();
+
   const method = req.method;
 
   try {
-    const backendResponse = await fetch(url, {
+    const fetchFunc = await getFetch();
+
+    const backendResponse = await fetchFunc(backendUrl, {
       method,
       headers: {
+        // Пробрасываем только необходимые заголовки
         'Content-Type': req.headers['content-type'] || 'application/json',
-        'Authorization': req.headers['authorization'] || '',
+        Authorization: req.headers['authorization'] || '',
       },
       body: ['POST', 'PUT', 'PATCH'].includes(method)
         ? req.body
         : undefined,
     });
 
-    // Forward headers like Content-Type
-    res.setHeader('Content-Type', backendResponse.headers.get('content-type') || 'application/json');
+    // Прокидываем тип контента и статус код от бэкенда
+    res.setHeader(
+      'Content-Type',
+      backendResponse.headers.get('content-type') || 'application/json'
+    );
     res.status(backendResponse.status);
 
-    const data = await backendResponse.text(); // Use text to avoid premature JSON parse
+    // Получаем ответ как текст — безопасно для любых типов
+    const data = await backendResponse.text();
     res.send(data);
   } catch (error) {
-    console.error("❌ Proxy error:", error);
-    res.status(502).json({ error: "Bad gateway: backend not reachable." });
+    console.error('❌ Proxy error:', error);
+    // Любая ошибка прокси приводит к 502
+    res
+      .status(502)
+      .json({ error: 'Bad gateway: backend not reachable.' });
   }
 }
