@@ -588,6 +588,12 @@ def ask_route():
         response = jsonify({"error": f"Ошибка сервера при обработке запроса: {str(e)}"})
         return add_cors_headers(response), 500
 
+# Дублируем маршрут с префиксом /api, чтобы корректно работать с прокси
+# на фронтенде (Next.js), где все запросы отправляются с префиксом /api.
+@app.route("/api/ask", methods=["POST"])
+def ask_route_api():
+    return ask_route()
+
 @app.route("/upload-document", methods=["POST"])
 def upload_document_route():
     """Обрабатывает загрузку документа пользователем."""
@@ -781,6 +787,10 @@ def upload_document_route():
         response = jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"})
         return add_cors_headers(response), 500
 
+@app.route("/api/upload-document", methods=["POST"])
+def upload_document_route_api():
+    return upload_document_route()
+
 @app.route('/get-all-sessions-summary', methods=["GET"])
 def get_all_sessions_summary_route():
     """Возвращает список всех сессий в базе данных."""
@@ -793,6 +803,10 @@ def get_all_sessions_summary_route():
         logging.error(f"❌ Ошибка при получении сводки сессий: {str(e)}")
         response = jsonify({"error": f"Ошибка при получении сводки сессий: {str(e)}"})
         return add_cors_headers(response), 500
+
+@app.route('/api/get-all-sessions-summary', methods=["GET"])
+def get_all_sessions_summary_route_api():
+    return get_all_sessions_summary_route()
 
 @app.route('/get-history', methods=["GET"])
 def get_history_route():
@@ -819,6 +833,10 @@ def get_history_route():
         logging.error(f"❌ Ошибка при получении истории: {str(e)}")
         response = jsonify({"error": f"Ошибка при получении истории: {str(e)}"})
         return add_cors_headers(response), 500
+
+@app.route('/api/get-history', methods=["GET"])
+def get_history_route_api():
+    return get_history_route()
 
 
 # Небольшой тест для проверки форматирования HTML. Оставлен для
