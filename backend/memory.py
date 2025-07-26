@@ -6,32 +6,43 @@ from datetime import datetime
 # Получаем строку подключения из переменных окружения
 # Эту переменную вы установите на Railway
 MONGO_URI = os.getenv("MONGO_URI")
-DB_NAME = "ai_lawyer_chat" # Имя базы данных в MongoDB Atlas
+DB_NAME = "ai_lawyer_chat"  # Имя базы данных в MongoDB Atlas
 
+# Глобальные переменные для клиента и базы данных. Они заполняются при
+# вызове ``init_db``. Использование глобальных переменных позволяет
+# удобно делиться клиентом между функциями без дополнительного
+# конфигурирования.
 client = None
 db = None
 
-def init_db():
+def init_db() -> None:
+    """Инициализирует подключение к MongoDB.
+
+    Читает URI из переменных окружения, создаёт клиент и проверяет
+    соединение. Если переменная окружения ``MONGO_URI`` не задана,
+    выводит ошибку и не выполняет подключение. При любых ошибках
+    подключения также обнуляет глобальные переменные.
+    """
     global client, db
-    if MONGO_URI is None: # Исправлено: если MONGO_URI не установлен
+    if not MONGO_URI:
+        # Явно проверяем наличие URI — без него подключение невозможно
         print("❌ Ошибка: Переменная окружения MONGO_URI не установлена. Подключение к MongoDB невозможно.")
         return
 
     try:
         # Устанавливаем таймаут соединения, чтобы избежать бесконечного ожидания
         client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-        client.admin.command('ping') # Проверка соединения с базой данных
+        # Проверка соединения с базой данных
+        client.admin.command('ping')
         db = client[DB_NAME]
         print("✅ Подключение к MongoDB Atlas успешно установлено.")
-        
-        # Создаем индекс для session_id для ускорения запросов
-        # Проверяем, существует ли индекс, чтобы избежать ошибок при повторном запуске
+
+        # Создаём коллекцию и индексы, если они отсутствуют. Это важно для
+        # корректной работы методов сохранения и выборки сообщений.
         if "conversations" not in db.list_collection_names():
             db.create_collection("conversations")
-        
-        # Создаем комбинированный индекс для session_id и message_index
+        # Индекс по session_id и message_index ускоряет сортировку и поиск
         db.conversations.create_index([("session_id", 1), ("message_index", 1)], unique=False)
-
     except ConnectionFailure as e:
         print(f"❌ Ошибка подключения к MongoDB (ConnectionFailure): {e}")
         client = None
@@ -45,15 +56,20 @@ def init_db():
         client = None
         db = None
 
-def save_message(session_id, role, content):
-    global db # Убедитесь, что db доступен в этой функции
-    if db is None: # Исправлено
+def save_message(session_id: str, role: str, content: str) -> None:
+    """Сохраняет сообщение в базе данных.
+
+    Если база данных не инициализирована, выводит предупреждение и
+    завершает функцию. Индекс сообщения вычисляется на основе
+    последнего сохранённого сообщения для данной сессии.
+    """
+    global db
+    if db is None:
         print("❌ Ошибка: База данных MongoDB не инициализирована. Сохранение невозможно.")
         return
 
     try:
-        # Получаем максимальный message_index для текущей сессии
-        # Если сессия новая, то index будет 0
+        # Ищем последнее сообщение в данной сессии, чтобы вычислить новый индекс
         last_message = db.conversations.find_one(
             {"session_id": session_id},
             sort=[("message_index", -1)]
@@ -68,13 +84,18 @@ def save_message(session_id, role, content):
             "timestamp": datetime.now()
         }
         db.conversations.insert_one(message_document)
-        # print(f"💾 Сообщение сохранено в сессии {session_id} с индексом {message_index}")
     except Exception as e:
         print(f"❌ Ошибка при сохранении сообщения в MongoDB: {e}")
 
-def load_conversation(session_id):
-    global db # Убедитесь, что db доступен в этой функции
-    if db is None: # Исправлено
+def load_conversation(session_id: str):
+    """Возвращает список сообщений для указанной сессии.
+
+    Формат результата соответствует требованиям Google Generative AI API:
+    каждый элемент списка содержит ``role`` и список ``parts``, где
+    ``parts`` — это словари с ключом ``text``.
+    """
+    global db
+    if db is None:
         print("❌ Ошибка: База данных MongoDB не инициализирована. Загрузка невозможна.")
         return []
     try:
@@ -82,7 +103,6 @@ def load_conversation(session_id):
             {"session_id": session_id},
             sort=[("message_index", 1)]
         )
-        # Формат должен быть [{"role": "user", "parts": [{"text": "content"}]}]
         formatted_messages = []
         for msg in messages:
             formatted_messages.append({"role": msg["role"], "parts": [{"text": msg["content"]}]})
@@ -91,9 +111,10 @@ def load_conversation(session_id):
         print(f"❌ Ошибка при загрузке истории из MongoDB: {e}")
         return []
 
-def delete_conversation(session_id):
-    global db # Убедитесь, что db доступен в этой функции
-    if db is None: # Исправлено
+def delete_conversation(session_id: str) -> None:
+    """Удаляет все сообщения для указанной сессии."""
+    global db
+    if db is None:
         print("❌ Ошибка: База данных MongoDB не инициализирована. Удаление невозможно.")
         return
     try:
@@ -103,6 +124,12 @@ def delete_conversation(session_id):
         print(f"❌ Ошибка при удалении истории из MongoDB: {e}")
 
 def get_all_sessions_summary_mongo():
+    """Возвращает сводку всех сессий в виде списка словарей.
+
+    Каждый элемент списка содержит идентификатор сессии и сокращённое
+    название первого сообщения пользователя. Если база данных не
+    инициализирована, возвращает пустой список.
+    """
     global db
     if db is None:
         print("❌ Ошибка: База данных MongoDB не инициализирована. Получение сводки невозможно.")
@@ -117,7 +144,11 @@ def get_all_sessions_summary_mongo():
             }},
             {"$addFields": {
                 "first_user_message_content": {
-                    "$cond": [{"$eq": ["$first_user_message_role", "user"]}, "$first_user_message_content", "$$REMOVE"]
+                    "$cond": [
+                        {"$eq": ["$first_user_message_role", "user"]},
+                        "$first_user_message_content",
+                        "$$REMOVE"
+                    ]
                 }
             }},
             {"$match": {"first_user_message_content": {"$exists": True}}},
@@ -125,17 +156,18 @@ def get_all_sessions_summary_mongo():
                 "id": "$_id",
                 "title": {"$cond": [
                     {"$ne": ["$first_user_message_content", None]},
-                    {"$concat": [{"$substrCP": ["$first_user_message_content", 0, 50]}, "..."]},
+                    {"$concat": [
+                        {"$substrCP": ["$first_user_message_content", 0, 50]},
+                        "..."
+                    ]},
                     "Новый чат"
                 ]},
                 "_id": 0
             }},
             {"$sort": {"id": 1}}
         ]
-        
         sessions_summary = list(db.conversations.aggregate(pipeline))
         return sessions_summary
     except Exception as e:
         print(f"❌ Ошибка при получении сводки сессий из MongoDB: {e}")
         return []
-
