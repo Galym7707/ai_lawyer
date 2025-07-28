@@ -97,6 +97,18 @@
 
                     </div> <div class="chat-input-area">
                         <input type="text" id="chat-input" placeholder="Задайте ваш вопрос или продолжите диалог..." class="chat-input">
+                        <div class="chat-input-area">
+                          <!-- Скрытый input для выбора файла -->
+                          <input type="file" id="chat-file-upload"
+                                 accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                                 style="display:none;">
+                          <!-- Кнопка скрепки для выбора файла -->
+                          <button id="attach-file-button" type="button" class="attach-button">
+                            <i class="fas fa-paperclip"></i>
+                          </button>
+                          <input type="text" id="chat-input" placeholder="Задайте ваш вопрос или продолжите диалог..." class="chat-input">
+                          <button class="send-button" id="send-button"><i class="fas fa-paper-plane"></i></button>
+                        </div>
                         <button class="send-button" id="send-button"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div> <section id="contact" style="margin-top: 2rem;">
