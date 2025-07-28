@@ -229,20 +229,26 @@ document.addEventListener('DOMContentLoaded', () => {
   async function sendText(text) {
     showChatContainer();
     if (!text.trim() && !uploadedFile) return;
+  
+    // Показываем соответствующий спиннер
     if (uploadedFile) {
-      fileSpinner.style.display = 'block';
-      spinner.style.display = 'none';
+      if (fileSpinner) fileSpinner.style.display = 'block';
+      if (spinner) spinner.style.display = 'none';
     } else {
-      spinner.style.display = 'block';
-      fileSpinner.style.display = 'none';
+      if (spinner) spinner.style.display = 'block';
+      if (fileSpinner) fileSpinner.style.display = 'none';
     }
+  
+    // Отображаем сообщение пользователя
     const messageText = uploadedFile ? fileQuestionInput.value || text : text;
     addMessage(messageText, 'user-message');
     userQuestionTextarea.value = '';
     chatInput.value = '';
+  
     try {
       let res;
       if (uploadedFile) {
+        // отправка файла
         const formData = new FormData();
         formData.append('file', uploadedFile);
         formData.append('question', messageText);
@@ -252,20 +258,31 @@ document.addEventListener('DOMContentLoaded', () => {
           body: formData
         });
       } else {
+        // отправка текста
         res = await apiFetch('/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: text, session_id: currentSessionId })
         });
       }
+  
+      // Создаём «заглушку» для ответа ИИ
+      const aiMessageElement = document.createElement('div');
+      aiMessageElement.classList.add('chat-bubble', 'ai-response');
+      aiMessageElement.textContent = uploadedFile
+        ? 'ИИ-юрист анализирует ваш документ…'
+        : 'ИИ-юрист анализирует ваш запрос…';
+      chatMessagesDisplay.appendChild(aiMessageElement);
+      chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
+  
+      // Читаем поток ответа и обновляем элемент по мере получения данных
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let aiFullResponse = '';
-      spinner.style.display = 'none';
-      fileSpinner.style.display = 'none';
-      const aiMessageElement = document.createElement('div');
-      aiMessageElement.classList.add('chat-bubble', 'ai-response');
-      chatMessagesDisplay.appendChild(aiMessageElement);
+      // Скрываем спиннеры
+      if (spinner) spinner.style.display = 'none';
+      if (fileSpinner) fileSpinner.style.display = 'none';
+  
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -274,22 +291,30 @@ document.addEventListener('DOMContentLoaded', () => {
         aiMessageElement.innerHTML = aiFullResponse;
         chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
       }
+  
+      // Если сервер прислал сообщение об ошибке, заменяем содержимое
       if (aiFullResponse.includes("Ошибка:")) {
         aiMessageElement.innerHTML = `<p class="error-message">${aiFullResponse}</p>`;
       }
+  
       await loadChatSessions();
       highlightSession(currentSessionId);
+  
     } catch (e) {
-      spinner.style.display = 'none';
-      fileSpinner.style.display = 'none';
+      // Скрываем спиннеры в случае ошибки
+      if (spinner) spinner.style.display = 'none';
+      if (fileSpinner) fileSpinner.style.display = 'none';
       console.error(e);
       addMessage(
         `<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу.</p>`,
         'ai-response'
       );
     }
+  
+    // Сбрасываем файл после отправки
     clearFile();
   }
+
 
   /* ----------  EVENTS ---------- */
   // Отправка начального вопроса из текстового поля на главном экране
