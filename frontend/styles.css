@@ -8,7 +8,7 @@
     --text-primary: #e0e0e0;
     --text-secondary: #b0b0b0;
     --accent-primary: #00bcd4; /* Голубой */
-    --accent-secondary: #00e676; /* Зеленый */
+    --accent-secondary: #00e676; /* Зелёный */
     --border-color: #333;
     --sidebar-width: 280px;
 
@@ -379,7 +379,7 @@ button.primary-btn:disabled, button.secondary-btn:disabled {
     cursor: not-allowed;
 }
 
-/* About and Help Sections */
+/* About, Help, Contact Sections */
 #about-section h2, #help-section h2, #contact h2 {
     color: var(--accent-primary);
     font-size: 1.5rem;
@@ -471,10 +471,6 @@ button.primary-btn:disabled, button.secondary-btn:disabled {
     white-space: pre-wrap; /* Preserves whitespace and wraps text */
 }
 
-.user-message {
-    background-color: #e6f7ff;
-}
-
 .chat-bubble.user-message {
     background-color: var(--chat-bubble-user);
     color: var(--text-primary);
@@ -493,7 +489,7 @@ button.primary-btn:disabled, button.secondary-btn:disabled {
     margin: 0;
 }
 
-/* Markdown specific styles */
+/* Markdown specific styles for AI responses */
 .ai-response p { margin-bottom: 0.5em; }
 .ai-response ul, .ai-response ol { margin-left: 1.5em; margin-bottom: 0.5em; }
 .ai-response li { margin-bottom: 0.2em; }
@@ -553,7 +549,6 @@ button.primary-btn:disabled, button.secondary-btn:disabled {
     border-top: 1px solid var(--border-color);
     margin: 1em 0;
 }
-
 
 /* Chat Input Area */
 .chat-input-area {
@@ -649,40 +644,36 @@ footer {
 }
 
 /* --- MEDIA QUERIES --- */
+
+/* Планшеты и небольшие экраны */
 @media (max-width: 768px) {
     .app-container {
         flex-direction: column;
     }
-
     .sidebar {
         width: 100%;
         border-right: none;
         border-bottom: 1px solid var(--border-color);
         padding-bottom: 1rem;
     }
-
     #chat-list {
-        max-height: 150px; /* Shorter history on mobile */
+        max-height: 150px;
     }
-
     .main-content-area {
         padding: 1rem;
     }
-
     header {
         flex-direction: column;
         gap: 0.5rem;
         padding: 0.8rem 1rem;
     }
-
     header nav a {
         margin: 0 0.5rem;
     }
-
     .chat-bubble {
         font-size: 0.95rem;
         padding: 10px 15px;
-        max-width: 90%; /* Allow bubbles to be wider on small screens */
+        max-width: 90%;
     }
     textarea#userQuestion {
         min-height: 80px;
@@ -723,5 +714,62 @@ footer {
         font-size: 0.95rem;
         padding: 0.8rem;
         min-height: 60px;
+    }
+}
+
+/* Очень узкие экраны (телефоны) */
+@media (max-width: 480px) {
+    /* Сжимаем боковую панель и убираем большие отступы */
+    .sidebar {
+        padding: 1rem 0.5rem;
+    }
+    #chat-list {
+        max-height: 120px;
+    }
+    /* Размещаем элементы ввода сообщения вертикально для удобства */
+    .chat-input-area {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+        padding: 0.8rem 0;
+    }
+    .attach-button {
+        align-self: flex-start;
+        padding: 0.6rem;
+    }
+    .chat-input {
+        width: 100%;
+        font-size: 0.95rem;
+        padding: 0.6rem;
+    }
+    .send-button {
+        width: 100%;
+        padding: 0.8rem;
+        font-size: 0.95rem;
+    }
+    /* Уменьшаем размеры спиннеров и пузырей */
+    #fileSpinner, #spinner {
+        font-size: 0.85rem;
+        padding: 14px 4px;
+        max-width: 95vw;
+    }
+    .loader {
+        width: 24px;
+        height: 24px;
+    }
+    .chat-bubble {
+        font-size: 0.9rem;
+        padding: 8px 14px;
+        max-width: 85%;
+    }
+    .upload-card h2, .input-card .greeting-message {
+        font-size: 1.1rem;
+    }
+    #about-section h2, #help-section h2, #contact h2 {
+        font-size: 1.3rem;
+    }
+    button.primary-btn {
+        font-size: 1rem;
+        padding: 0.7rem 1.2rem;
     }
 }
