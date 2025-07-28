@@ -128,6 +128,9 @@ main {
 }
 
 #chat-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 0.7rem 0.5rem;
     cursor: pointer;
     color: var(--text-secondary);
@@ -143,6 +146,25 @@ main {
 #chat-list li:hover {
     background-color: var(--accent-primary);
     color: #fff;
+}
+
+/* Стилизуем кнопку удаления */
+.delete-chat-btn {
+    background: none;
+    border: none;
+    color: #ff6b6b;    /* красная иконка для заметности */
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0.2rem;
+    margin-left: 0.5rem;
+}
+
+.delete-chat-btn:hover {
+    color: #ff3b3b;     /* более яркая при наведении */
+}
+
+.delete-chat-btn i {
+    pointer-events: none; /* кликаем по кнопке, а не по иконке */
 }
 
 .new-conversation-btn {
