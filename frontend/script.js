@@ -62,7 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const aboutLinkNav         = document.getElementById('about-link-nav');
 
   /* ----------  STATE ---------- */
-  let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
+  let currentSessionId = localStorage.getItem('currentSessionId');
+  if (!currentSessionId) {
+    currentSessionId = crypto.randomUUID();
+    localStorage.setItem('currentSessionId', currentSessionId);
+  }
   let uploadedFile = null;
 
   /* ----------  FILE UPLOAD IN CHAT ---------- */
