@@ -343,6 +343,14 @@ def generate_response_stream(model, messages, session_id: str):
         yield error_message
 
 
+def validate_session_id(session_id: str) -> bool:
+    """
+    Проверяет, что session_id содержит только латинские буквы, цифры,
+    подчеркивания и дефисы. Возвращает True для корректных строк.
+    """
+    return bool(re.match(r'^[a-zA-Z0-9_-]+$', session_id))
+
+
 def build_law_index() -> None:
     """Строит индекс для поиска по базе законов."""
     global LAW_INDEX
