@@ -1,4 +1,3 @@
-
 /* =========   GLOBAL API HELPERS   ========= */
 const API_BASE = '/api'; // Use Vercel proxy
 
@@ -45,42 +44,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const spinner              = document.getElementById('spinner');
   const fileSpinner          = document.getElementById('fileSpinner');
   const chatList             = document.getElementById('chat-list');
+
+  // Элементы формы для загрузки файла в отдельной секции
   const fileUploadInput      = document.getElementById('file-upload');
   const fileNameDisplay      = document.getElementById('file-name');
   const clearFileBtn         = document.getElementById('clearFileBtn');
   const fileQuestionInput    = document.getElementById('file-question');
-  const homeLink             = document.getElementById('home-link');
-  const aboutLinkNav         = document.getElementById('about-link-nav');
   const fileInfo             = document.getElementById('file-info');
   const uploadButton         = document.getElementById('upload-button');
-  const chatFileUploadInput = document.getElementById('chat-file-upload');
-  const attachFileButton = document.getElementById('attach-file-button');
 
-  
+  // Новые элементы для загрузки файла прямо из чата
+  const chatFileUploadInput  = document.getElementById('chat-file-upload');
+  const attachFileButton     = document.getElementById('attach-file-button');
+
+  // Навигация
+  const homeLink             = document.getElementById('home-link');
+  const aboutLinkNav         = document.getElementById('about-link-nav');
+
   /* ----------  STATE ---------- */
   let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
   let uploadedFile = null;
 
+  /* ----------  FILE UPLOAD IN CHAT ---------- */
   // кнопка‑скрепка открывает диалог выбора файла
   attachFileButton.onclick = () => {
     chatFileUploadInput.click();
   };
-  
-  // когда файл выбран, сохраняем его в uploadedFile и отправляем вместе с текстом
+
+  // когда файл выбран, сохраняем его и сразу отправляем вместе с текстом
   chatFileUploadInput.onchange = (event) => {
     const file = event.target.files[0];
     if (file) {
       uploadedFile = file;
-      // сразу отправляем: текст из поля чата будет использован как вопрос к документу
       sendText(chatInput.value);
     }
   };
-  
-  if (clearFileBtn) {
-    clearFileBtn.onclick = clearFile;
-  }
-
-  uploadButton.disabled = !uploadedFile;
 
   /* ----------  HELPERS ---------- */
   function showInitialSections() {
@@ -131,14 +129,14 @@ document.addEventListener('DOMContentLoaded', () => {
         data.sessions.forEach(session => {
           const li = document.createElement('li');
           li.dataset.sessionId = session.id;
-  
-          // название чата
+
+          // название чата в отдельном span, чтобы по нему можно было кликнуть
           const spanTitle = document.createElement('span');
           spanTitle.textContent = session.title;
           spanTitle.onclick = () => loadConversation(session.id);
           li.appendChild(spanTitle);
-  
-          // кнопка удаления
+
+          // кнопка удаления с иконкой корзины
           const delBtn = document.createElement('button');
           delBtn.classList.add('delete-chat-btn');
           delBtn.innerHTML = '<i class="fas fa-trash"></i>';
@@ -152,13 +150,14 @@ document.addEventListener('DOMContentLoaded', () => {
                   await startNewChat();
                 }
                 await loadChatSessions();
+                highlightSession(currentSessionId);
               } catch (err) {
                 alert(`Не удалось удалить чат: ${err.message}`);
               }
             }
           };
           li.appendChild(delBtn);
-  
+
           chatList.appendChild(li);
         });
       } else {
@@ -170,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `<p class="error-message">Ошибка загрузки истории: ${e.message}. Проверьте подключение к серверу.</p>`;
     }
   }
-
 
   async function loadConversation(sessionId) {
     currentSessionId = sessionId;
@@ -188,7 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       console.error('Ошибка загрузки истории беседы:', e);
-      addMessage(`<p class="error-message">Ошибка загрузки истории беседы: ${e.message}. Проверьте подключение к серверу.</p>`, 'ai-response');
+      addMessage(
+        `<p class="error-message">Ошибка загрузки истории беседы: ${e.message}. Проверьте подключение к серверу.</p>`,
+        'ai-response'
+      );
     }
   }
 
@@ -219,6 +220,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fileQuestionInput.value = '';
     fileInfo.style.display = 'none';
     uploadButton.disabled = true;
+    // очищаем также скрытый input из чата, чтобы можно было выбрать тот же файл повторно
+    if (chatFileUploadInput) {
+      chatFileUploadInput.value = '';
+    }
   }
 
   async function sendText(text) {
@@ -278,17 +283,47 @@ document.addEventListener('DOMContentLoaded', () => {
       spinner.style.display = 'none';
       fileSpinner.style.display = 'none';
       console.error(e);
-      addMessage(`<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу.</p>`, 'ai-response');
+      addMessage(
+        `<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу.</p>`,
+        'ai-response'
+      );
     }
     clearFile();
   }
-  
+
   /* ----------  EVENTS ---------- */
-  submitBtn.onclick = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
-  sendButton.onclick = e => { e.preventDefault(); sendText(chatInput.value); };
+  // Отправка начального вопроса из текстового поля на главном экране
+  submitBtn.onclick = e => {
+    e.preventDefault();
+    sendText(userQuestionTextarea.value);
+  };
+
+  // Отправка текста из чата
+  sendButton.onclick = e => {
+    e.preventDefault();
+    sendText(chatInput.value);
+  };
+
+  // Новый чат
   newChatBtn.onclick = startNewChat;
-  chatInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(chatInput.value); } };
-  userQuestionTextarea.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(userQuestionTextarea.value); } };
+
+  // Отправка по Enter в chatInput
+  chatInput.onkeydown = e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendText(chatInput.value);
+    }
+  };
+
+  // Отправка по Enter в начальном textarea
+  userQuestionTextarea.onkeydown = e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendText(userQuestionTextarea.value);
+    }
+  };
+
+  // Загрузка файла в отдельной секции
   fileUploadInput.onchange = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -300,11 +335,19 @@ document.addEventListener('DOMContentLoaded', () => {
       clearFile();
     }
   };
-  clearFileBtn.onclick = clearFile;
+
+  // Очистка файла в отдельной секции
+  if (clearFileBtn) {
+    clearFileBtn.onclick = clearFile;
+  }
+
+  // Переход домой
   homeLink.onclick = e => {
     e.preventDefault();
     showInitialSections();
   };
+
+  // Ссылка "О проекте"
   aboutLinkNav.onclick = e => {
     e.preventDefault();
     document.getElementById('about').scrollIntoView({ behavior: 'smooth' });
@@ -315,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
   showInitialSections();
   loadChatSessions().then(() => {
     if (
-      currentSessionId !== 'default' && 
+      currentSessionId !== 'default' &&
       document.querySelector(`[data-session-id="${currentSessionId}"]`)
     ) {
       loadConversation(currentSessionId);
