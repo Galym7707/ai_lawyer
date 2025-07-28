@@ -460,6 +460,10 @@ def ask_route():
         if not user_question:
             response = jsonify({"error": "Пустой вопрос"})
             return add_cors_headers(response), 400
+
+        # Сохраняем вопрос пользователя
+        save_message(session_id, "user", user_question)
+
         history = load_conversation(session_id)
         full_history = history + [{"role": "user", "parts": [user_question]}]
         relevant_laws = find_relevant_laws(user_question)
@@ -658,10 +662,9 @@ def upload_document_route():
             response = jsonify({"error": "Неподдерживаемый или поврежденный тип файла."})
             return add_cors_headers(response), 400
         file_message_content = f"SECTION: Загруженный документ\nПользователь загрузил документ ({user_file.filename}). Содержимое документа:\n{file_content_text[:2000]}...\n"
-        history = load_conversation(session_id)
-        full_history = history + [{"role": "user", "parts": [file_message_content]}]
+        save_message(session_id, "user", file_message_content)
         if user_question:
-            full_history.append({"role": "user", "parts": [user_question]})
+            save_message(session_id, "user", user_question)
         combined_text_for_search = file_content_text + " " + user_question
         relevant_laws = find_relevant_laws(combined_text_for_search)
         law_context = ""
