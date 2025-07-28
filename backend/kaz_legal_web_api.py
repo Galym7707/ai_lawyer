@@ -315,39 +315,33 @@ def sanitize_html_output(text: str) -> str:
 
 
 def generate_response_stream(model, messages, session_id: str):
-    """Потоковая генерация ответа от AI с последующим сохранением в базу."""
-    ai_response_content = ""
-    accumulated_text = ""
+    """Генерирует ответ модели полностью, потом форматирует и отдаёт."""
     try:
+        raw_text = ""
         for chunk in model.generate_content(messages, stream=True):
             if chunk.text:
-                accumulated_text += chunk.text
-                if re.search(r'\n\n', accumulated_text) or len(accumulated_text) > 150:
-                    cleaned_chunk = sanitize_html_output(accumulated_text)
-                    if cleaned_chunk.strip() and not re.search(r'<[^>]+>', cleaned_chunk):
-                        cleaned_chunk = f' {cleaned_chunk} '
-                    ai_response_content += cleaned_chunk
-                    yield cleaned_chunk
-                    accumulated_text = ""
-        if accumulated_text:
-            cleaned_chunk = sanitize_html_output(accumulated_text)
-            if cleaned_chunk.strip() and not re.search(r'<[^>]+>', cleaned_chunk):
-                cleaned_chunk = f' {cleaned_chunk} '
-            ai_response_content += cleaned_chunk
-            yield cleaned_chunk
-        # Сохраняем полный ответ в базу данных после завершения потока
-        save_message(session_id, "model", ai_response_content)
-        logging.info(f"✅ Ответ AI сохранен для сессии {session_id}")
+                raw_text += chunk.text
+
+        # После завершения генерации приводим весь ответ к HTML
+        sanitized = sanitize_html_output(raw_text)
+        save_message(session_id, "model", sanitized)
+        yield sanitized
+        logging.info(f"✅ Ответ AI сохранён для сессии {session_id}")
     except genai.types.BlockedPromptException as e:
         logging.error(f"❌ Запрос заблокирован: {e}")
-        error_message = " Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента. "
+        error_message = (
+            "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента."
+        )
         save_message(session_id, "model", error_message)
         yield error_message
     except Exception as e:
         logging.error(f"❌ Ошибка генерации ответа: {e}")
-        error_message = " Произошла ошибка при генерации ответа. Попробуйте еще раз. "
+        error_message = (
+            "Произошла ошибка при генерации ответа. Попробуйте ещё раз."
+        )
         save_message(session_id, "model", error_message)
         yield error_message
+
 
 def build_law_index() -> None:
     """Строит индекс для поиска по базе законов."""
