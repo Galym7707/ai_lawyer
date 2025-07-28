@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showChatContainer();
     if (!text.trim() && !uploadedFile) return;
   
-    // Показываем соответствующий спиннер
+    // Показываем спиннер
     if (uploadedFile) {
       if (fileSpinner) fileSpinner.style.display = 'block';
       if (spinner) spinner.style.display = 'none';
@@ -243,16 +243,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (fileSpinner) fileSpinner.style.display = 'none';
     }
   
-    // Отображаем сообщение пользователя
+    // Сообщение пользователя
     const messageText = uploadedFile ? fileQuestionInput.value || text : text;
     addMessage(messageText, 'user-message');
     userQuestionTextarea.value = '';
     chatInput.value = '';
   
+    // СОЗДАЁМ ПЛЕЙСХОЛДЕР сразу, до запроса
+    const aiMessageElement = document.createElement('div');
+    aiMessageElement.classList.add('chat-bubble','ai-response');
+    aiMessageElement.textContent = uploadedFile
+      ? 'ИИ-юрист анализирует ваш документ…'
+      : 'ИИ-юрист анализирует ваш запрос…';
+    chatMessagesDisplay.appendChild(aiMessageElement);
+    chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
+  
     try {
+      // Теперь отправляем запрос
       let res;
       if (uploadedFile) {
-        // отправка файла
         const formData = new FormData();
         formData.append('file', uploadedFile);
         formData.append('question', messageText);
@@ -262,7 +271,6 @@ document.addEventListener('DOMContentLoaded', () => {
           body: formData
         });
       } else {
-        // отправка текста
         res = await apiFetch('/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -270,23 +278,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
   
-      // Создаём «заглушку» для ответа ИИ
-      const aiMessageElement = document.createElement('div');
-      aiMessageElement.classList.add('chat-bubble', 'ai-response');
-      aiMessageElement.textContent = uploadedFile
-        ? 'ИИ-юрист анализирует ваш документ…'
-        : 'ИИ-юрист анализирует ваш запрос…';
-      chatMessagesDisplay.appendChild(aiMessageElement);
-      chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
-  
-      // Читаем поток ответа и обновляем элемент по мере получения данных
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let aiFullResponse = '';
-      // Скрываем спиннеры
+      // Скрываем спиннер
       if (spinner) spinner.style.display = 'none';
       if (fileSpinner) fileSpinner.style.display = 'none';
   
+      // Читаем ответ и постепенно заменяем текст плейсхолдера
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let aiFullResponse = '';
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -296,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
       }
   
-      // Если сервер прислал сообщение об ошибке, заменяем содержимое
       if (aiFullResponse.includes("Ошибка:")) {
         aiMessageElement.innerHTML = `<p class="error-message">${aiFullResponse}</p>`;
       }
@@ -305,19 +303,17 @@ document.addEventListener('DOMContentLoaded', () => {
       highlightSession(currentSessionId);
   
     } catch (e) {
-      // Скрываем спиннеры в случае ошибки
+      // Скрываем спиннер в случае ошибки
       if (spinner) spinner.style.display = 'none';
       if (fileSpinner) fileSpinner.style.display = 'none';
       console.error(e);
-      addMessage(
-        `<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу.</p>`,
-        'ai-response'
-      );
+      aiMessageElement.innerHTML =
+        `<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу.</p>`;
     }
   
-    // Сбрасываем файл после отправки
     clearFile();
   }
+
 
 
   /* ----------  EVENTS ---------- */
