@@ -174,7 +174,14 @@ def clean_and_format_html(text: str) -> str:
     """Преобразует сырой текст с маркерами SECTION и LIST_ITEM в структурированный HTML."""
     # Убираем лишние пустые строки
     text = re.sub(r'\s*\n\s*\n\s*', '\n\n', text).strip()
+    
+    # убираем лишние пустые строки
+    text = re.sub(r'\s*\n\s*\n\s*', '\n\n', text).strip()
 
+    # заменяем **жирный** и *курсив* на HTML, чтобы избавить вывод от звёздочек
+    text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+    text = re.sub(r'\*(.*?)\*', r'<em>\1</em>', text)
+  
     # Орфография (если есть jamspell)
     if jsp is not None:
         try:
