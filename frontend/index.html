@@ -5,116 +5,168 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kaz Legal Bot — AI Юрист Казахстана</title>
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Law_scale_icon.svg/1024px-Law_scale_icon.svg.png" />
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon"
+          href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Law_scale_icon.svg/1024px-Law_scale_icon.svg.png" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-    <header>
-        <h1>Kaz Legal Bot</h1>
-        <nav>
-            <a href="#" id="home-link">Главная</a>
-            <a href="#about-link" id="about-link-nav">О проекте</a>
-            <a href="#help-link">Юридическая помощь</a>
-            <a href="#contact-link">Обратная связь</a>
-        </nav>
-    </header>
+<header>
+    <h1>Kaz Legal Bot</h1>
+    <nav>
+        <a href="#" id="home-link">Главная</a>
+        <a href="#about-link" id="about-link-nav">О проекте</a>
+        <a href="#help-link">Юридическая помощь</a>
+        <a href="#contact-link">Обратная связь</a>
+    </nav>
+</header>
 
-    <main>
-        <div class="app-container">
-            <aside class="sidebar">
-                <h2>История чатов</h2>
-                <ul id="chat-list">
-                    <p>Загрузка истории...</p>
-                </ul>
-                <button id="start-new-conversation-sidebar" class="btn new-conversation-btn">
-                    <i class="fas fa-plus"></i> Новый чат
-                </button>
-            </aside>
+<main>
+    <div class="app-container">
+        <aside class="sidebar">
+            <h2>История чатов</h2>
+            <ul id="chat-list">
+                <p>Загрузка истории...</p>
+            </ul>
+            <button id="start-new-conversation-sidebar"
+                    class="btn new-conversation-btn">
+                <i class="fas fa-plus"></i> Новый чат
+            </button>
+        </aside>
 
-            <div class="main-content-area">
-                <div id="initial-sections">
-                    <section id="about-section">
-                        <h2 id="about-link">🤖 О проекте</h2>
-                        <p>Kaz Legal Bot — это инновационный AI-помощник, разработанный для предоставления быстрой и точной юридической информации, основанной исключительно на законодательстве Республики Казахстан. Наша цель — сделать правовую помощь доступной и понятной для каждого.</p>
-                        <p>Мы используем передовые модели искусственного интеллекта для анализа вашего запроса и предоставления релевантных ответов, а также можем анализировать загруженные вами юридические документы, такие как договоры, исковые заявления, нормативные акты и многое другое. </p>
-                    </section>
-                    
-                    <section id="hero-section" class="input-card">
-                        <p class="greeting-message">Я ваш ИИ-юрист. Чем могу помочь?</p>
-                        <form id="chat-form">
-                            <textarea id="userQuestion" placeholder="Задайте ваш юридический вопрос здесь..."></textarea>
-                            <button type="submit" id="send-initial-message" class="btn primary-btn"><i class="fas fa-paper-plane"></i> Отправить</button>
-                        </form>
-                    </section>
+        <div class="main-content-area">
+            <!-- Блок начальных разделов (о проекте, форма вопроса, загрузка файла) -->
+            <div id="initial-sections">
+                <!-- О проекте -->
+                <section id="about-section">
+                    <h2 id="about-link">🤖 О проекте</h2>
+                    <p>Kaz Legal Bot — это инновационный AI-помощник, разработанный
+                       для предоставления быстрой и точной юридической информации,
+                       основанной исключительно на законодательстве Республики Казахстан.
+                       Наша цель — сделать правовую помощь доступной и понятной для
+                       каждого.</p>
+                    <p>Мы используем передовые модели искусственного интеллекта для
+                       анализа вашего запроса и предоставления релевантных ответов,
+                       а также можем анализировать загруженные вами юридические
+                       документы, такие как договоры, исковые заявления, нормативные
+                       акты и многое другое.</p>
+                </section>
 
-                    <section id="upload-section" class="upload-card">
-                        <h2>Загрузите документ для анализа</h2>
-                        <div id="drop-area" class="drop-area">
-                            <input type="file" id="file-upload" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
-                            <label for="file-upload" class="drop-label">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                                <p>Перетащите файл сюда или нажмите, чтобы выбрать</p>
-                                <p class="file-types">Поддерживаемые форматы: PDF, DOCX, TXT, PNG, JPG</p>
-                            </label>
-                            <div id="file-list" class="file-list"></div>
-                        </div>
-                    
-                        <!-- Отображение имени файла и кнопки очистки -->
-                        <div id="file-info" style="display:none;">
-                            <span id="file-name">Файл не выбран</span>
-                            <button id="clearFileBtn" type="button">Очистить</button>
-                        </div>
-                    
-                        <textarea id="file-question" class="file-question-input" placeholder="Задайте вопрос по документу (необязательно)"></textarea>
-                        <div class="upload-footer">
-                            <button id="upload-button" class="btn primary-btn" disabled><i class="fas fa-upload"></i> Загрузить</button>
-                        </div>
-                    </section>
+                <!-- Приветствие и форма первого вопроса -->
+                <section id="hero-section" class="input-card">
+                    <p class="greeting-message">Я ваш ИИ-юрист. Чем могу помочь?</p>
+                    <form id="chat-form">
+                        <textarea id="userQuestion"
+                                  placeholder="Задайте ваш юридический вопрос здесь..."></textarea>
+                        <button type="submit"
+                                id="send-initial-message"
+                                class="btn primary-btn">
+                            <i class="fas fa-paper-plane"></i> Отправить
+                        </button>
+                    </form>
+                </section>
 
+                <!-- Загрузка документа -->
+                <section id="upload-section" class="upload-card">
+                    <h2>Загрузите документ для анализа</h2>
+                    <div id="drop-area" class="drop-area">
+                        <input type="file" id="file-upload" multiple
+                               accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
+                        <label for="file-upload" class="drop-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Перетащите файл сюда или нажмите, чтобы выбрать</p>
+                            <p class="file-types">Поддерживаемые форматы:
+                                PDF, DOCX, TXT, PNG, JPG</p>
+                        </label>
+                        <div id="file-list" class="file-list"></div>
+                    </div>
 
-                    <section id="help-section">
-                        <h2 id="help-link">✨ Как получить юридическую помощь?</h2>
-                        <ul>
-                            <li><b>Задайте вопрос:</b> Просто введите ваш вопрос в текстовое поле и нажмите Enter или кнопку отправки.</li>
-                            <li><b>Загрузите документ:</b> Перетащите или выберите ваш документ (PDF, DOCX, TXT, JPG, PNG) в специальную область. Вы также можете добавить вопрос по содержимому документа.</li>
-                            <li><b>История чатов:</b> Все ваши предыдущие диалоги сохраняются в боковой панели для удобного доступа.</li>
-                            <li><b>Уточняющие вопросы:</b> Если ответ ИИ будет недостаточно полным, он задаст уточняющие вопросы, чтобы максимально точно понять вашу ситуацию и предоставить наилучший ответ.</li>
-                        </ul>
-                    </section>
+                    <!-- Отображение имени файла и кнопки очистки -->
+                    <div id="file-info" style="display:none;">
+                        <span id="file-name">Файл не выбран</span>
+                        <button id="clearFileBtn" type="button">Очистить</button>
+                    </div>
+
+                    <textarea id="file-question"
+                              class="file-question-input"
+                              placeholder="Задайте вопрос по документу (необязательно)"></textarea>
+                    <div class="upload-footer">
+                        <button id="upload-button"
+                                class="btn primary-btn" disabled>
+                            <i class="fas fa-upload"></i> Загрузить
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Как получить помощь -->
+                <section id="help-section">
+                    <h2 id="help-link">✨ Как получить юридическую помощь?</h2>
+                    <ul>
+                        <li><b>Задайте вопрос:</b> Просто введите ваш вопрос в
+                            текстовое поле и нажмите Enter или кнопку отправки.</li>
+                        <li><b>Загрузите документ:</b> Перетащите или выберите
+                            ваш документ (PDF, DOCX, TXT, JPG, PNG) в специальную
+                            область. Вы также можете добавить вопрос по содержимому
+                            документа.</li>
+                        <li><b>История чатов:</b> Все ваши предыдущие диалоги
+                            сохраняются в боковой панели для удобного доступа.</li>
+                        <li><b>Уточняющие вопросы:</b> Если ответ ИИ будет
+                            недостаточно полным, он задаст уточняющие вопросы,
+                            чтобы максимально точно понять вашу ситуацию и
+                            предоставить наилучший ответ.</li>
+                    </ul>
+                </section>
+            </div>
+
+            <!-- Контейнер активного чата (появляется после отправки первого вопроса) -->
+            <div id="current-chat-container" style="display: none;">
+                <div id="chat-messages-display">
+                    <!-- Спиннеры для ожидания ответа -->
+                    <div id="spinner" style="display: none;">
+                        <p>ИИ-юрист анализирует ваш запрос...</p>
+                        <div class="loader"></div>
+                    </div>
+                    <div id="fileSpinner" style="display: none;">
+                        <p>ИИ-юрист анализирует ваш документ...</p>
+                        <div class="loader"></div>
+                    </div>
                 </div>
-
-                <div id="current-chat-container" style="display: none;">
-                  <div id="chat-messages-display">
-                    <!-- блок сообщений и спиннеры -->
-                  </div>
-                  <div class="chat-input-area">
-                    <!-- скрытый input для выбора файла -->
+                <!-- Блок ввода: скрепка для файла, поле ввода текста и кнопка отправки -->
+                <div class="chat-input-area">
                     <input type="file" id="chat-file-upload"
                            accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
                            style="display:none;">
-                    <!-- кнопка‑скрепка для выбора файла -->
-                    <button id="attach-file-button" type="button" class="attach-button">
-                      <i class="fas fa-paperclip"></i>
+                    <button id="attach-file-button"
+                            type="button"
+                            class="attach-button">
+                        <i class="fas fa-paperclip"></i>
                     </button>
-                    <!-- поле для ввода текста сообщения -->
                     <input type="text" id="chat-input"
                            placeholder="Задайте ваш вопрос или продолжите диалог..."
                            class="chat-input">
-                    <!-- кнопка отправки -->
                     <button class="send-button" id="send-button">
-                      <i class="fas fa-paper-plane"></i>
+                        <i class="fas fa-paper-plane"></i>
                     </button>
-                  </div>
                 </div>
-    </main>
+            </div>
 
-    <footer>
-        <div class="footer-content">
-            <p>© 2025 Kaz Legal Bot</p>
-        </div>
-    </footer>
+            <!-- Секция обратной связи -->
+            <section id="contact" style="margin-top: 2rem;">
+                <h2 id="contact-link">📬 Обратная связь</h2>
+                <p>Проект с открытым исходным кодом. Для связи:
+                    <a href="mailto:galymtashtek@gmail.com">galymtashtek@gmail.com</a></p>
+            </section>
+        </div> <!-- /.main-content-area -->
+    </div> <!-- /.app-container -->
+</main>
 
-    <script src="script.js"></script>
+<footer>
+    <div class="footer-content">
+        <p>© 2025 Kaz Legal Bot</p>
+    </div>
+</footer>
+
+<script src="script.js"></script>
 </body>
 </html>
