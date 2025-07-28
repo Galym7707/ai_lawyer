@@ -170,6 +170,23 @@ def load_law_db(path: str = "laws/kazakh_laws_db.json") -> None:
 # Загрузить базу законов при старте
 load_law_db()
 
+@app.route("/delete-session", methods=["DELETE"])
+@app.route("/api/delete-session", methods=["DELETE"])
+def delete_session_route():
+    """Удаляет переписку с заданным session_id."""
+    session_id = request.args.get("session_id")
+    if not session_id or not validate_session_id(session_id):
+        response = jsonify({"error": "Недопустимый session_id"})
+        return add_cors_headers(response), 400
+
+    try:
+        delete_conversation(session_id)
+        # также можно удалить связанные файлы, если вы их сохраняете
+        return add_cors_headers(jsonify({"status": "ok"})), 200
+    except Exception as e:
+        logging.error(f"❌ Ошибка удаления сессии: {e}")
+        return add_cors_headers(jsonify({"error": "Ошибка удаления сессии"})), 500
+
 def clean_and_format_html(text: str) -> str:
     """Преобразует сырой текст с маркерами SECTION и LIST_ITEM в структурированный HTML."""
     # Убираем лишние пустые строки
