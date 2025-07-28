@@ -170,16 +170,12 @@ def load_law_db(path: str = "laws/kazakh_laws_db.json") -> None:
 # Загрузить базу законов при старте
 load_law_db()
 
-def validate_session_id(session_id: str) -> bool:
-    """Проверяет session_id на корректность (буквы, цифры, подчеркивания и дефисы)."""
-    return bool(re.match(r'^[a-zA-Z0-9_-]+$', session_id))
-
 def clean_and_format_html(text: str) -> str:
-    """Преобразует текст с маркерами SECTION и LIST_ITEM в структурированный HTML."""
+    """Преобразует сырой текст с маркерами SECTION и LIST_ITEM в структурированный HTML."""
     # Убираем лишние пустые строки
     text = re.sub(r'\s*\n\s*\n\s*', '\n\n', text).strip()
 
-    # Исправляем орфографию, если доступна модель JamSpell
+    # Орфография (если есть jamspell)
     if jsp is not None:
         try:
             text = jsp.FixFragment(text)
@@ -191,16 +187,17 @@ def clean_and_format_html(text: str) -> str:
     in_list = False
     last_section = ''
 
-    # Названия секций на русском
+    # Заголовки
     expected_sections = {
         'юридическая оценка': 'Юридическая оценка ситуации',
         'действие': 'Действие',
         'рекомендации': 'Рекомендации',
         'необходимая информация': 'Необходимая информация',
-        'экстренные контакты': 'Экстренные контакты'
+        'экстренные контакты': 'Экстренные контакты',
+        'релевантные законы': 'Релевантные законы',
     }
 
-    # Словари для переименования меток в определённых блоках
+    # Переименование меток в различных разделах
     recommendations_labels = {
         'напишите работодателю': 'Письменное требование',
         'обратитесь в территориальное': 'Обращение в инспекцию труда',
@@ -213,7 +210,6 @@ def clean_and_format_html(text: str) -> str:
         'по возможности соберите': 'Свидетельские показания',
         'рассмотрите возможность': 'Жалоба в органы образования',
     }
-
     info_labels = {
         'ваш трудовой договор': 'Трудовой договор',
         'точная сумма задолженности': 'Сумма задолженности',
@@ -232,9 +228,8 @@ def clean_and_format_html(text: str) -> str:
         if not line:
             continue
 
-        # Проверяем, является ли строка заголовком секции
+        # Заголовок раздела
         if line.lower().startswith('section:') or line.lower() in expected_sections:
-            # Если был открыт список, закрываем его
             if in_list:
                 formatted.append('</ul>')
                 in_list = False
@@ -244,32 +239,30 @@ def clean_and_format_html(text: str) -> str:
             formatted.append(f'<h3>{human_heading}</h3>')
             last_section = heading.lower()
 
-            # Дополнительные пояснения для некоторых секций
+            # Пояснительные абзацы
             if last_section == 'необходимая информация':
                 formatted.append(
-                    '<p>Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</p>'
+                    '<p>Для качественного предоставления услуги с моей стороны как юриста, '
+                    'мне потребуется следующая информация:</p>'
                 )
             elif last_section == 'экстренные контакты':
                 formatted.append('<p>В экстренных случаях обращайтесь:</p>')
-
             continue
 
-        # Проверяем, является ли строка элементом списка
+        # Элемент списка
         if (
             line.startswith('LIST_ITEM:')
             or line.startswith('-')
             or re.match(r'^\d+\.\s+', line)
         ):
-            # Начинаем список, если ещё не начат
             if not in_list:
                 formatted.append('<ul>')
                 in_list = True
 
-            # Очищаем от нумерации/маркеров
+            # Убираем нумерацию и маркеры
             line_clean = re.sub(r'^\d+\.\s+', '', line.lstrip('- ').strip())
             line_clean = line_clean.replace('LIST_ITEM:', '').strip()
 
-            # Если есть метка и двоеточие, переименовываем её и выделяем жирным
             if ':' in line_clean:
                 label, content = line_clean.split(':', 1)
                 label = label.strip()
@@ -280,25 +273,24 @@ def clean_and_format_html(text: str) -> str:
                 formatted.append(f'<li><strong>{label}:</strong> {content.strip()}</li>')
             else:
                 formatted.append(f'<li>{line_clean}</li>')
-
             continue
 
-        # Обычный текст – завершаем список, если он был открыт
+        # Обычный абзац
         if in_list:
             formatted.append('</ul>')
             in_list = False
 
-        # Если предыдущий раздел был «Юридическая оценка», добавляем подпись
+        # Подпись для юридической оценки
         if last_section == 'юридическая оценка':
             formatted.append(f'<p><strong>Юридическая оценка:</strong> {line}</p>')
         else:
             formatted.append(f'<p>{line}</p>')
 
-    # Закрываем незакрытый список
     if in_list:
         formatted.append('</ul>')
 
     return '\n'.join(formatted)
+
 
 def validate_html(text: str) -> bool:
     """Проверяет, является ли строка корректным HTML."""
