@@ -85,37 +85,29 @@
                 </div>
 
                 <div id="current-chat-container" style="display: none;">
-                    <div id="chat-messages-display">
-                        <div id="spinner" style="display: none;">
-                            <p>ИИ-юрист анализирует ваш запрос...</p>
-                            <div class="loader"></div>
-                        </div>
-                        <div id="fileSpinner" style="display: none;">
-                            <p>ИИ-юрист анализирует ваш документ...</p>
-                            <div class="loader"></div>
-                        </div>
-
-                    </div> <div class="chat-input-area">
-                        <input type="text" id="chat-input" placeholder="Задайте ваш вопрос или продолжите диалог..." class="chat-input">
-                        <div class="chat-input-area">
-                          <!-- Скрытый input для выбора файла -->
-                          <input type="file" id="chat-file-upload"
-                                 accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
-                                 style="display:none;">
-                          <!-- Кнопка скрепки для выбора файла -->
-                          <button id="attach-file-button" type="button" class="attach-button">
-                            <i class="fas fa-paperclip"></i>
-                          </button>
-                          <input type="text" id="chat-input" placeholder="Задайте ваш вопрос или продолжите диалог..." class="chat-input">
-                          <button class="send-button" id="send-button"><i class="fas fa-paper-plane"></i></button>
-                        </div>
-                        <button class="send-button" id="send-button"><i class="fas fa-paper-plane"></i></button>
-                    </div>
-                </div> <section id="contact" style="margin-top: 2rem;">
-                    <h2 id="contact-link">📬 Обратная связь</h2>
-                    <p>Проект с открытым исходным кодом. Для связи: <a href="mailto:galymtashtek@gmail.com">galymtashtek@gmail.com</a></p>
-                </section>
-            </div> </div> </main>
+                  <div id="chat-messages-display">
+                    <!-- блок сообщений и спиннеры -->
+                  </div>
+                  <div class="chat-input-area">
+                    <!-- скрытый input для выбора файла -->
+                    <input type="file" id="chat-file-upload"
+                           accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                           style="display:none;">
+                    <!-- кнопка‑скрепка для выбора файла -->
+                    <button id="attach-file-button" type="button" class="attach-button">
+                      <i class="fas fa-paperclip"></i>
+                    </button>
+                    <!-- поле для ввода текста сообщения -->
+                    <input type="text" id="chat-input"
+                           placeholder="Задайте ваш вопрос или продолжите диалог..."
+                           class="chat-input">
+                    <!-- кнопка отправки -->
+                    <button class="send-button" id="send-button">
+                      <i class="fas fa-paper-plane"></i>
+                    </button>
+                  </div>
+                </div>
+ </main>
 
     <footer>
         <div class="footer-content">
