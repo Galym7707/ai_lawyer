@@ -131,8 +131,34 @@ document.addEventListener('DOMContentLoaded', () => {
         data.sessions.forEach(session => {
           const li = document.createElement('li');
           li.dataset.sessionId = session.id;
-          li.textContent = session.title;
-          li.addEventListener('click', () => loadConversation(session.id));
+  
+          // название чата
+          const spanTitle = document.createElement('span');
+          spanTitle.textContent = session.title;
+          spanTitle.onclick = () => loadConversation(session.id);
+          li.appendChild(spanTitle);
+  
+          // кнопка удаления
+          const delBtn = document.createElement('button');
+          delBtn.classList.add('delete-chat-btn');
+          delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+          delBtn.onclick = async (e) => {
+            e.stopPropagation();
+            if (confirm('Удалить этот чат?')) {
+              try {
+                await apiFetch(`/delete-session?session_id=${session.id}`, { method: 'DELETE' });
+                // если удалён текущий чат, переключаемся на новый
+                if (currentSessionId === session.id) {
+                  await startNewChat();
+                }
+                await loadChatSessions();
+              } catch (err) {
+                alert(`Не удалось удалить чат: ${err.message}`);
+              }
+            }
+          };
+          li.appendChild(delBtn);
+  
           chatList.appendChild(li);
         });
       } else {
@@ -140,9 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       console.error('Ошибка загрузки сессий:', e);
-      chatList.innerHTML = `<p class="error-message">Ошибка загрузки истории: ${e.message}. Проверьте подключение к серверу.</p>`;
+      chatList.innerHTML =
+        `<p class="error-message">Ошибка загрузки истории: ${e.message}. Проверьте подключение к серверу.</p>`;
     }
   }
+
 
   async function loadConversation(sessionId) {
     currentSessionId = sessionId;
