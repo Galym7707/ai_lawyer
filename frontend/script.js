@@ -53,11 +53,29 @@ document.addEventListener('DOMContentLoaded', () => {
   const aboutLinkNav         = document.getElementById('about-link-nav');
   const fileInfo             = document.getElementById('file-info');
   const uploadButton         = document.getElementById('upload-button');
+  const chatFileUploadInput = document.getElementById('chat-file-upload');
+  const attachFileButton = document.getElementById('attach-file-button');
 
+  
   /* ----------  STATE ---------- */
   let currentSessionId = localStorage.getItem('currentSessionId') || 'default';
   let uploadedFile = null;
 
+  // кнопка‑скрепка открывает диалог выбора файла
+  attachFileButton.onclick = () => {
+    chatFileUploadInput.click();
+  };
+  
+  // когда файл выбран, сохраняем его в uploadedFile и отправляем вместе с текстом
+  chatFileUploadInput.onchange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      uploadedFile = file;
+      // сразу отправляем: текст из поля чата будет использован как вопрос к документу
+      sendText(chatInput.value);
+    }
+  };
+  
   if (clearFileBtn) {
     clearFileBtn.onclick = clearFile;
   }
@@ -236,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     clearFile();
   }
-
+  
   /* ----------  EVENTS ---------- */
   submitBtn.onclick = e => { e.preventDefault(); sendText(userQuestionTextarea.value); };
   sendButton.onclick = e => { e.preventDefault(); sendText(chatInput.value); };
