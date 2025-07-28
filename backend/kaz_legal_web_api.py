@@ -175,26 +175,23 @@ def validate_session_id(session_id: str) -> bool:
     return bool(re.match(r'^[a-zA-Z0-9_-]+$', session_id))
 
 def clean_and_format_html(text: str) -> str:
-    """Очищает и форматирует текст, возвращая удобочитаемый HTML.
-
-    Принимает текст, содержащий маркеры ``SECTION:`` и ``LIST_ITEM:``. Разбивает
-    его на строки, формирует заголовки и списки, переименовывает некоторые
-    секции на более понятные названия и добавляет пояснения. Если входной
-    текст не соответствует ожидаемому формату, функция старается избежать
-    ошибок, не обращаясь к несуществующим элементам списка.
-    """
-    # Удаляем лишние пустые строки и повторяющиеся пробелы
+    """Преобразует текст с маркерами SECTION и LIST_ITEM в структурированный HTML."""
+    # Убираем лишние пустые строки
     text = re.sub(r'\s*\n\s*\n\s*', '\n\n', text).strip()
-    text = re.sub(r'\s+', ' ', text)
+
     # Исправляем орфографию, если доступна модель JamSpell
     if jsp is not None:
         try:
             text = jsp.FixFragment(text)
         except Exception as e:
             logging.warning(f"⚠️ Ошибка JamSpell: {e}. Продолжаем без исправления.")
+
     lines = text.split('\n\n')
-    formatted_lines: list[str] = []
+    formatted: list[str] = []
     in_list = False
+    last_section = ''
+
+    # Названия секций на русском
     expected_sections = {
         'юридическая оценка': 'Юридическая оценка ситуации',
         'действие': 'Действие',
@@ -202,81 +199,106 @@ def clean_and_format_html(text: str) -> str:
         'необходимая информация': 'Необходимая информация',
         'экстренные контакты': 'Экстренные контакты'
     }
-    for line in lines:
-        line = line.strip()
+
+    # Словари для переименования меток в определённых блоках
+    recommendations_labels = {
+        'напишите работодателю': 'Письменное требование',
+        'обратитесь в территориальное': 'Обращение в инспекцию труда',
+        'подготовьте исковое': 'Исковое заявление',
+        'собирайте все': 'Документы',
+        'сообщите о случившемся': 'Уведомление родителей',
+        'обратитесь в полицию': 'Обращение в полицию',
+        'обратитесь в медицинское учреждение': 'Медицинский осмотр',
+        'сохраните все доказательства': 'Сбор доказательств',
+        'по возможности соберите': 'Свидетельские показания',
+        'рассмотрите возможность': 'Жалоба в органы образования',
+    }
+
+    info_labels = {
+        'ваш трудовой договор': 'Трудовой договор',
+        'точная сумма задолженности': 'Сумма задолженности',
+        'дата последней выплаты': 'Дата последней выплаты',
+        'наличие каких-либо соглашений': 'Соглашения о задержке',
+        'причины задержки': 'Причины задержки',
+        'подробное описание инцидента': 'Описание инцидента',
+        'степень тяжести полученных травм': 'Степень травм',
+        'свидетели': 'Свидетели',
+        'данные об учителе': 'Данные об учителе',
+        'данные о школе': 'Данные о школе',
+    }
+
+    for raw_line in lines:
+        line = raw_line.strip()
         if not line:
             continue
-        # Разделы начинаются с ``SECTION:`` или соответствуют ключам expected_sections
-        if re.match(r'^SECTION:\s*[А-Я][А-Яа-я\s]+$', line.strip()) or line.strip().lower() in [k.lower() for k in expected_sections]:
+
+        # Проверяем, является ли строка заголовком секции
+        if line.lower().startswith('section:') or line.lower() in expected_sections:
+            # Если был открыт список, закрываем его
             if in_list:
-                formatted_lines.append('')
+                formatted.append('</ul>')
                 in_list = False
+
             heading = line.replace('SECTION:', '').strip()
-            formatted_lines.append(f' {expected_sections.get(heading.lower(), heading)} ')
-            if heading.lower() == 'необходимая информация':
-                formatted_lines.append(' Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация: ')
-            elif heading.lower() == 'экстренные контакты':
-                formatted_lines.append(' В экстренных случаях обращайтесь: ')
+            human_heading = expected_sections.get(heading.lower(), heading)
+            formatted.append(f'<h3>{human_heading}</h3>')
+            last_section = heading.lower()
+
+            # Дополнительные пояснения для некоторых секций
+            if last_section == 'необходимая информация':
+                formatted.append(
+                    '<p>Для качественного предоставления услуги с моей стороны как юриста, мне потребуется следующая информация:</p>'
+                )
+            elif last_section == 'экстренные контакты':
+                formatted.append('<p>В экстренных случаях обращайтесь:</p>')
+
             continue
-        # Элементы списка начинаются с ``LIST_ITEM:`` или с дефиса или цифры и точки
-        if line.startswith('LIST_ITEM:') or line.startswith('-') or re.match(r'^\d+\.\s+', line):
+
+        # Проверяем, является ли строка элементом списка
+        if (
+            line.startswith('LIST_ITEM:')
+            or line.startswith('-')
+            or re.match(r'^\d+\.\s+', line)
+        ):
+            # Начинаем список, если ещё не начат
             if not in_list:
-                formatted_lines.append('')
+                formatted.append('<ul>')
                 in_list = True
-            # Убираем номер списка и префикс
+
+            # Очищаем от нумерации/маркеров
             line_clean = re.sub(r'^\d+\.\s+', '', line.lstrip('- ').strip())
             line_clean = line_clean.replace('LIST_ITEM:', '').strip()
-            # Разбиваем по первой двоеточии для переименования метки
-            if ':' in line_clean and len(line_clean.split(':', 1)) > 1:
-                parts = line_clean.split(':', 1)
-                label = parts[0].strip()
-                # Переименование меток в блоке Рекомендаций
-                if formatted_lines and 'рекомендации' in formatted_lines[-1].lower():
-                    label = {
-                        'напишите работодателю': 'Письменное требование',
-                        'обратитесь в территориальное': 'Обращение в инспекцию труда',
-                        'подготовьте исковое': 'Исковое заявление',
-                        'собирайте все': 'Документы',
-                        'сообщите о случившемся': 'Уведомление родителей',
-                        'обратитесь в полицию': 'Обращение в полицию',
-                        'обратитесь в медицинское учреждение': 'Медицинский осмотр',
-                        'сохраните все доказательства': 'Сбор доказательств',
-                        'по возможности соберите': 'Свидетельские показания',
-                        'рассмотрите возможность': 'Жалоба в органы образования'
-                    }.get(label.lower(), label)
-                # Переименование меток в блоке Необходимой информации
-                elif formatted_lines and 'необходимая информация' in formatted_lines[-1].lower():
-                    label = {
-                        'ваш трудовой договор': 'Трудовой договор',
-                        'точная сумма задолженности': 'Сумма задолженности',
-                        'дата последней выплаты': 'Дата последней выплаты',
-                        'наличие каких-либо соглашений': 'Соглашения о задержке',
-                        'причины задержки': 'Причины задержки',
-                        'подробное описание инцидента': 'Описание инцидента',
-                        'степень тяжести полученных травм': 'Степень травм',
-                        'свидетели': 'Свидетели',
-                        'данные об учителе': 'Данные об учителе',
-                        'данные о школе': 'Данные о школе'
-                    }.get(label.lower(), label)
-                formatted_lines.append(f' {label}: {parts[1].strip()} ')
+
+            # Если есть метка и двоеточие, переименовываем её и выделяем жирным
+            if ':' in line_clean:
+                label, content = line_clean.split(':', 1)
+                label = label.strip()
+                if last_section == 'рекомендации':
+                    label = recommendations_labels.get(label.lower(), label)
+                elif last_section == 'необходимая информация':
+                    label = info_labels.get(label.lower(), label)
+                formatted.append(f'<li><strong>{label}:</strong> {content.strip()}</li>')
             else:
-                formatted_lines.append(f' {line_clean} ')
+                formatted.append(f'<li>{line_clean}</li>')
+
+            continue
+
+        # Обычный текст – завершаем список, если он был открыт
+        if in_list:
+            formatted.append('</ul>')
+            in_list = False
+
+        # Если предыдущий раздел был «Юридическая оценка», добавляем подпись
+        if last_section == 'юридическая оценка':
+            formatted.append(f'<p><strong>Юридическая оценка:</strong> {line}</p>')
         else:
-            # Если сейчас в списке, закрываем его
-            if in_list:
-                formatted_lines.append('')
-                in_list = False
-            # Если предыдущая строка — заголовок "Юридическая оценка", то добавляем пояснение
-            if formatted_lines and 'юридическая оценка' in formatted_lines[-1].lower():
-                formatted_lines.append(f' Юридическая оценка: {line} ')
-            else:
-                formatted_lines.append(f' {line} ')
+            formatted.append(f'<p>{line}</p>')
+
+    # Закрываем незакрытый список
     if in_list:
-        formatted_lines.append('')
-    result = '\n'.join(formatted_lines)
-    # Убираем лишние пробелы между словами
-    result = re.sub(r' \s* ', '', result)
-    return result
+        formatted.append('</ul>')
+
+    return '\n'.join(formatted)
 
 def validate_html(text: str) -> bool:
     """Проверяет, является ли строка корректным HTML."""
@@ -288,14 +310,17 @@ def validate_html(text: str) -> bool:
         return False
 
 def sanitize_html_output(text: str) -> str:
-    """Форматирует и очищает текст, удаляя запрещённые HTML‑теги."""
-    text = clean_and_format_html(text)
-    if not validate_html(text):
-        logging.warning("⚠️ Исправление неверного HTML")
-        text = f' {text} '
+    """Приводит ответ к HTML и удаляет запрещённые теги."""
+    html_text = clean_and_format_html(text)
+    if not validate_html(html_text):
+        # В редких случаях добавляем <p>, чтобы HTML был валиден
+        html_text = f'<p>{html_text}</p>'
+
+    # Оставляем только разрешённые теги
     allowed_tags = ['p', 'ul', 'li', 'h3', 'strong']
     allowed_attrs = {'strong': ['style']}
-    return bleach.clean(text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+    return bleach.clean(html_text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+
 
 def generate_response_stream(model, messages, session_id: str):
     """Потоковая генерация ответа от AI с последующим сохранением в базу."""
