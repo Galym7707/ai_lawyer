@@ -32,6 +32,13 @@ async function safeJson(res) {
   throw new Error(text.slice(0, 300) || `HTTP ${res.status}`);
 }
 
+/* =========   DEVICE IDENTIFIER   ========= */
+function generateDeviceId() {
+  const userAgent = navigator.userAgent;
+  const randomString = crypto.randomUUID();
+  return btoa(userAgent + randomString).replace(/=/g, '');
+}
+
 /* =========   MAIN SCRIPT   ========= */
 document.addEventListener('DOMContentLoaded', () => {
   /* ----------  DOM ---------- */
@@ -47,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileSpinner          = document.getElementById('fileSpinner');
   const chatList             = document.getElementById('chat-list');
 
-  // Элементы формы для загрузки файла в отдельной секции
   const fileUploadInput      = document.getElementById('file-upload');
   const fileNameDisplay      = document.getElementById('file-name');
   const clearFileBtn         = document.getElementById('clearFileBtn');
@@ -55,19 +61,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInfo             = document.getElementById('file-info');
   const uploadButton         = document.getElementById('upload-button');
 
-  // Элементы для загрузки файла прямо из чата
   const chatFileUploadInput  = document.getElementById('chat-file-upload');
   const attachFileButton     = document.getElementById('attach-file-button');
 
-  // Навигация
   const homeLink             = document.getElementById('home-link');
   const aboutLinkNav         = document.getElementById('about-link-nav');
 
   /* ----------  STATE ---------- */
-  let currentSessionId = sessionStorage.getItem('currentSessionId');
+  let deviceId = sessionStorage.getItem('deviceId');
+  if (!deviceId) {
+    deviceId = generateDeviceId();
+    sessionStorage.setItem('deviceId', deviceId);
+  }
+
+  let currentSessionId = sessionStorage.getItem(`sessionId_${deviceId}`);
   if (!currentSessionId) {
-    currentSessionId = crypto.randomUUID();
-    sessionStorage.setItem('currentSessionId', currentSessionId);
+    currentSessionId = `${deviceId}_${crypto.randomUUID()}`;
+    sessionStorage.setItem(`sessionId_${deviceId}`, currentSessionId);
   }
   let uploadedFile = null;
 
@@ -129,55 +139,57 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await safeJson(res);
 
       chatList.innerHTML = '';
-      // Получаем шаблон (может быть null)
       const template = document.getElementById('chat-item-template');
 
       if (data.sessions && data.sessions.length > 0) {
-        data.sessions.forEach(session => {
-          let li;
-          // Если шаблон существует, клонируем; иначе создаём заново
-          if (template) {
-            li = template.cloneNode(true);
-            li.id = '';
-            li.style.display = 'flex';
-          } else {
-            li = document.createElement('li');
-            li.classList.add('chat-list-item');
-            const spanTitle = document.createElement('span');
-            spanTitle.classList.add('chat-title');
-            li.appendChild(spanTitle);
-            const delBtn = document.createElement('button');
-            delBtn.classList.add('delete-chat-btn');
-            delBtn.type = 'button';
-            delBtn.innerHTML = '<i class="fas fa-trash"></i>';
-            li.appendChild(delBtn);
-          }
-
-          li.dataset.sessionId = session.id;
-          // Заполняем и вешаем обработчики
-          const spanTitle = li.querySelector('.chat-title');
-          spanTitle.textContent = session.title;
-          spanTitle.onclick = () => loadConversation(session.id);
-
-          const delBtn = li.querySelector('.delete-chat-btn');
-          delBtn.onclick = async (e) => {
-            e.stopPropagation();
-            if (confirm('Удалить этот чат?')) {
-              try {
-                await apiFetch(`/delete-session?session_id=${session.id}`, { method:'DELETE' });
-                if (currentSessionId === session.id) {
-                  await startNewChat();
-                }
-                await loadChatSessions();
-                highlightSession(currentSessionId);
-              } catch (err) {
-                alert(`Не удалось удалить чат: ${err.message}`);
-              }
+        const deviceSessions = data.sessions.filter(session => session.id.startsWith(deviceId));
+        if (deviceSessions.length > 0) {
+          deviceSessions.forEach(session => {
+            let li;
+            if (template) {
+              li = template.cloneNode(true);
+              li.id = '';
+              li.style.display = 'flex';
+            } else {
+              li = document.createElement('li');
+              li.classList.add('chat-list-item');
+              const spanTitle = document.createElement('span');
+              spanTitle.classList.add('chat-title');
+              li.appendChild(spanTitle);
+              const delBtn = document.createElement('button');
+              delBtn.classList.add('delete-chat-btn');
+              delBtn.type = 'button';
+              delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+              li.appendChild(delBtn);
             }
-          };
 
-          chatList.appendChild(li);
-        });
+            li.dataset.sessionId = session.id;
+            const spanTitle = li.querySelector('.chat-title');
+            spanTitle.textContent = session.title;
+            spanTitle.onclick = () => loadConversation(session.id);
+
+            const delBtn = li.querySelector('.delete-chat-btn');
+            delBtn.onclick = async (e) => {
+              e.stopPropagation();
+              if (confirm('Удалить этот чат?')) {
+                try {
+                  await apiFetch(`/delete-session?session_id=${session.id}`, { method:'DELETE' });
+                  if (currentSessionId === session.id) {
+                    await startNewChat();
+                  }
+                  await loadChatSessions();
+                  highlightSession(currentSessionId);
+                } catch (err) {
+                  alert(`Не удалось удалить чат: ${err.message}`);
+                }
+              }
+            };
+
+            chatList.appendChild(li);
+          });
+        } else {
+          chatList.innerHTML = '<p>История чатов пуста.</p>';
+        }
       } else {
         chatList.innerHTML = '<p>История чатов пуста.</p>';
       }
@@ -190,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadConversation(sessionId) {
     currentSessionId = sessionId;
-    localStorage.setItem('currentSessionId', currentSessionId);
+    sessionStorage.setItem(`sessionId_${deviceId}`, currentSessionId);
     showChatContainer();
     clearChatMessages();
     highlightSession(sessionId);
@@ -222,8 +234,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function startNewChat() {
-    currentSessionId = crypto.randomUUID();
-    localStorage.setItem('currentSessionId', currentSessionId);
+    currentSessionId = `${deviceId}_${crypto.randomUUID()}`;
+    sessionStorage.setItem(`sessionId_${deviceId}`, currentSessionId);
     showChatContainer();
     clearChatMessages();
     highlightSession(currentSessionId);
@@ -370,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ----------  INIT ---------- */
   showInitialSections();
   loadChatSessions().then(() => {
-    const savedId   = localStorage.getItem('currentSessionId');
+    const savedId   = sessionStorage.getItem(`sessionId_${deviceId}`);
     const existingLi = savedId && document.querySelector(`[data-session-id="${savedId}"]`);
     if (existingLi) {
       loadConversation(savedId);
