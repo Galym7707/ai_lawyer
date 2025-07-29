@@ -27,7 +27,13 @@
         <aside class="sidebar">
             <h2>История чатов</h2>
             <ul id="chat-list">
-                <p>Загрузка истории...</p>
+                <!-- Шаблон элемента истории (будет клонироваться в JS) -->
+                <li id="chat-item-template" style="display:none;">
+                    <span class="chat-title"></span>
+                    <button class="delete-chat-btn" type="button">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </li>
             </ul>
             <button id="start-new-conversation-sidebar"
                     class="btn new-conversation-btn">
@@ -154,6 +160,7 @@
             <!-- Секция обратной связи -->
             <section id="contact" style="margin-top: 2rem;">
                 <h2 id="contact-link">📬 Обратная связь</h2>
+                <p>Проект с открытым исходным кодом. Для связи:
                     <a href="mailto:galymtashtek@gmail.com">galymtashtek@gmail.com</a></p>
             </section>
         </div> <!-- /.main-content-area -->
