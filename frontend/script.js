@@ -15,7 +15,9 @@ async function apiFetch(path, options = {}, retries = 2) {
     } catch (e) {
       if (i < retries) {
         console.warn(`Retry ${i + 1}/${retries} for ${path}: ${e.message}`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        await new Promise(resolve =>
+          setTimeout(resolve, 1000 * (i + 1))
+        );
         continue;
       }
       throw e;
@@ -53,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInfo             = document.getElementById('file-info');
   const uploadButton         = document.getElementById('upload-button');
 
-  // Новые элементы для загрузки файла прямо из чата
+  // Элементы для загрузки файла прямо из чата
   const chatFileUploadInput  = document.getElementById('chat-file-upload');
   const attachFileButton     = document.getElementById('attach-file-button');
 
@@ -62,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const aboutLinkNav         = document.getElementById('about-link-nav');
 
   /* ----------  STATE ---------- */
+  // Если в localStorage ещё нет session_id, создаём уникальный
   let currentSessionId = localStorage.getItem('currentSessionId');
   if (!currentSessionId) {
     currentSessionId = crypto.randomUUID();
@@ -124,32 +127,37 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadChatSessions() {
+    // Показываем временный текст
     chatList.innerHTML = '<p>Загрузка истории...</p>';
     try {
-      const res = await apiFetch('/get-all-sessions-summary');
+      const res  = await apiFetch('/get-all-sessions-summary');
       const data = await safeJson(res);
+
+      // Очищаем список
       chatList.innerHTML = '';
+      // Получаем шаблон
+      const template = document.getElementById('chat-item-template');
+
       if (data.sessions && data.sessions.length > 0) {
         data.sessions.forEach(session => {
-          const li = document.createElement('li');
+          // Клонируем шаблон
+          const li = template.cloneNode(true);
+          li.id = '';
+          li.style.display = 'flex';
           li.dataset.sessionId = session.id;
 
-          // название чата в отдельном span, чтобы по нему можно было кликнуть
-          const spanTitle = document.createElement('span');
+          // Заполняем название
+          const spanTitle = li.querySelector('.chat-title');
           spanTitle.textContent = session.title;
           spanTitle.onclick = () => loadConversation(session.id);
-          li.appendChild(spanTitle);
 
-          // кнопка удаления с иконкой корзины
-          const delBtn = document.createElement('button');
-          delBtn.classList.add('delete-chat-btn');
-          delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+          // Обработчик для кнопки удаления
+          const delBtn = li.querySelector('.delete-chat-btn');
           delBtn.onclick = async (e) => {
             e.stopPropagation();
             if (confirm('Удалить этот чат?')) {
               try {
                 await apiFetch(`/delete-session?session_id=${session.id}`, { method: 'DELETE' });
-                // если удалён текущий чат, переключаемся на новый
                 if (currentSessionId === session.id) {
                   await startNewChat();
                 }
@@ -160,8 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             }
           };
-          li.appendChild(delBtn);
 
+          // Добавляем элемент в список
           chatList.appendChild(li);
         });
       } else {
@@ -181,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearChatMessages();
     highlightSession(sessionId);
     try {
-      const res = await apiFetch(`/get-history?session_id=${sessionId}`);
+      const res  = await apiFetch(`/get-history?session_id=${sessionId}`);
       const data = await safeJson(res);
       if (data.history) {
         data.history.forEach(msg => {
@@ -224,7 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fileQuestionInput.value = '';
     fileInfo.style.display = 'none';
     uploadButton.disabled = true;
-    // очищаем также скрытый input из чата, чтобы можно было выбрать тот же файл повторно
     if (chatFileUploadInput) {
       chatFileUploadInput.value = '';
     }
@@ -233,33 +240,33 @@ document.addEventListener('DOMContentLoaded', () => {
   async function sendText(text) {
     showChatContainer();
     if (!text.trim() && !uploadedFile) return;
-  
-    // Показываем спиннер
+
+    // Показываем соответствующий спиннер
     if (uploadedFile) {
       if (fileSpinner) fileSpinner.style.display = 'block';
-      if (spinner) spinner.style.display = 'none';
+      if (spinner)     spinner.style.display     = 'none';
     } else {
-      if (spinner) spinner.style.display = 'block';
+      if (spinner)     spinner.style.display     = 'block';
       if (fileSpinner) fileSpinner.style.display = 'none';
     }
-  
+
     // Сообщение пользователя
     const messageText = uploadedFile ? fileQuestionInput.value || text : text;
     addMessage(messageText, 'user-message');
     userQuestionTextarea.value = '';
-    chatInput.value = '';
-  
-    // СОЗДАЁМ ПЛЕЙСХОЛДЕР сразу, до запроса
+    chatInput.value           = '';
+
+    // Создаём плейсхолдер для ответа ИИ
     const aiMessageElement = document.createElement('div');
-    aiMessageElement.classList.add('chat-bubble','ai-response');
+    aiMessageElement.classList.add('chat-bubble', 'ai-response');
     aiMessageElement.textContent = uploadedFile
       ? 'ИИ-юрист анализирует ваш документ…'
       : 'ИИ-юрист анализирует ваш запрос…';
     chatMessagesDisplay.appendChild(aiMessageElement);
     chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
-  
+
     try {
-      // Теперь отправляем запрос
+      // Отправляем запрос
       let res;
       if (uploadedFile) {
         const formData = new FormData();
@@ -277,15 +284,16 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify({ question: text, session_id: currentSessionId })
         });
       }
-  
-      // Скрываем спиннер
-      if (spinner) spinner.style.display = 'none';
+
+      // Скрываем спиннеры
+      if (spinner)     spinner.style.display     = 'none';
       if (fileSpinner) fileSpinner.style.display = 'none';
-  
-      // Читаем ответ и постепенно заменяем текст плейсхолдера
-      const reader = res.body.getReader();
+
+      // Читаем поток ответа и обновляем элемент
+      const reader  = res.body.getReader();
       const decoder = new TextDecoder();
       let aiFullResponse = '';
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -294,30 +302,27 @@ document.addEventListener('DOMContentLoaded', () => {
         aiMessageElement.innerHTML = aiFullResponse;
         chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
       }
-  
+
       if (aiFullResponse.includes("Ошибка:")) {
         aiMessageElement.innerHTML = `<p class="error-message">${aiFullResponse}</p>`;
       }
-  
+
       await loadChatSessions();
       highlightSession(currentSessionId);
-  
+
     } catch (e) {
-      // Скрываем спиннер в случае ошибки
-      if (spinner) spinner.style.display = 'none';
+      if (spinner)     spinner.style.display     = 'none';
       if (fileSpinner) fileSpinner.style.display = 'none';
       console.error(e);
       aiMessageElement.innerHTML =
         `<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу.</p>`;
     }
-  
+
     clearFile();
   }
 
-
-
   /* ----------  EVENTS ---------- */
-  // Отправка начального вопроса из текстового поля на главном экране
+  // Отправка начального вопроса
   submitBtn.onclick = e => {
     e.preventDefault();
     sendText(userQuestionTextarea.value);
@@ -361,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Очистка файла в отдельной секции
+  // Очистка файла
   if (clearFileBtn) {
     clearFileBtn.onclick = clearFile;
   }
@@ -372,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showInitialSections();
   };
 
-  // Ссылка "О проекте"
+  // Ссылка «О проекте»
   aboutLinkNav.onclick = e => {
     e.preventDefault();
     document.getElementById('about').scrollIntoView({ behavior: 'smooth' });
@@ -382,11 +387,10 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ----------  INIT ---------- */
   showInitialSections();
   loadChatSessions().then(() => {
-    if (
-      currentSessionId !== 'default' &&
-      document.querySelector(`[data-session-id="${currentSessionId}"]`)
-    ) {
-      loadConversation(currentSessionId);
+    const savedId = localStorage.getItem('currentSessionId');
+    const existingLi = savedId && document.querySelector(`[data-session-id="${savedId}"]`);
+    if (existingLi) {
+      loadConversation(savedId);
     } else {
       startNewChat();
     }
