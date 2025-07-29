@@ -64,10 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const aboutLinkNav         = document.getElementById('about-link-nav');
 
   /* ----------  STATE ---------- */
-  let currentSessionId = localStorage.getItem('currentSessionId');
+  let currentSessionId = sessionStorage.getItem('currentSessionId');
   if (!currentSessionId) {
     currentSessionId = crypto.randomUUID();
-    localStorage.setItem('currentSessionId', currentSessionId);
+    sessionStorage.setItem('currentSessionId', currentSessionId);
   }
   let uploadedFile = null;
 
