@@ -351,13 +351,6 @@ def generate_response_stream(model, messages, session_id: str):
         save_message(session_id, "model", sanitized)
         yield sanitized
         logging.info(f"✅ Ответ AI сохранён для сессии {session_id}")
-    except genai.types.BlockedPromptException as e:
-        logging.error(f"❌ Запрос заблокирован: {e}")
-        error_message = (
-            "Извините, ваш запрос был заблокирован из-за потенциально неприемлемого контента."
-        )
-        save_message(session_id, "model", error_message)
-        yield error_message
     except Exception as e:
         logging.error(f"❌ Ошибка генерации ответа: {e}")
         error_message = (
