@@ -108,7 +108,7 @@ main {
     margin: 0;
     flex-grow: 1;
     overflow-y: auto;
-    max-height: calc(100vh - 250px); /* Adjust based on header/footer */
+    max-height: calc(100vh - 250px);
     scrollbar-width: thin;
     scrollbar-color: var(--accent-primary) var(--bg-secondary);
 }
@@ -137,11 +137,11 @@ main {
     border-radius: 5px;
     margin-bottom: 0.4rem;
     transition: background-color 0.2s ease, color 0.2s ease;
+    position: relative;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
-
 
 #chat-list li.active,
 #chat-list li:hover {
@@ -153,19 +153,23 @@ main {
 .delete-chat-btn {
     background: none;
     border: none;
-    color: #ff6b6b;       /* красный цвет для заметности */
+    color: #ff6b6b;
     font-size: 1rem;
     cursor: pointer;
     padding: 0.2rem;
-    margin-left: 0.5rem;
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
 }
 
 .delete-chat-btn:hover {
-    color: #ff3b3b;     /* более яркая при наведении */
+    color: #ff3b3b;
 }
 
 .delete-chat-btn i {
-    pointer-events: none; /* кликаем по кнопке, а не по иконке */
+    pointer-events: none;
 }
 
 .new-conversation-btn {
@@ -186,7 +190,7 @@ main {
 }
 
 .new-conversation-btn:hover {
-    background-color: #00c766; /* Darker green */
+    background-color: #00c766;
 }
 
 /* --- MAIN CONTENT AREA --- */
@@ -197,7 +201,7 @@ main {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    position: relative; /* Для позиционирования спиннера */
+    position: relative;
 }
 
 #initial-sections {
@@ -267,7 +271,7 @@ button.primary-btn {
 }
 
 button.primary-btn:hover {
-    background-color: #0097a7; /* Darker accent primary */
+    background-color: #0097a7;
 }
 
 /* Upload Section */
@@ -334,7 +338,7 @@ button.primary-btn:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    word-break: break-all; /* Ensure long filenames wrap */
+    word-break: break-all;
 }
 
 .file-list .remove-file {
@@ -464,7 +468,7 @@ button.primary-btn:disabled, button.secondary-btn:disabled {
     flex-direction: column;
     gap: 1rem;
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
-    min-height: 400px; /* Ensures a minimum height for the chat area */
+    min-height: 400px;
     scrollbar-width: thin;
     scrollbar-color: var(--accent-primary) var(--bg-primary);
 }
@@ -490,8 +494,8 @@ button.primary-btn:disabled, button.secondary-btn:disabled {
     position: relative;
     font-size: 1rem;
     line-height: 1.5;
-    word-wrap: break-word; /* Allows long words to break and wrap */
-    white-space: pre-wrap; /* Preserves whitespace and wraps text */
+    word-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 .chat-bubble.user-message {
@@ -742,14 +746,16 @@ footer {
 
 /* Очень узкие экраны (телефоны) */
 @media (max-width: 480px) {
-    /* Сжимаем боковую панель и убираем большие отступы */
     .sidebar {
-        padding: 1rem 0.5rem;
+        padding: 0.5rem;
     }
-    #chat-list {
-        max-height: 120px;
+    #chat-list li {
+        padding: 0.5rem;
     }
-    /* Размещаем элементы ввода сообщения вертикально для удобства */
+    .delete-chat-btn {
+        font-size: 0.8rem;
+        padding: 0.1rem;
+    }
     .chat-input-area {
         flex-direction: column;
         align-items: stretch;
@@ -770,7 +776,6 @@ footer {
         padding: 0.8rem;
         font-size: 0.95rem;
     }
-    /* Уменьшаем размеры спиннеров и пузырей */
     #fileSpinner, #spinner {
         font-size: 0.85rem;
         padding: 14px 4px;
