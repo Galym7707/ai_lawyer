@@ -1,4 +1,4 @@
-// frontend/api/proxy.js
+// frontend/api/proxy/[...path].js
 
 // Динамически подключаем node-fetch при необходимости (если fetch не глобальный)
 const getFetch = async () => {
@@ -12,11 +12,13 @@ export default async function handler(req, res) {
   const backendBase =
     process.env.RAILWAY_BACKEND_URL || 'https://ai-lawyer.up.railway.app';
 
-  // Удаляем префикс /api для корректного проксирования
-  const backendUrl = new URL(
-    req.url.replace(/^\/api/, ''),
-    backendBase
-  ).toString();
+  // Получаем путь из query параметров
+  const { path = [] } = req.query;
+  const targetPath = '/' + path.join('/');
+  
+  // Добавляем query параметры если они есть
+  const queryString = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  const backendUrl = new URL(targetPath + queryString, backendBase).toString();
 
   const method = req.method.toUpperCase();
 
