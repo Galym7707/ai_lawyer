@@ -171,6 +171,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const aboutLinkNav         = document.getElementById('about-link-nav');
   const themeToggle          = document.getElementById('theme-toggle');
 
+  // Отладочная информация
+  console.log('🔍 Проверка элементов DOM:');
+  console.log('initialSections:', initialSections);
+  console.log('currentChatContainer:', currentChatContainer);
+  console.log('submitBtn:', submitBtn);
+  console.log('sendButton:', sendButton);
+  console.log('newChatBtn:', newChatBtn);
+
+  // Проверяем, что все критически важные элементы найдены
+  if (!initialSections || !currentChatContainer || !submitBtn || !sendButton || !newChatBtn) {
+    console.error('❌ Критические элементы не найдены!');
+    return;
+  }
+
+  // Тестовая функция для проверки переключения
+  window.testSwitch = () => {
+    console.log('🧪 Тестируем переключение секций...');
+    console.log('До переключения:');
+    console.log('- initialSections.display:', initialSections.style.display);
+    console.log('- currentChatContainer.display:', currentChatContainer.style.display);
+    
+    showChatContainer();
+    
+    console.log('После showChatContainer():');
+    console.log('- initialSections.display:', initialSections.style.display);
+    console.log('- currentChatContainer.display:', currentChatContainer.style.display);
+    
+    setTimeout(() => {
+      showInitialSections();
+      console.log('После showInitialSections():');
+      console.log('- initialSections.display:', initialSections.style.display);
+      console.log('- currentChatContainer.display:', currentChatContainer.style.display);
+    }, 2000);
+  };
+
   // Initialize theme on page load
   initTheme();
 
@@ -202,17 +237,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ----------  HELPERS ---------- */
   function showInitialSections() {
+    console.log('🏠 showInitialSections() вызвана');
+    console.log('initialSections до:', initialSections.style.display);
+    console.log('currentChatContainer до:', currentChatContainer.style.display);
+    
     initialSections.style.display = 'block';
     currentChatContainer.style.display = 'none';
     clearChatMessages();
     userQuestionTextarea.value = '';
     chatInput.value = '';
     clearFile();
+    
+    console.log('initialSections после:', initialSections.style.display);
+    console.log('currentChatContainer после:', currentChatContainer.style.display);
   }
 
   function showChatContainer() {
+    console.log('🔄 showChatContainer() вызвана');
+    console.log('initialSections до:', initialSections.style.display);
+    console.log('currentChatContainer до:', currentChatContainer.style.display);
+    
     initialSections.style.display = 'none';
     currentChatContainer.style.display = 'flex';
+    
+    console.log('initialSections после:', initialSections.style.display);
+    console.log('currentChatContainer после:', currentChatContainer.style.display);
   }
 
   function clearChatMessages() {
@@ -351,6 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function startNewChat() {
+    console.log('🆕 startNewChat() вызвана');
     currentSessionId = `${deviceId}_${crypto.randomUUID()}`;
     sessionStorage.setItem(`sessionId_${deviceId}`, currentSessionId);
     showChatContainer();
@@ -373,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function sendText(text) {
+    console.log('📤 sendText() вызвана с текстом:', text);
     showChatContainer();
     if (!text.trim() && !uploadedFile) return;
 
@@ -452,14 +503,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ----------  EVENTS ---------- */
   submitBtn.onclick = e => {
+    console.log('🖱️ submitBtn.onclick вызван');
     e.preventDefault();
     sendText(userQuestionTextarea.value);
   };
   sendButton.onclick = e => {
+    console.log('🖱️ sendButton.onclick вызван');
     e.preventDefault();
     sendText(chatInput.value);
   };
-  newChatBtn.onclick = startNewChat;
+  newChatBtn.onclick = e => {
+    console.log('🖱️ newChatBtn.onclick вызван');
+    startNewChat();
+  };
+  uploadButton.onclick = e => {
+    console.log('🖱️ uploadButton.onclick вызван');
+    e.preventDefault();
+    if (uploadedFile) {
+      sendText(fileQuestionInput.value || 'Анализируйте этот документ');
+    }
+  };
+  // Предотвращаем отправку формы по умолчанию
+  const chatForm = document.getElementById('chat-form');
+  if (chatForm) {
+    chatForm.onsubmit = e => {
+      console.log('📝 chatForm.onsubmit вызван');
+      e.preventDefault();
+      sendText(userQuestionTextarea.value);
+    };
+  }
+
   chatInput.onkeydown = e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -487,6 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearFileBtn.onclick = clearFile;
   }
   homeLink.onclick = e => {
+    console.log('🏠 homeLink.onclick вызван');
     e.preventDefault();
     showInitialSections();
   };
@@ -502,14 +576,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* ----------  INIT ---------- */
+  console.log('🚀 Инициализация приложения');
   showInitialSections();
   loadChatSessions().then(() => {
     const savedId   = sessionStorage.getItem(`sessionId_${deviceId}`);
     const existingLi = savedId && document.querySelector(`[data-session-id="${savedId}"]`);
     if (existingLi) {
+      console.log('📂 Загружаем существующую сессию:', savedId);
       loadConversation(savedId);
     } else {
-      startNewChat();
+      console.log('🆕 Создаем новую сессию');
+      // НЕ вызываем startNewChat() автоматически - пусть пользователь сам нажмет кнопку
+      // startNewChat();
     }
   });
 });
