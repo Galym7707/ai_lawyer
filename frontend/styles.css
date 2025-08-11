@@ -1,34 +1,34 @@
-/* Kaz Legal Bot — Modern Dark Theme with Enhanced Interactivity
+﻿/* Kaz Legal Bot вЂ” Modern Dark Theme with Enhanced Interactivity
  *
- * Этот файл содержит стили для веб‑приложения Kaz Legal Bot. Он использует
- * переменные CSS для лёгкого управления цветовой схемой и размерам элементов.
- * Предусмотрена адаптивная верстка для устройств различных размеров,
- * включая планшеты и телефоны. В интерфейсе применяются плавные
- * анимации при наведении, чтобы сделать использование более приятным.
+ * Р­С‚РѕС‚ С„Р°Р№Р» СЃРѕРґРµСЂР¶РёС‚ СЃС‚РёР»Рё РґР»СЏ РІРµР±вЂ‘РїСЂРёР»РѕР¶РµРЅРёСЏ Kaz Legal Bot. РћРЅ РёСЃРїРѕР»СЊР·СѓРµС‚
+ * РїРµСЂРµРјРµРЅРЅС‹Рµ CSS РґР»СЏ Р»С‘РіРєРѕРіРѕ СѓРїСЂР°РІР»РµРЅРёСЏ С†РІРµС‚РѕРІРѕР№ СЃС…РµРјРѕР№ Рё СЂР°Р·РјРµСЂР°Рј СЌР»РµРјРµРЅС‚РѕРІ.
+ * РџСЂРµРґСѓСЃРјРѕС‚СЂРµРЅР° Р°РґР°РїС‚РёРІРЅР°СЏ РІРµСЂСЃС‚РєР° РґР»СЏ СѓСЃС‚СЂРѕР№СЃС‚РІ СЂР°Р·Р»РёС‡РЅС‹С… СЂР°Р·РјРµСЂРѕРІ,
+ * РІРєР»СЋС‡Р°СЏ РїР»Р°РЅС€РµС‚С‹ Рё С‚РµР»РµС„РѕРЅС‹. Р’ РёРЅС‚РµСЂС„РµР№СЃРµ РїСЂРёРјРµРЅСЏСЋС‚СЃСЏ РїР»Р°РІРЅС‹Рµ
+ * Р°РЅРёРјР°С†РёРё РїСЂРё РЅР°РІРµРґРµРЅРёРё, С‡С‚РѕР±С‹ СЃРґРµР»Р°С‚СЊ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ Р±РѕР»РµРµ РїСЂРёСЏС‚РЅС‹Рј.
  */
 
 /* === CSS Variables === */
 :root {
-  /* Основа тёмной темы */
+  /* РћСЃРЅРѕРІР° С‚С‘РјРЅРѕР№ С‚РµРјС‹ */
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;
   --bg-header: #1a2232;
 
-  /* Цвета текста */
+  /* Р¦РІРµС‚Р° С‚РµРєСЃС‚Р° */
   --text-primary: #d1d5da;
   --text-secondary: #8b949e;
 
-  /* Акцентные цвета */
-  --accent-primary: #58a6ff; /* Голубой для активных элементов */
-  --accent-secondary: #3fb950; /* Зелёный для второстепенных действий */
-  --danger: #f85149;         /* Красный для удаления и ошибок */
+  /* РђРєС†РµРЅС‚РЅС‹Рµ С†РІРµС‚Р° */
+  --accent-primary: #58a6ff; /* Р“РѕР»СѓР±РѕР№ РґР»СЏ Р°РєС‚РёРІРЅС‹С… СЌР»РµРјРµРЅС‚РѕРІ */
+  --accent-secondary: #3fb950; /* Р—РµР»С‘РЅС‹Р№ РґР»СЏ РІС‚РѕСЂРѕСЃС‚РµРїРµРЅРЅС‹С… РґРµР№СЃС‚РІРёР№ */
+  --danger: #f85149;         /* РљСЂР°СЃРЅС‹Р№ РґР»СЏ СѓРґР°Р»РµРЅРёСЏ Рё РѕС€РёР±РѕРє */
 
-  /* Отделители и фон пузырей */
+  /* РћС‚РґРµР»РёС‚РµР»Рё Рё С„РѕРЅ РїСѓР·С‹СЂРµР№ */
   --border-color: #30363d;
   --chat-bubble-user: #1f2937;
   --chat-bubble-ai: #24344d;
 
-  /* Поля ввода */
+  /* РџРѕР»СЏ РІРІРѕРґР° */
   --input-bg: #1e2531;
   --input-border: #39414c;
 }
@@ -143,7 +143,7 @@ main {
   border: 2px solid var(--bg-secondary);
 }
 
-/* Каждая запись — flex: текст и иконка по краям */
+/* РљР°Р¶РґР°СЏ Р·Р°РїРёСЃСЊ вЂ” flex: С‚РµРєСЃС‚ Рё РёРєРѕРЅРєР° РїРѕ РєСЂР°СЏРј */
 #chat-list li {
   display: flex;
   justify-content: space-between;
@@ -167,7 +167,7 @@ main {
   transform: translateY(-2px);
 }
 
-/* Кнопка удаления в списке чатов */
+/* РљРЅРѕРїРєР° СѓРґР°Р»РµРЅРёСЏ РІ СЃРїРёСЃРєРµ С‡Р°С‚РѕРІ */
 .delete-chat-btn {
   background: none;
   border: none;
@@ -188,7 +188,7 @@ main {
 }
 
 /* New chat button */
-.new-conversation-btn {
+.new-conversation-btn:focus {`n  outline: none;`n}`n`n.new-conversation-btn {
   width: 100%;
   margin-top: 1rem;
   padding: 0.7rem;
@@ -206,10 +206,7 @@ main {
   transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
 
-.new-conversation-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
+.new-conversation-btn:hover,`n.new-conversation-btn:focus {`n  transform: translateY(-2px) scale(1.02);`n  box-shadow: 0 6px 12px rgba(47, 181, 95, 0.3);`n}
 
 /* === Main content area === */
 .main-content-area {
@@ -284,15 +281,12 @@ button.primary-btn {
   gap: 0.5rem;
 }
 
-button.primary-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-}
+button.primary-btn:hover,`nbutton.primary-btn:focus {`n  transform: translateY(-2px) scale(1.02);`n  box-shadow: 0 6px 15px rgba(88, 166, 255, 0.3);`n}
 
 button.primary-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
+}`n`nbutton.primary-btn:focus {`n  outline: none;`n}
 
 /* Upload Section */
 .upload-card h2 {
@@ -406,15 +400,12 @@ button.secondary-btn {
   transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
 
-button.secondary-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-}
+button.secondary-btn:hover,`nbutton.secondary-btn:focus {`n  transform: translateY(-2px) scale(1.02);`n  box-shadow: 0 6px 12px rgba(63, 185, 80, 0.3);`n}
 
 button.secondary-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
+}`n`nbutton.secondary-btn:focus {`n  outline: none;`n}
 
 /* About, Help, Contact sections */
 #about-section h2, #help-section h2, #contact h2 {
@@ -641,10 +632,7 @@ button.secondary-btn:disabled {
   transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
 
-.send-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-}
+.send-button:hover,`n.send-button:focus {`n  transform: translateY(-2px) scale(1.02);`n  box-shadow: 0 6px 15px rgba(88, 166, 255, 0.3);`n}
 
 /* Spinners */
 #spinner, #fileSpinner {
@@ -697,6 +685,42 @@ footer {
   padding: 1rem;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
   margin-top: auto;
+}
+
+/* === Pulsing Loading Animation === */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.pulse-loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* === Chat Bubble Entrance Animation === */
+@keyframes slideUpFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-bubble-enter {
+  animation: slideUpFadeIn 0.4s ease-out forwards;
 }
 
 /* === Responsive Breakpoints === */
@@ -821,3 +845,11 @@ footer {
     padding: 0.6rem;
   }
 }
+
+
+
+
+
+
+
+

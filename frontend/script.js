@@ -1,4 +1,4 @@
-/* =========   GLOBAL API HELPERS   ========= */
+﻿/* =========   GLOBAL API HELPERS   ========= */
 const API_BASE = '/api'; // Use Vercel proxy
 
 async function apiFetch(path, options = {}, retries = 2) {
@@ -111,11 +111,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearChatMessages() {
     chatMessagesDisplay.innerHTML = `
       <div id="spinner" style="display: none;">
-          <p>ИИ-юрист анализирует ваш запрос...</p>
+          <p>РР-СЋСЂРёСЃС‚ Р°РЅР°Р»РёР·РёСЂСѓРµС‚ РІР°С€ Р·Р°РїСЂРѕСЃ...</p>
           <div class="loader"></div>
       </div>
       <div id="fileSpinner" style="display: none;">
-          <p>ИИ-юрист анализирует ваш документ...</p>
+          <p>РР-СЋСЂРёСЃС‚ Р°РЅР°Р»РёР·РёСЂСѓРµС‚ РІР°С€ РґРѕРєСѓРјРµРЅС‚...</p>
           <div class="loader"></div>
       </div>
     `;
@@ -123,17 +123,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function addMessage(text, senderClass) {
     const messageElement = document.createElement('div');
-    messageElement.classList.add('chat-bubble', senderClass);
+    messageElement.classList.add('chat-bubble', senderClass, 'chat-bubble-enter');
     messageElement.innerHTML = text;
     chatMessagesDisplay.appendChild(messageElement);
     chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
-    if (text.includes("Ошибка:")) {
+    if (text.includes("РћС€РёР±РєР°:")) {
       messageElement.innerHTML = `<p class="error-message">${text}</p>`;
     }
   }
 
   async function loadChatSessions() {
-    chatList.innerHTML = '<p>Загрузка истории...</p>';
+    chatList.innerHTML = '<p>Р—Р°РіСЂСѓР·РєР° РёСЃС‚РѕСЂРёРё...</p>';
     try {
       const res  = await apiFetch('/get-all-sessions-summary');
       const data = await safeJson(res);
@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const delBtn = li.querySelector('.delete-chat-btn');
             delBtn.onclick = async (e) => {
               e.stopPropagation();
-              if (confirm('Удалить этот чат?')) {
+              if (confirm('РЈРґР°Р»РёС‚СЊ СЌС‚РѕС‚ С‡Р°С‚?')) {
                 try {
                   await apiFetch(`/delete-session?session_id=${session.id}`, { method:'DELETE' });
                   if (currentSessionId === session.id) {
@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   await loadChatSessions();
                   highlightSession(currentSessionId);
                 } catch (err) {
-                  alert(`Не удалось удалить чат: ${err.message}`);
+                  alert(`РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ С‡Р°С‚: ${err.message}`);
                 }
               }
             };
@@ -188,15 +188,15 @@ document.addEventListener('DOMContentLoaded', () => {
             chatList.appendChild(li);
           });
         } else {
-          chatList.innerHTML = '<p>История чатов пуста.</p>';
+          chatList.innerHTML = '<p>РСЃС‚РѕСЂРёСЏ С‡Р°С‚РѕРІ РїСѓСЃС‚Р°.</p>';
         }
       } else {
-        chatList.innerHTML = '<p>История чатов пуста.</p>';
+        chatList.innerHTML = '<p>РСЃС‚РѕСЂРёСЏ С‡Р°С‚РѕРІ РїСѓСЃС‚Р°.</p>';
       }
     } catch (e) {
-      console.error('Ошибка загрузки сессий:', e);
+      console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё СЃРµСЃСЃРёР№:', e);
       chatList.innerHTML =
-        `<p class="error-message">Ошибка загрузки истории: ${e.message}. Проверьте подключение к серверу.</p>`;
+        `<p class="error-message">РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РёСЃС‚РѕСЂРёРё: ${e.message}. РџСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ.</p>`;
     }
   }
 
@@ -215,9 +215,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
     } catch (e) {
-      console.error('Ошибка загрузки истории беседы:', e);
+      console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РёСЃС‚РѕСЂРёРё Р±РµСЃРµРґС‹:', e);
       addMessage(
-        `<p class="error-message">Ошибка загрузки истории беседы: ${e.message}. Проверьте подключение к серверу.</p>`,
+        `<p class="error-message">РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РёСЃС‚РѕСЂРёРё Р±РµСЃРµРґС‹: ${e.message}. РџСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ.</p>`,
         'ai-response'
       );
     }
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearFile() {
     uploadedFile = null;
     fileUploadInput.value = '';
-    fileNameDisplay.textContent = 'Файл не выбран';
+    fileNameDisplay.textContent = 'Р¤Р°Р№Р» РЅРµ РІС‹Р±СЂР°РЅ';
     fileQuestionInput.value = '';
     fileInfo.style.display = 'none';
     uploadButton.disabled = true;
@@ -273,10 +273,10 @@ document.addEventListener('DOMContentLoaded', () => {
     chatInput.value           = '';
 
     const aiMessageElement = document.createElement('div');
-    aiMessageElement.classList.add('chat-bubble','ai-response');
+    aiMessageElement.classList.add('chat-bubble','ai-response', 'chat-bubble-enter');
     aiMessageElement.textContent = uploadedFile
-      ? 'ИИ-юрист анализирует ваш документ…'
-      : 'ИИ-юрист анализирует ваш запрос…';
+      ? 'РР-СЋСЂРёСЃС‚ Р°РЅР°Р»РёР·РёСЂСѓРµС‚ РІР°С€ РґРѕРєСѓРјРµРЅС‚вЂ¦'
+      : 'РР-СЋСЂРёСЃС‚ Р°РЅР°Р»РёР·РёСЂСѓРµС‚ РІР°С€ Р·Р°РїСЂРѕСЃвЂ¦';
     chatMessagesDisplay.appendChild(aiMessageElement);
     chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
 
@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
       }
 
-      if (aiFullResponse.includes("Ошибка:")) {
+      if (aiFullResponse.includes("РћС€РёР±РєР°:")) {
         aiMessageElement.innerHTML = `<p class="error-message">${aiFullResponse}</p>`;
       }
 
@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (fileSpinner) fileSpinner.style.display = 'none';
       console.error(e);
       aiMessageElement.innerHTML =
-        `<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу.</p>`;
+        `<p class="error-message">РћС€РёР±РєР°: ${e.message}. РџСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ.</p>`;
     }
 
     clearFile();
@@ -391,3 +391,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+
