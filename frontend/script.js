@@ -1,4 +1,138 @@
-﻿/* =========   GLOBAL API HELPERS   ========= */
+/* =========   AI RESPONSE FORMATTER   ========= */
+function formatAIResponse(text) {
+  // Convert markdown-style formatting to HTML
+  let formatted = text;
+
+  // Code blocks (```code```)
+  formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre class="code-block"><code>$1</code></pre>');
+  
+  // Inline code (`code`)
+  formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+  
+  // Bold text (**text** or __text__)
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="bold-text">$1</strong>');
+  formatted = formatted.replace(/__(.*?)__/g, '<strong class="bold-text">$1</strong>');
+  
+  // Italic text (*text* or _text_)
+  formatted = formatted.replace(/\*(.*?)\*/g, '<em class="italic-text">$1</em>');
+  formatted = formatted.replace(/_(.*?)_/g, '<em class="italic-text">$1</em>');
+
+  // Headers (## Header)
+  formatted = formatted.replace(/^### (.*$)/gm, '<h3 class="header-3">$1</h3>');
+  formatted = formatted.replace(/^## (.*$)/gm, '<h2 class="header-2">$1</h2>');
+  formatted = formatted.replace(/^# (.*$)/gm, '<h1 class="header-1">$1</h1>');
+
+  // Lists (- item or * item)
+  formatted = formatted.replace(/^[-*] (.*$)/gm, '<li class="list-item">$1</li>');
+  formatted = formatted.replace(/(<li class="list-item">.*<\/li>)/gs, '<ul class="formatted-list">$1</ul>');
+
+  // Numbered lists (1. item)
+  formatted = formatted.replace(/^\d+\. (.*$)/gm, '<li class="numbered-item">$1</li>');
+  formatted = formatted.replace(/(<li class="numbered-item">.*<\/li>)/gs, '<ol class="numbered-list">$1</ol>');
+
+  // Content type detection and semantic formatting
+  const lines = formatted.split('\n');
+  const processedLines = lines.map(line => {
+    const trimmed = line.trim();
+    
+    // Warning/Important content (keywords that indicate warnings)
+    if (/^(внимание|важно|предупреждение|осторожно|опасность|предостережение|warning|important|caution|danger|note)/i.test(trimmed) ||
+        /(!{2,}|⚠️|⛔|🚨)/.test(trimmed)) {
+      return `<div class="content-warning">${line}</div>`;
+    }
+    
+    // Positive content (success, completion, good news)
+    if (/^(отлично|хорошо|успешно|готово|завершено|успех|правильно|верно|положительно|excellent|good|success|completed|correct|positive)/i.test(trimmed) ||
+        /✓|✅|👍|😊|🎉/.test(trimmed)) {
+      return `<div class="content-positive">${line}</div>`;
+    }
+    
+    // References (articles, laws, documents, citations)
+    if (/^(статья|закон|кодекс|постановление|указ|пункт|часть|глава|раздел|приложение|документ|ссылка|источник|article|law|code|section|chapter|document|reference)/i.test(trimmed) ||
+        /\d+\.\d+|\d+\/\d+|№\s*\d+|п\.\s*\d+|ст\.\s*\d+|гл\.\s*\d+/.test(trimmed) ||
+        /(https?:\/\/|www\.|\.kz|\.ru|\.com)/.test(trimmed)) {
+      return `<div class="content-reference">${line}</div>`;
+    }
+    
+    return line;
+  });
+
+  formatted = processedLines.join('\n');
+  
+  // Convert line breaks to HTML
+  formatted = formatted.replace(/\n/g, '<br>');
+  
+  return formatted;
+}
+
+/* =========   AI RESPONSE FORMATTER   ========= */
+function formatAIResponse(text) {
+  // Convert markdown-style formatting to HTML
+  let formatted = text;
+
+  // Code blocks (```code```)
+  formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre class="code-block"><code>$1</code></pre>');
+  
+  // Inline code (`code`)
+  formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+  
+  // Bold text (**text** or __text__)
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="bold-text">$1</strong>');
+  formatted = formatted.replace(/__(.*?)__/g, '<strong class="bold-text">$1</strong>');
+  
+  // Italic text (*text* or _text_)
+  formatted = formatted.replace(/\*(.*?)\*/g, '<em class="italic-text">$1</em>');
+  formatted = formatted.replace(/_(.*?)_/g, '<em class="italic-text">$1</em>');
+
+  // Headers (## Header)
+  formatted = formatted.replace(/^### (.*$)/gm, '<h3 class="header-3">$1</h3>');
+  formatted = formatted.replace(/^## (.*$)/gm, '<h2 class="header-2">$1</h2>');
+  formatted = formatted.replace(/^# (.*$)/gm, '<h1 class="header-1">$1</h1>');
+
+  // Lists (- item or * item)
+  formatted = formatted.replace(/^[-*] (.*$)/gm, '<li class="list-item">$1</li>');
+  formatted = formatted.replace(/(<li class="list-item">.*<\/li>)/gs, '<ul class="formatted-list">$1</ul>');
+
+  // Numbered lists (1. item)
+  formatted = formatted.replace(/^\d+\. (.*$)/gm, '<li class="numbered-item">$1</li>');
+  formatted = formatted.replace(/(<li class="numbered-item">.*<\/li>)/gs, '<ol class="numbered-list">$1</ol>');
+
+  // Content type detection and semantic formatting
+  const lines = formatted.split('\n');
+  const processedLines = lines.map(line => {
+    const trimmed = line.trim();
+    
+    // Warning/Important content (keywords that indicate warnings)
+    if (/^(внимание|важно|предупреждение|осторожно|опасность|предостережение|warning|important|caution|danger|note)/i.test(trimmed) ||
+        /(!{2,}|⚠️|⛔|🚨)/.test(trimmed)) {
+      return `<div class="content-warning">${line}</div>`;
+    }
+    
+    // Positive content (success, completion, good news)
+    if (/^(отлично|хорошо|успешно|готово|завершено|успех|правильно|верно|положительно|excellent|good|success|completed|correct|positive)/i.test(trimmed) ||
+        /✓|✅|👍|😊|🎉/.test(trimmed)) {
+      return `<div class="content-positive">${line}</div>`;
+    }
+    
+    // References (articles, laws, documents, citations)
+    if (/^(статья|закон|кодекс|постановление|указ|пункт|часть|глава|раздел|приложение|документ|ссылка|источник|article|law|code|section|chapter|document|reference)/i.test(trimmed) ||
+        /\d+\.\d+|\d+\/\d+|№\s*\d+|п\.\s*\d+|ст\.\s*\d+|гл\.\s*\d+/.test(trimmed) ||
+        /(https?:\/\/|www\.|\.kz|\.ru|\.com)/.test(trimmed)) {
+      return `<div class="content-reference">${line}</div>`;
+    }
+    
+    return line;
+  });
+
+  formatted = processedLines.join('\n');
+  
+  // Convert line breaks to HTML
+  formatted = formatted.replace(/\n/g, '<br>');
+  
+  return formatted;
+}
+
+/* =========   GLOBAL API HELPERS   ========= */
 const API_BASE = '/api'; // Use Vercel proxy
 
 async function apiFetch(path, options = {}, retries = 2) {
@@ -111,11 +245,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearChatMessages() {
     chatMessagesDisplay.innerHTML = `
       <div id="spinner" style="display: none;">
-          <p>РР-СЋСЂРёСЃС‚ Р°РЅР°Р»РёР·РёСЂСѓРµС‚ РІР°С€ Р·Р°РїСЂРѕСЃ...</p>
+          <p>ИИ-юрист анализирует ваш запрос...</p>
           <div class="loader"></div>
       </div>
       <div id="fileSpinner" style="display: none;">
-          <p>РР-СЋСЂРёСЃС‚ Р°РЅР°Р»РёР·РёСЂСѓРµС‚ РІР°С€ РґРѕРєСѓРјРµРЅС‚...</p>
+          <p>ИИ-юрист анализирует ваш документ...</p>
           <div class="loader"></div>
       </div>
     `;
@@ -123,17 +257,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function addMessage(text, senderClass) {
     const messageElement = document.createElement('div');
-    messageElement.classList.add('chat-bubble', senderClass, 'chat-bubble-enter');
+    messageElement.classList.add('chat-bubble', senderClass);
     messageElement.innerHTML = text;
     chatMessagesDisplay.appendChild(messageElement);
     chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
-    if (text.includes("РћС€РёР±РєР°:")) {
+    if (text.includes("Ошибка:")) {
       messageElement.innerHTML = `<p class="error-message">${text}</p>`;
     }
   }
 
   async function loadChatSessions() {
-    chatList.innerHTML = '<p>Р—Р°РіСЂСѓР·РєР° РёСЃС‚РѕСЂРёРё...</p>';
+    chatList.innerHTML = '<p>Загрузка истории...</p>';
     try {
       const res  = await apiFetch('/get-all-sessions-summary');
       const data = await safeJson(res);
@@ -171,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const delBtn = li.querySelector('.delete-chat-btn');
             delBtn.onclick = async (e) => {
               e.stopPropagation();
-              if (confirm('РЈРґР°Р»РёС‚СЊ СЌС‚РѕС‚ С‡Р°С‚?')) {
+              if (confirm('Удалить этот чат?')) {
                 try {
                   await apiFetch(`/delete-session?session_id=${session.id}`, { method:'DELETE' });
                   if (currentSessionId === session.id) {
@@ -180,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   await loadChatSessions();
                   highlightSession(currentSessionId);
                 } catch (err) {
-                  alert(`РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ С‡Р°С‚: ${err.message}`);
+                  alert(`Не удалось удалить чат: ${err.message}`);
                 }
               }
             };
@@ -188,15 +322,15 @@ document.addEventListener('DOMContentLoaded', () => {
             chatList.appendChild(li);
           });
         } else {
-          chatList.innerHTML = '<p>РСЃС‚РѕСЂРёСЏ С‡Р°С‚РѕРІ РїСѓСЃС‚Р°.</p>';
+          chatList.innerHTML = '<p>История чатов пуста.</p>';
         }
       } else {
-        chatList.innerHTML = '<p>РСЃС‚РѕСЂРёСЏ С‡Р°С‚РѕРІ РїСѓСЃС‚Р°.</p>';
+        chatList.innerHTML = '<p>История чатов пуста.</p>';
       }
     } catch (e) {
-      console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё СЃРµСЃСЃРёР№:', e);
+      console.error('Ошибка загрузки сессий:', e);
       chatList.innerHTML =
-        `<p class="error-message">РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РёСЃС‚РѕСЂРёРё: ${e.message}. РџСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ.</p>`;
+        `<p class="error-message">Ошибка загрузки истории: ${e.message}. Проверьте подключение к серверу.</p>`;
     }
   }
 
@@ -211,13 +345,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await safeJson(res);
       if (data.history) {
         data.history.forEach(msg => {
-          addMessage(msg.content, msg.role === 'user' ? 'user-message' : 'ai-response');
+          const formattedContent = msg.role === 'user' ? msg.content : formatAIResponse(msg.content);
+          addMessage(formattedContent, msg.role === 'user' ? 'user-message' : 'ai-response');
         });
       }
     } catch (e) {
-      console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РёСЃС‚РѕСЂРёРё Р±РµСЃРµРґС‹:', e);
+      console.error('Ошибка загрузки истории беседы:', e);
       addMessage(
-        `<p class="error-message">РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РёСЃС‚РѕСЂРёРё Р±РµСЃРµРґС‹: ${e.message}. РџСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ.</p>`,
+        `<p class="error-message">Ошибка загрузки истории беседы: ${e.message}. Проверьте подключение к серверу.</p>`,
         'ai-response'
       );
     }
@@ -246,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearFile() {
     uploadedFile = null;
     fileUploadInput.value = '';
-    fileNameDisplay.textContent = 'Р¤Р°Р№Р» РЅРµ РІС‹Р±СЂР°РЅ';
+    fileNameDisplay.textContent = 'Файл не выбран';
     fileQuestionInput.value = '';
     fileInfo.style.display = 'none';
     uploadButton.disabled = true;
@@ -273,10 +408,10 @@ document.addEventListener('DOMContentLoaded', () => {
     chatInput.value           = '';
 
     const aiMessageElement = document.createElement('div');
-    aiMessageElement.classList.add('chat-bubble','ai-response', 'chat-bubble-enter');
+    aiMessageElement.classList.add('chat-bubble','ai-response');
     aiMessageElement.textContent = uploadedFile
-      ? 'РР-СЋСЂРёСЃС‚ Р°РЅР°Р»РёР·РёСЂСѓРµС‚ РІР°С€ РґРѕРєСѓРјРµРЅС‚вЂ¦'
-      : 'РР-СЋСЂРёСЃС‚ Р°РЅР°Р»РёР·РёСЂСѓРµС‚ РІР°С€ Р·Р°РїСЂРѕСЃвЂ¦';
+      ? 'ИИ-юрист анализирует ваш документ…'
+      : 'ИИ-юрист анализирует ваш запрос…';
     chatMessagesDisplay.appendChild(aiMessageElement);
     chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
 
@@ -311,11 +446,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         aiFullResponse += chunk;
-        aiMessageElement.innerHTML = aiFullResponse;
+        aiMessageElement.innerHTML = formatAIResponse(aiFullResponse);
         chatMessagesDisplay.scrollTop = chatMessagesDisplay.scrollHeight;
       }
 
-      if (aiFullResponse.includes("РћС€РёР±РєР°:")) {
+      if (aiFullResponse.includes("Ошибка:")) {
         aiMessageElement.innerHTML = `<p class="error-message">${aiFullResponse}</p>`;
       }
 
@@ -327,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (fileSpinner) fileSpinner.style.display = 'none';
       console.error(e);
       aiMessageElement.innerHTML =
-        `<p class="error-message">РћС€РёР±РєР°: ${e.message}. РџСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ.</p>`;
+        `<p class="error-message">Ошибка: ${e.message}. Проверьте подключение к серверу.</p>`;
     }
 
     clearFile();
@@ -391,5 +526,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-
-

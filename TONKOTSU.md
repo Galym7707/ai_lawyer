@@ -1,60 +1,64 @@
 # REPO CONTEXT
 This file contains important context about this repo for [Tonkotsu](https://www.tonkotsu.ai) and helps it work faster and generate better code.
 
-## REPO STRUCTURE
-- **backend/**: Flask-based Python API server for AI legal assistant
-- **frontend/**: Static HTML/CSS/JS frontend with Vercel serverless API proxy
+## Project Structure
+This is a Flask backend + vanilla JS frontend project for a legal AI assistant.
 
-## INITIAL SETUP
+- `backend/` - Flask API server with Gemini AI integration
+- `frontend/` - Static HTML/CSS/JS frontend with Vercel proxy
+
+## Initial Setup
 ```bash
-# Backend setup (Python/Flask)
+# Backend setup
 cd backend
 python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 
-# Frontend setup (Static files)
+# Frontend setup (no additional dependencies needed)
 cd frontend
-# No package installation needed - uses vanilla HTML/CSS/JS with CDN dependencies
+# Static files, no package installation required
 ```
 
-## BUILD
-```bash
-# Backend: No build step required (Python)
-# Frontend: No build step required (static files)
-```
+## Running Build
+No explicit build process - this is a Flask + static files project.
 
-## LINT
-```bash
-# No linting configuration found in the repo
-```
+## Running Lint
+No linting configuration found in the project.
 
-## TESTS
+## Running Tests
 ```bash
-# Backend: Run unit tests in Flask app
+# Backend tests (unittest is used within the main file)
 cd backend
-python -m unittest kaz_legal_web_api.TestHTMLFormatting
-
-# Frontend: No tests found
+python -m unittest kaz_legal_web_api.py
 ```
 
-## DEV SERVER
+## Running Dev Server
 ```bash
-# Backend: Run Flask development server
+# Backend server
 cd backend
 python kaz_legal_web_api.py
-# Server runs on http://localhost:5000
+# Runs on http://localhost:5000
 
-# Frontend: Serve static files (any method)
+# Frontend development
 cd frontend
-python -m http.server 8000
-# Or use any static file server
+# Open index.html in browser or use a local server like:
+# python -m http.server 8000
 ```
 
-## PRODUCTION DEPLOYMENT
-- Backend: Deployed on Railway (configured via environment variables)
-- Frontend: Deployed on Vercel (configured via vercel.json)
-- Frontend proxies API requests to backend via /api/* routes
+## Environment Variables
+Create `.env` file in backend directory:
+```
+GEMINI_API_KEY=your_api_key
+MONGO_URI=your_mongo_connection_string
+CORS_ORIGINS=http://localhost:5000,http://127.0.0.1:5000
+PORT=5000
+MAX_CONTENT_LENGTH=16777216
+```
+
+## Notes
+- Backend uses Python Flask with Gemini AI integration
+- Frontend uses vanilla JS with Vercel proxy for API calls
+- MongoDB is used for conversation storage
+- Project includes legal document processing and Kazakh law database
