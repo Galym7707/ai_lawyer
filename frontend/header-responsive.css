@@ -1,0 +1,216 @@
+/* ===== HEADER RESPONSIVE STYLES ===== */
+
+/* Header right container with flexbox layout */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+/* Sidebar toggle button */
+.sidebar-toggle {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+/* Update existing header h1 */
+header h1 {
+  flex-shrink: 0;
+}
+
+/* Update existing header nav */
+header nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+header nav a {
+  white-space: nowrap;
+}
+
+/* Mobile header styles - 320px and up */
+@media (max-width: 767px) {
+  header {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-height: 60px;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    order: 1;
+  }
+
+  .header-right {
+    order: 2;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  /* Mobile theme toggle - smaller size and proper touch targets */
+  .theme-toggle {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+    min-width: 40px;
+    min-height: 40px;
+    border-radius: 4px;
+  }
+
+  /* Show sidebar toggle on mobile */
+  .sidebar-toggle {
+    display: flex;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+    min-width: 40px;
+    min-height: 40px;
+    border-radius: 4px;
+    margin-right: 0.25rem;
+  }
+
+  /* Mobile navigation - full width below header elements */
+  header nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    gap: 1rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  header nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  header nav a {
+    font-size: 0.9rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  header nav a:hover,
+  header nav a:focus {
+    background: rgba(88, 166, 255, 0.1);
+    outline: none;
+  }
+}
+
+/* Extra small mobile - 320px to 480px */
+@media (max-width: 480px) {
+  header {
+    padding: 0.5rem 0.75rem;
+    min-height: 56px;
+  }
+
+  header h1 {
+    font-size: 1.25rem;
+  }
+
+  .header-right {
+    gap: 0.25rem;
+  }
+
+  .theme-toggle,
+  .sidebar-toggle {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  header nav a {
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+/* Tablet styles - 768px to 1023px */
+@media (min-width: 768px) and (max-width: 1023px) {
+  header {
+    padding: 0.875rem 1.5rem;
+  }
+
+  header h1 {
+    font-size: 1.6rem;
+  }
+
+  .header-right {
+    gap: 0.875rem;
+  }
+
+  .theme-toggle {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.95rem;
+  }
+
+  header nav {
+    gap: 1.5rem;
+  }
+
+  header nav a {
+    font-size: 0.95rem;
+  }
+}
+
+/* Large desktop - 1024px and up */
+@media (min-width: 1024px) {
+  .theme-toggle:active {
+    transform: translateY(0);
+  }
+
+  .sidebar-toggle:active {
+    transform: translateY(0);
+  }
+}
