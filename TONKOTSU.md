@@ -1,47 +1,60 @@
 # REPO CONTEXT
 This file contains important context about this repo for [Tonkotsu](https://www.tonkotsu.ai) and helps it work faster and generate better code.
 
-## Repository Structure
-This is a full-stack AI legal assistant application with:
-- `backend/` - Flask Python API server
-- `frontend/` - Static HTML/CSS/JS frontend with Vercel deployment
+## REPO STRUCTURE
+- **backend/**: Flask-based Python API server for AI legal assistant
+- **frontend/**: Static HTML/CSS/JS frontend with Vercel serverless API proxy
 
-## Initial Setup
-
-### Backend Setup
+## INITIAL SETUP
 ```bash
+# Backend setup (Python/Flask)
 cd backend
-python -m venv .venv
-# On Windows:
-.venv\Scripts\activate
-# On macOS/Linux:
-source .venv/bin/activate
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
 pip install -r requirements.txt
+
+# Frontend setup (Static files)
+cd frontend
+# No package installation needed - uses vanilla HTML/CSS/JS with CDN dependencies
 ```
 
-### Frontend Setup
-The frontend is static HTML/CSS/JS with no build dependencies. It uses Vercel for deployment with a Node.js proxy API.
+## BUILD
+```bash
+# Backend: No build step required (Python)
+# Frontend: No build step required (static files)
+```
 
-## Commands
+## LINT
+```bash
+# No linting configuration found in the repo
+```
 
-### Build
-- **Backend**: No build step required (Python Flask)
-- **Frontend**: No build step required (static files)
+## TESTS
+```bash
+# Backend: Run unit tests in Flask app
+cd backend
+python -m unittest kaz_legal_web_api.TestHTMLFormatting
 
-### Lint
-- **Backend**: No linting configured
-- **Frontend**: No linting configured
+# Frontend: No tests found
+```
 
-### Tests
-- **Backend**: `python -m unittest kaz_legal_web_api.TestHTMLFormatting` (requires dependencies installed)
-- **Frontend**: No tests configured
+## DEV SERVER
+```bash
+# Backend: Run Flask development server
+cd backend
+python kaz_legal_web_api.py
+# Server runs on http://localhost:5000
 
-### Dev Server
-- **Backend**: `python kaz_legal_web_api.py` (runs on port 5000 by default, or PORT env var)
-- **Frontend**: Serve static files (e.g., `python -m http.server 8000` from frontend directory)
+# Frontend: Serve static files (any method)
+cd frontend
+python -m http.server 8000
+# Or use any static file server
+```
 
-## Notes
-- Backend requires environment variables (likely GOOGLE_API_KEY and MongoDB connection)
-- Frontend uses Vercel proxy to route `/api/*` requests to backend
-- Backend includes MongoDB for session storage and Google Generative AI integration
-- Virtual environment should be created in `backend/.venv` based on typical Python conventions
+## PRODUCTION DEPLOYMENT
+- Backend: Deployed on Railway (configured via environment variables)
+- Frontend: Deployed on Vercel (configured via vercel.json)
+- Frontend proxies API requests to backend via /api/* routes
