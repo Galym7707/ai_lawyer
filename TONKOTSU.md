@@ -9,42 +9,50 @@ This is a Flask backend + vanilla JS frontend project for a legal AI assistant.
 
 ## Initial Setup
 ```bash
-# Backend setup
+# Backend setup (Python Flask app)
 cd backend
-python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Linux/Mac
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+# or: source .venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 
-# Frontend setup (no additional dependencies needed)
-cd frontend
-# Static files, no package installation required
+# Frontend is static HTML/JS/CSS - no package installation needed
 ```
 
 ## Running Build
-No explicit build process - this is a Flask + static files project.
+```bash
+# This is a simple Flask app with static frontend - no build step required
+# The backend uses Python dependencies from requirements.txt
+# The frontend is served as static files
+```
 
 ## Running Lint
-No linting configuration found in the project.
+```bash
+# No specific linting configured in this repo
+# Can use standard Python linters:
+# pip install flake8 black
+# flake8 backend/
+# black backend/
+```
 
 ## Running Tests
 ```bash
-# Backend tests (unittest is used within the main file)
+# Basic unit tests are included in the main Flask file
 cd backend
-python -m unittest kaz_legal_web_api.py
+python -m unittest kaz_legal_web_api.TestCleanAndFormatHtml
 ```
 
 ## Running Dev Server
 ```bash
-# Backend server
+# Backend (Flask API server)
 cd backend
 python kaz_legal_web_api.py
 # Runs on http://localhost:5000
 
-# Frontend development
-cd frontend
-# Open index.html in browser or use a local server like:
-# python -m http.server 8000
+# Frontend (can be served locally)
+# The frontend is static files that make API calls to the backend
+# Can be opened directly in browser or served with a local server:
+# python -m http.server 8000  # from frontend directory
 ```
 
 ## Environment Variables
@@ -58,6 +66,10 @@ MAX_CONTENT_LENGTH=16777216
 ```
 
 ## Notes
+- This is a Flask-based legal AI assistant for Kazakhstan law
+- Backend requires environment variables (GEMINI_API_KEY, MONGO_URI, etc.)
+- Frontend uses Vercel for deployment with proxy configuration
+- The app uses Google's Gemini AI model for legal consultations
 - Backend uses Python Flask with Gemini AI integration
 - Frontend uses vanilla JS with Vercel proxy for API calls
 - MongoDB is used for conversation storage

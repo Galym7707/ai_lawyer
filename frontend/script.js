@@ -267,7 +267,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadChatSessions() {
-    chatList.innerHTML = '<p>Загрузка истории...</p>';
+    if (window.enhancedComponents) {
+      window.enhancedComponents.showSidebarSkeleton();
+    } else {
+      chatList.innerHTML = '<p>Загрузка истории...</p>';
+    }
     try {
       const res  = await apiFetch('/get-all-sessions-summary');
       const data = await safeJson(res);
@@ -329,6 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       console.error('Ошибка загрузки сессий:', e);
+      if (window.enhancedComponents) {
+        chatList.innerHTML = '';
+        window.enhancedComponents.handleConnectionError(e);
+      } else {
       chatList.innerHTML =
         `<p class="error-message">Ошибка загрузки истории: ${e.message}. Проверьте подключение к серверу.</p>`;
     }
