@@ -43,6 +43,19 @@ export default async function handler(req, res) {
     const queryString = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
     const backendUrl = new URL(targetPath + queryString, validatedBase).toString();
 
+    // Диагностический маршрут, чтобы проверить конфиг на проде: /api/__diag
+    if (targetPath === '/__diag') {
+      res.status(200).json({
+        ok: true,
+        method,
+        validatedBase,
+        targetPath,
+        queryString,
+        backendUrl
+      });
+      return;
+    }
+
     // Собираем тело запроса
     let requestBody;
     const contentType = (req.headers['content-type'] || '').toLowerCase();
@@ -65,6 +78,9 @@ export default async function handler(req, res) {
     if (req.headers['content-type']) headersToForward['Content-Type'] = req.headers['content-type'];
     if (req.headers['authorization']) headersToForward['Authorization'] = req.headers['authorization'];
     if (req.headers['cookie']) headersToForward['Cookie'] = req.headers['cookie'];
+
+    // Логируем ключевые значения для отладки в Vercel Function Logs
+    console.log('[proxy] method=', method, 'base=', validatedBase, 'path=', targetPath, 'url=', backendUrl);
 
     // Выполняем запрос к бэкенду
     const backendResponse = await fetchFunc(backendUrl, {
