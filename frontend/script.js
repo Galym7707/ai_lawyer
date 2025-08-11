@@ -173,6 +173,42 @@ function generateDeviceId() {
   return btoa(userAgent + randomString).replace(/=/g, '');
 }
 
+/* =========   THEME MANAGEMENT   ========= */
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+    document.body.classList.add('dark-theme');
+    updateThemeIcon(true);
+  } else {
+    document.body.classList.remove('dark-theme');
+    updateThemeIcon(false);
+  }
+}
+
+function updateThemeIcon(isDark) {
+  const themeToggle = document.getElementById('theme-toggle');
+  if (!themeToggle) return;
+  const icon = themeToggle.querySelector('i');
+  
+  if (isDark) {
+    icon.className = 'fas fa-sun';
+    themeToggle.title = 'Переключить на светлую тему';
+  } else {
+    icon.className = 'fas fa-moon';
+    themeToggle.title = 'Переключить на тёмную тему';
+  }
+}
+
+function toggleTheme() {
+  const body = document.body;
+  const isDark = body.classList.toggle('dark-theme');
+  
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  updateThemeIcon(isDark);
+}
+
 /* =========   MAIN SCRIPT   ========= */
 document.addEventListener('DOMContentLoaded', () => {
   /* ----------  DOM ---------- */
@@ -200,6 +236,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const homeLink             = document.getElementById('home-link');
   const aboutLinkNav         = document.getElementById('about-link-nav');
+  const themeToggle          = document.getElementById('theme-toggle');
+
+  // Initialize theme on page load
+  initTheme();
 
   /* ----------  STATE ---------- */
   let deviceId = sessionStorage.getItem('deviceId');
@@ -521,6 +561,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('about').scrollIntoView({ behavior: 'smooth' });
     showInitialSections();
   };
+  
+  // Theme toggle event
+  if (themeToggle) {
+    themeToggle.onclick = toggleTheme;
+  }
 
   /* ----------  INIT ---------- */
   showInitialSections();
