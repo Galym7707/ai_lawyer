@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Teg — AI Юрист Казахстана</title>
     <link rel="stylesheet" href="styles.css" />
-<<<<<<< HEAD
     <link rel="stylesheet" href="enhanced-styles.css" />
-=======
     <link rel="stylesheet" href="error-styles.css" />
->>>>>>> 43f838c (Implement error boundaries, event listener cleanup, file upload validation, and secure session management)
+    <link rel="stylesheet" href="responsive-system.css" />
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon"
@@ -20,6 +18,9 @@
 <header>
     <h1>Teg</h1>
     <div class="header-right">
+        <button id="sidebar-toggle" class="sidebar-toggle mobile-only" title="Открыть меню">
+            <i class="fas fa-bars"></i>
+        </button>
         <button id="theme-toggle" class="theme-toggle" title="Переключить тему">
             <i class="fas fa-moon"></i>
         </button>
@@ -34,7 +35,11 @@
 
 <main>
     <div class="app-container">
-        <aside class="sidebar">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        <aside class="sidebar" id="sidebar">
+            <button class="sidebar-close mobile-only" id="sidebar-close">
+                <i class="fas fa-times"></i>
+            </button>
             <h2>История чатов</h2>
             <ul id="chat-list">
                 <!-- Шаблон элемента истории (будет клонироваться в JS) -->
@@ -185,5 +190,6 @@
 
 <script src="enhanced-components.js"></script>
 <script src="script.js"></script>
+<script src="responsive-menu.js"></script>
 </body>
 </html>
