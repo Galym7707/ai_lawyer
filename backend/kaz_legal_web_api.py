@@ -258,24 +258,24 @@ load_law_db()
 # Add health endpoint
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Health check endpoint that returns server status and configuration."""
+    """Health check endpoint that returns standardized JSON response with server status and configuration."""
     import datetime
     from flask import jsonify
     
     # Get port from environment or default to 5000
     port = int(os.getenv('PORT', 5000))
     
-    # Get CORS configuration
+    # Get CORS configuration details - ensure all values are JSON serializable
     cors_config = {
-        "origins": cors_origins,
+        "origins": list(cors_origins),  # Ensure it's a list for JSON serialization
         "methods": "GET, POST, OPTIONS",
-        "headers": "Content-Type, Authorization",
+        "headers": "Content-Type, Authorization", 
         "credentials": True
     }
     
     response_data = {
         "status": "healthy",
-        "server": "active",
+
         "port": port,
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
         "cors": cors_config
