@@ -1,0 +1,41 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.cache/
+*.log
+
+# Secrets
+.env
+.env.*
+*.env
+
+# OS/IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Node/Frontend (если есть) ---
+node_modules/
+.next/
+.vercel/
+dist/
+build/
+.turbo/
+*.map
+
+# Project-specific
+uploads/
+tmp/
