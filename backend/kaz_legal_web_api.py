@@ -989,24 +989,6 @@ def get_history_route():
 def get_history_route_api():
     return get_history_route()
 
-@app.route('/health', methods=["GET"])
-def health_check():
-    """Возвращает статус здоровья сервера."""
-    try:
-        response = jsonify({
-            "status": "healthy",
-            "timestamp": json.dumps({"timestamp": "now"}),
-            "service": "kaz-legal-api"
-        })
-        return add_cors_headers(response), 200
-    except Exception as e:
-        logging.error(f"❌ Ошибка в health check: {e}")
-        response = jsonify({
-            "status": "error",
-            "error": str(e),
-            "service": "kaz-legal-api"
-        })
-        return add_cors_headers(response), 500
 
 @app.route('/api/health', methods=["GET"])
 def health_check_api():
@@ -1061,4 +1043,5 @@ if __name__ == '__main__':
     # Запуск приложения. Порт можно переопределить через переменную окружения PORT
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
 
