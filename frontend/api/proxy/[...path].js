@@ -43,16 +43,98 @@ export default async function handler(req, res) {
     const queryString = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
     const backendUrl = new URL(targetPath + queryString, validatedBase).toString();
 
-    // Диагностический маршрут, чтобы проверить конфиг на проде: /api/__diag
+    // Enhanced diagnostics endpoint for debugging deployment issues: /api/__diag
     if (targetPath === '/__diag') {
-      res.status(200).json({
-        ok: true,
-        method,
-        validatedBase,
-        targetPath,
-        queryString,
-        backendUrl
-      });
+      const diagnostics = {
+        status: 'success',
+        timestamp: new Date().toISOString(),
+        environment: {
+          node_version: process.version,
+          platform: process.platform,
+          vercel_region: process.env.VERCEL_REGION || 'unknown',
+          vercel_env: process.env.VERCEL_ENV || 'unknown'
+        },
+        proxy_configuration: {
+          backend_url_env_var: process.env.RAILWAY_BACKEND_URL || null,
+          backend_url_raw: rawBase,
+          backend_url_validated: validatedBase,
+          current_request: {
+            method: method,
+            target_path: targetPath,
+            query_string: queryString,
+            constructed_backend_url: backendUrl,
+            user_agent: req.headers['user-agent'] || null,
+            content_type: req.headers['content-type'] || null
+          }
+        },
+        environment_variables: {
+          railway_backend_url: {
+            value: process.env.RAILWAY_BACKEND_URL || null,
+            status: process.env.RAILWAY_BACKEND_URL ? 'present' : 'missing'
+          },
+          vercel_url: {
+            value: process.env.VERCEL_URL || null,
+            status: process.env.VERCEL_URL ? 'present' : 'missing'
+          },
+          vercel_branch_url: {
+            value: process.env.VERCEL_BRANCH_URL || null,
+            status: process.env.VERCEL_BRANCH_URL ? 'present' : 'missing'
+          }
+        },
+        connection_validation: {
+          backend_url_valid: false,
+          backend_reachable: false,
+          validation_error: null,
+          response_time_ms: null
+        }
+      };
+
+      // Validate backend URL format
+      try {
+        new URL(validatedBase);
+        diagnostics.connection_validation.backend_url_valid = true;
+      } catch (urlError) {
+        diagnostics.connection_validation.validation_error = `Invalid backend URL format: ${urlError.message}`;
+      }
+
+      // Test backend connectivity
+      if (diagnostics.connection_validation.backend_url_valid) {
+        try {
+          const fetchFunc = await getFetch();
+          const startTime = Date.now();
+          const healthCheckResponse = await fetchFunc(`${validatedBase}/health`, {
+            method: 'GET',
+            timeout: 10000 // 10 second timeout
+          });
+          const responseTime = Date.now() - startTime;
+          
+          diagnostics.connection_validation.backend_reachable = healthCheckResponse.ok;
+          diagnostics.connection_validation.response_time_ms = responseTime;
+          
+          if (!healthCheckResponse.ok) {
+            diagnostics.connection_validation.validation_error = `Backend responded with status: ${healthCheckResponse.status}`;
+          }
+        } catch (connectionError) {
+          diagnostics.connection_validation.validation_error = `Connection failed: ${connectionError.message}`;
+        }
+      }
+
+      // Check for common configuration issues
+      const configurationIssues = [];
+      if (!process.env.RAILWAY_BACKEND_URL) {
+        configurationIssues.push('RAILWAY_BACKEND_URL environment variable is not set');
+      }
+      if (!diagnostics.connection_validation.backend_url_valid) {
+        configurationIssues.push('Backend URL format is invalid');
+      }
+      if (!diagnostics.connection_validation.backend_reachable) {
+        configurationIssues.push('Backend server is not reachable');
+      }
+
+      diagnostics.configuration_issues = configurationIssues;
+      diagnostics.overall_status = configurationIssues.length === 0 ? 'healthy' : 'issues_detected';
+
+      res.status(200).json(diagnostics);
       return;
     }
 
