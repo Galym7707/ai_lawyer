@@ -1,4 +1,4 @@
-"""Основной веб‑сервер для Kaz Legal Bot.
+﻿"""Основной веб‑сервер для Kaz Legal Bot.
 
 Этот модуль реализует API, позволяющий отправлять текстовые запросы
 искусственному интеллекту, загружать документы для анализа,
@@ -250,6 +250,35 @@ def load_law_db(path: str = "laws/kazakh_laws_db.json") -> None:
 
 # Загрузить базу законов при старте
 load_law_db()
+
+# Add health endpoint
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Health check endpoint that returns server status and configuration."""
+    import datetime
+    from flask import jsonify
+    
+    # Get port from environment or default to 5000
+    port = int(os.getenv('PORT', 5000))
+    
+    # Get CORS configuration
+    cors_config = {
+        "origins": cors_origins,
+        "methods": "GET, POST, OPTIONS",
+        "headers": "Content-Type, Authorization",
+        "credentials": True
+    }
+    
+    response_data = {
+        "status": "healthy",
+        "server": "active",
+        "port": port,
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "cors": cors_config
+    }
+    
+    response = jsonify(response_data)
+    return add_cors_headers(response), 200
 
 @app.route("/delete-session", methods=["DELETE"])
 @app.route("/api/delete-session", methods=["DELETE"])
@@ -1028,3 +1057,4 @@ if __name__ == '__main__':
     # Запуск приложения. Порт можно переопределить через переменную окружения PORT
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
