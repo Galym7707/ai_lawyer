@@ -956,6 +956,29 @@ def get_history_route():
 def get_history_route_api():
     return get_history_route()
 
+@app.route('/health', methods=["GET"])
+def health_check():
+    """Возвращает статус здоровья сервера."""
+    try:
+        response = jsonify({
+            "status": "healthy",
+            "timestamp": json.dumps({"timestamp": "now"}),
+            "service": "kaz-legal-api"
+        })
+        return add_cors_headers(response), 200
+    except Exception as e:
+        logging.error(f"❌ Ошибка в health check: {e}")
+        response = jsonify({
+            "status": "error",
+            "error": str(e),
+            "service": "kaz-legal-api"
+        })
+        return add_cors_headers(response), 500
+
+@app.route('/api/health', methods=["GET"])
+def health_check_api():
+    return health_check()
+
 
 # Небольшой тест для проверки форматирования HTML. Оставлен для
 # разработчиков, но не используется в производственной среде.
