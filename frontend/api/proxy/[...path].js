@@ -21,8 +21,32 @@ export default async function handler(req, res) {
   try {
     const method = (req.method || 'GET').toUpperCase();
 
+    // Environment variable validation
+    const backendUrl = process.env.RAILWAY_BACKEND_URL || process.env.BACKEND_URL;
+    
+    if (!backendUrl) {
+      console.error('❌ REQUIRED: RAILWAY_BACKEND_URL or BACKEND_URL is not set.');
+      console.error('   Description: Backend API URL for the legal assistant');
+      console.error('   Example: https://ai-lawyer.up.railway.app');
+      return res.status(500).json({
+        error: 'CONFIGURATION_ERROR',
+        message: 'Backend URL not configured. Please set RAILWAY_BACKEND_URL or BACKEND_URL environment variable.',
+        example: 'https://ai-lawyer.up.railway.app'
+      });
+    }
+    
+    if (!backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {
+      console.error(`❌ INVALID: Backend URL must start with http:// or https://. Current: ${backendUrl}`);
+      return res.status(500).json({
+        error: 'CONFIGURATION_ERROR',
+        message: 'Invalid backend URL format. Must start with http:// or https://',
+        current: backendUrl.substring(0, 50),
+        example: 'https://ai-lawyer.up.railway.app'
+      });
+    }
+
     // База бэкенда из переменной окружения (обязательно укажите её в Vercel!)
-    const rawBase = (process.env.RAILWAY_BACKEND_URL || 'https://ai-lawyer.up.railway.app').trim();
+    const rawBase = backendUrl.trim();
     // Валидация URL базы (если некорректна — бросим понятную ошибку)
     const validatedBase = new URL(rawBase).toString();
 
@@ -41,7 +65,7 @@ export default async function handler(req, res) {
 
     // Query-строка, если была
     const queryString = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
-    const backendUrl = new URL(targetPath + queryString, validatedBase).toString();
+    const backendUrlFull = new URL(targetPath + queryString, validatedBase).toString();
 
     // Enhanced diagnostics endpoint for debugging deployment issues: /api/__diag
     if (targetPath === '/__diag') {
@@ -55,14 +79,14 @@ export default async function handler(req, res) {
           vercel_env: process.env.VERCEL_ENV || 'unknown'
         },
         proxy_configuration: {
-          backend_url_env_var: process.env.RAILWAY_BACKEND_URL || null,
+          backend_url_env_var: process.env.RAILWAY_BACKEND_URL || process.env.BACKEND_URL || null,
           backend_url_raw: rawBase,
           backend_url_validated: validatedBase,
           current_request: {
             method: method,
             target_path: targetPath,
             query_string: queryString,
-            constructed_backend_url: backendUrl,
+            constructed_backend_url: backendUrlFull,
             user_agent: req.headers['user-agent'] || null,
             content_type: req.headers['content-type'] || null
           }
@@ -71,6 +95,10 @@ export default async function handler(req, res) {
           railway_backend_url: {
             value: process.env.RAILWAY_BACKEND_URL || null,
             status: process.env.RAILWAY_BACKEND_URL ? 'present' : 'missing'
+          },
+          backend_url: {
+            value: process.env.BACKEND_URL || null,
+            status: process.env.BACKEND_URL ? 'present' : 'missing'
           },
           vercel_url: {
             value: process.env.VERCEL_URL || null,
@@ -121,8 +149,8 @@ export default async function handler(req, res) {
 
       // Check for common configuration issues
       const configurationIssues = [];
-      if (!process.env.RAILWAY_BACKEND_URL) {
-        configurationIssues.push('RAILWAY_BACKEND_URL environment variable is not set');
+      if (!process.env.RAILWAY_BACKEND_URL && !process.env.BACKEND_URL) {
+        configurationIssues.push('RAILWAY_BACKEND_URL or BACKEND_URL environment variable is not set');
       }
       if (!diagnostics.connection_validation.backend_url_valid) {
         configurationIssues.push('Backend URL format is invalid');
@@ -162,10 +190,10 @@ export default async function handler(req, res) {
     if (req.headers['cookie']) headersToForward['Cookie'] = req.headers['cookie'];
 
     // Логируем ключевые значения для отладки в Vercel Function Logs
-    console.log('[proxy] method=', method, 'base=', validatedBase, 'path=', targetPath, 'url=', backendUrl);
+    console.log('[proxy] method=', method, 'base=', validatedBase, 'path=', targetPath, 'url=', backendUrlFull);
 
     // Выполняем запрос к бэкенду
-    const backendResponse = await fetchFunc(backendUrl, {
+    const backendResponse = await fetchFunc(backendUrlFull, {
       method,
       headers: headersToForward,
       body: requestBody,

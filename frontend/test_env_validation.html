@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environment Validation Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+        .test { margin: 10px 0; padding: 10px; border-left: 3px solid #555; }
+        .success { border-color: #4caf50; background: #1b4332; }
+        .error { border-color: #f44336; background: #4a1e1e; }
+        .warning { border-color: #ff9800; background: #3d2f1a; }
+    </style>
+</head>
+<body>
+    <h1>Environment Validation Test</h1>
+    <div id="test-results"></div>
+
+    <script src="env_validator.js"></script>
+    <script>
+        // Override the dialog function for testing
+        function showEnvironmentErrorDialog(errors) {
+            const results = document.getElementById('test-results');
+            results.innerHTML += '<div class="test error">Environment error dialog would show: ' + errors.join('<br>') + '</div>';
+        }
+
+        // Override console methods to capture output
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            const results = document.getElementById('test-results');
+            results.innerHTML += '<div class="test success">LOG: ' + args.join(' ') + '</div>';
+            originalLog.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            const results = document.getElementById('test-results');
+            results.innerHTML += '<div class="test warning">WARN: ' + args.join(' ') + '</div>';
+            originalWarn.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            const results = document.getElementById('test-results');
+            results.innerHTML += '<div class="test error">ERROR: ' + args.join(' ') + '</div>';
+            originalError.apply(console, args);
+        };
+
+        // Test environment variable validation
+        function runTests() {
+            const results = document.getElementById('test-results');
+            
+            results.innerHTML += '<div class="test">Testing environment variable validation...</div>';
+            
+            // Test 1: Missing BACKEND_URL
+            results.innerHTML += '<div class="test">Test 1: Missing BACKEND_URL...</div>';
+            if (typeof window !== 'undefined') {
+                window.env = {}; // Clear env
+            }
+            
+            const result1 = validateEnvironmentVariables();
+            results.innerHTML += '<div class="test ' + (result1 ? 'error' : 'success') + '">Test 1 result: ' + (result1 ? 'FAILED (should have failed)' : 'SUCCESS (correctly failed)') + '</div>';
+            
+            // Test 2: Invalid BACKEND_URL
+            results.innerHTML += '<div class="test">Test 2: Invalid BACKEND_URL...</div>';
+            if (typeof window !== 'undefined') {
+                window.env = { BACKEND_URL: 'invalid-url' };
+            }
+            
+            const result2 = validateEnvironmentVariables();
+            results.innerHTML += '<div class="test ' + (result2 ? 'error' : 'success') + '">Test 2 result: ' + (result2 ? 'FAILED (should have failed)' : 'SUCCESS (correctly failed)') + '</div>';
+            
+            // Test 3: Valid BACKEND_URL
+            results.innerHTML += '<div class="test">Test 3: Valid BACKEND_URL...</div>';
+            if (typeof window !== 'undefined') {
+                window.env = { BACKEND_URL: 'https://api.example.com' };
+            }
+            
+            const result3 = validateEnvironmentVariables();
+            results.innerHTML += '<div class="test ' + (result3 ? 'success' : 'error') + '">Test 3 result: ' + (result3 ? 'SUCCESS (correctly passed)' : 'FAILED (should have passed)') + '</div>';
+            
+            results.innerHTML += '<div class="test">All tests completed!</div>';
+        }
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+        
+        // Prevent auto-validation on load
+        if (typeof window !== 'undefined' && document.readyState !== 'loading') {
+            // Don't run auto-validation
+        }
+    </script>
+</body>
+</html>

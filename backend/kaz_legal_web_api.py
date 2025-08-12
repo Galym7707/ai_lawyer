@@ -44,6 +44,10 @@ import unittest
 # Загрузка переменных окружения из .env
 load_dotenv()
 
+# Validate environment variables on startup
+from env_validator import validate_environment_variables
+validate_environment_variables()
+
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
