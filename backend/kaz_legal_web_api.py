@@ -241,7 +241,7 @@ else:
 
 executor = ThreadPoolExecutor(max_workers=4)
 
-def load_law_db(path: str = "laws/kazakh_laws_db.json") -> None:
+def load_law_db(path: str = "laws/kazakh_laws.json") -> None:
     """Загружает базу данных законов из файла и строит индекс."""
     global LAW_DB
     if os.path.exists(path):
