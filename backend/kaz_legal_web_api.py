@@ -62,17 +62,20 @@ cors_origins = os.getenv(
 logging.info(f"✅ CORS configured for origins: {cors_origins}")
 
 def add_cors_headers(response):
-    """Добавляет CORS-заголовки к ответу."""
-    origin = request.headers.get("Origin", "")
-    if origin in cors_origins:
-        response.headers["Access-Control-Allow-Origin"] = origin
+    req_origin = normalize_origin(request.headers.get('Origin', ''))
+    allowed = [normalize_origin(o) for o in cors_origins]
+
+    if req_origin in allowed:
+        # возвращаем ровно то, что прислал браузер
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin')
     else:
-        # можно не выставлять вовсе, но оставим безопасный дефолт
-        response.headers["Access-Control-Allow-Origin"] = cors_origins[0]
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Max-Age"] = "86400"
+        response.headers['Access-Control-Allow-Origin'] = allowed[0]
+
+    response.headers['Vary'] = 'Origin'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Max-Age'] = '86400'
     return response
 
 @app.after_request
@@ -602,6 +605,9 @@ def upload_document_route():
     except Exception as e:
         logging.error(f"❌ Ошибка в /upload-document: {e}")
         return add_cors_headers(jsonify({"error": f"Ошибка сервера при обработке документа: {str(e)}"})), 500
+
+def normalize_origin(o: str) -> str:
+    return (o or "").strip().rstrip("/;")
 
 @app.route("/api/upload-document", methods=["POST"])
 def upload_document_route_api():
