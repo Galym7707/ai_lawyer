@@ -1,68 +1,32 @@
 /* =========   AI RESPONSE FORMATTER   ========= */
-function formatAIResponse(text) {
-  // Convert markdown-style formatting to HTML
-  let formatted = text;
+function formatAIResponse(text = '') {
+  // 1) Уже готовый HTML (и это не fenced-code)
+  const hasTags = /<\/?[a-z][\s\S]*>/i.test(text);
+  const hasFence = /```/.test(text);
+  if (hasTags && !hasFence) {
+    return text.trim();
+  }
 
-  // Code blocks (```code```)
-  formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre class="code-block"><code>$1</code></pre>');
-  
-  // Inline code (`code`)
-  formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-  
-  // Bold text (**text** or __text__)
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="bold-text">$1</strong>');
-  formatted = formatted.replace(/__(.*?)__/g, '<strong class="bold-text">$1</strong>');
-  
-  // Italic text (*text* or _text_)
-  formatted = formatted.replace(/\*(.*?)\*/g, '<em class="italic-text">$1</em>');
-  formatted = formatted.replace(/_(.*?)_/g, '<em class="italic-text">$1</em>');
+  // 2) Снять тройные бэктики с языком html/htm и отдать чистый HTML
+  const htmlFenceMatch = text.match(/```(?:html|htm)\s*([\s\S]*?)```/i);
+  if (htmlFenceMatch) {
+    return htmlFenceMatch[1].trim();
+  }
 
-  // Headers (## Header)
-  formatted = formatted.replace(/^### (.*$)/gm, '<h3 class="header-3">$1</h3>');
-  formatted = formatted.replace(/^## (.*$)/gm, '<h2 class="header-2">$1</h2>');
-  formatted = formatted.replace(/^# (.*$)/gm, '<h1 class="header-1">$1</h1>');
+  // 3) Обычный fenced-code без языка — показать как код (не «html»)
+  const codeFenceMatch = text.match(/```([\s\S]*?)```/);
+  if (codeFenceMatch && !htmlFenceMatch) {
+    const code = codeFenceMatch[1].trim();
+    return `<pre class="code-block"><code>${escapeHtml(code)}</code></pre>`;
+  }
 
-  // Lists (- item or * item)
-  formatted = formatted.replace(/^[-*] (.*$)/gm, '<li class="list-item">$1</li>');
-  formatted = formatted.replace(/(<li class="list-item">.*<\/li>)/gs, '<ul class="formatted-list">$1</ul>');
+  // 4) Markdown → HTML через marked (если есть), с переносами строк
+  if (window.marked && typeof window.marked.parse === 'function') {
+    return window.marked.parse(text, { breaks: true });
+  }
 
-  // Numbered lists (1. item)
-  formatted = formatted.replace(/^\d+\. (.*$)/gm, '<li class="numbered-item">$1</li>');
-  formatted = formatted.replace(/(<li class="numbered-item">.*<\/li>)/gs, '<ol class="numbered-list">$1</ol>');
-
-  // Content type detection and semantic formatting
-  const lines = formatted.split('\n');
-  const processedLines = lines.map(line => {
-    const trimmed = line.trim();
-    
-    // Warning/Important content (keywords that indicate warnings)
-    if (/^(внимание|важно|предупреждение|осторожно|опасность|предостережение|warning|important|caution|danger|note)/i.test(trimmed) ||
-        /(!{2,}|⚠️|⛔|🚨)/.test(trimmed)) {
-      return `<div class="content-warning">${line}</div>`;
-    }
-    
-    // Positive content (success, completion, good news)
-    if (/^(отлично|хорошо|успешно|готово|завершено|успех|правильно|верно|положительно|excellent|good|success|completed|correct|positive)/i.test(trimmed) ||
-        /✓|✅|👍|😊|🎉/.test(trimmed)) {
-      return `<div class="content-positive">${line}</div>`;
-    }
-    
-    // References (articles, laws, documents, citations)
-    if (/^(статья|закон|кодекс|постановление|указ|пункт|часть|глава|раздел|приложение|документ|ссылка|источник|article|law|code|section|chapter|document|reference)/i.test(trimmed) ||
-        /\d+\.\d+|\d+\/\d+|№\s*\d+|п\.\s*\d+|ст\.\s*\d+|гл\.\s*\d+/.test(trimmed) ||
-        /(https?:\/\/|www\.|\.kz|\.ru|\.com)/.test(trimmed)) {
-      return `<div class="content-reference">${line}</div>`;
-    }
-    
-    return line;
-  });
-
-  formatted = processedLines.join('\n');
-  
-  // Convert line breaks to HTML
-  formatted = formatted.replace(/\n/g, '<br>');
-  
-  return formatted;
+  // 5) Минимальный запасной вариант
+  return text.replace(/\n/g, '<br>');
 }
 
 /* =========   GLOBAL API HELPERS   ========= */
@@ -118,6 +82,13 @@ function initTheme() {
     document.body.classList.remove('dark-theme');
     updateThemeIcon(false);
   }
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function updateThemeIcon(isDark) {
