@@ -1,5 +1,5 @@
 // api/[...path].js
-// Прокси с Vercel на Railway (ловит любой путь /api/*)
+// Catch-all прокси: любой запрос на /api/* → на Railway backend
 
 const getFetch = async () => {
   if (typeof fetch === 'function') return fetch;
@@ -20,8 +20,9 @@ export default async function handler(req, res) {
   try {
     const method = (req.method || 'GET').toUpperCase();
 
-    // Базовый URL бэкенда: выстави в Vercel
+    // В Vercel установи одну из переменных:
     // RAILWAY_BACKEND_URL=https://ai-lawyer.up.railway.app
+    // или BACKEND_URL=...
     const backendBase =
       (process.env.RAILWAY_BACKEND_URL || process.env.BACKEND_URL || '').trim();
 
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
       return res.status(500).json({
         error: 'CONFIGURATION_ERROR',
         message:
-          'Backend URL not configured. Set RAILWAY_BACKEND_URL (or BACKEND_URL) to your Railway domain, e.g. https://ai-lawyer.up.railway.app',
+          'Backend URL not configured. Set RAILWAY_BACKEND_URL (or BACKEND_URL), e.g. https://ai-lawyer.up.railway.app',
       });
     }
     if (!/^https?:\/\//i.test(backendBase)) {
@@ -43,8 +44,7 @@ export default async function handler(req, res) {
 
     const base = new URL(backendBase).toString();
 
-    // Собираем путь, который пришёл после /api
-    // (а если вдруг кто-то оставил старый /api/proxy, тоже учтём)
+    // Путь после /api (учитываем и /api/proxy/* если когда-то был такой)
     const urlPath =
       '/' +
       (Array.isArray(req.query?.path) ? req.query.path.join('/') : '')
@@ -59,10 +59,10 @@ export default async function handler(req, res) {
     // Query string
     const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
 
-    // Полный URL на Railway
+    // Полный целевой URL
     const targetUrl = new URL(targetPath + qs, base).toString();
 
-    // Диагностика: /api/__diag
+    // Диагностика: GET /api/__diag
     if (targetPath === '/__diag') {
       const diag = {
         status: 'ok',
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
       return res.status(200).json(diag);
     }
 
-    // Тело запроса
+    // Тело запроса (для POST/PUT/…)
     let body;
     const ct = (req.headers['content-type'] || '').toLowerCase();
     if (!['GET', 'HEAD'].includes(method)) {
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
       body = ct.includes('application/json') ? raw.toString('utf8') : raw;
     }
 
-    // Проброс безопасных заголовков
+    // Проброс важных заголовков
     const headers = {};
     if (req.headers['content-type']) headers['Content-Type'] = req.headers['content-type'];
     if (req.headers['authorization']) headers['Authorization'] = req.headers['authorization'];
@@ -102,10 +102,13 @@ export default async function handler(req, res) {
     const f = await getFetch();
     const r = await f(targetUrl, { method, headers, body });
 
+    // Проксируем ответ
     res.status(r.status);
-    // Отдаём как есть (stream-simple)
+    const contentType = r.headers.get('content-type') || 'text/plain; charset=utf-8';
+    res.setHeader('Content-Type', contentType);
+
+    // Для простоты читаем текстом (фронту подходит и для stream HTML)
     const text = await r.text();
-    res.setHeader('Content-Type', r.headers.get('content-type') || 'text/plain; charset=utf-8');
     res.send(text);
   } catch (e) {
     console.error('Proxy error:', e);

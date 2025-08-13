@@ -7,20 +7,20 @@ function formatAIResponse(text = '') {
     return text.trim();
   }
 
-  // 2) Снять тройные бэктики с языком html/htm и отдать чистый HTML
+  // 2) Тройные бэктики с языком html/htm → чистый HTML без слова "html"
   const htmlFenceMatch = text.match(/```(?:html|htm)\s*([\s\S]*?)```/i);
   if (htmlFenceMatch) {
     return htmlFenceMatch[1].trim();
   }
 
-  // 3) Обычный fenced-code без языка — показать как код (не «html»)
+  // 3) Обычный fenced-code без языка → показать как код (НЕ как html)
   const codeFenceMatch = text.match(/```([\s\S]*?)```/);
   if (codeFenceMatch && !htmlFenceMatch) {
     const code = codeFenceMatch[1].trim();
     return `<pre class="code-block"><code>${escapeHtml(code)}</code></pre>`;
   }
 
-  // 4) Markdown → HTML через marked (если есть), с переносами строк
+  // 4) Markdown → HTML через marked (если библиотека подана на страницу)
   if (window.marked && typeof window.marked.parse === 'function') {
     return window.marked.parse(text, { breaks: true });
   }
@@ -46,9 +46,7 @@ async function apiFetch(path, options = {}, retries = 2) {
     } catch (e) {
       if (i < retries) {
         console.warn(`Retry ${i + 1}/${retries} for ${path}: ${e.message}`);
-        await new Promise(resolve =>
-          setTimeout(resolve, 1000 * (i + 1))
-        );
+        await new Promise(r => setTimeout(r, 1000 * (i + 1)));
         continue;
       }
       throw e;
