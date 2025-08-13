@@ -48,9 +48,10 @@
       // Обязательные переменные
       const requiredVars = {
         BACKEND_URL: {
-          description: 'Backend API URL for the legal assistant',
-          example: 'https://ai-lawyer.up.railway.app  (или /api при использовании Vercel Proxy)',
-          validator: isValidBackendUrl,
+          description: 'Backend API URL or relative proxy (/api)',
+          example: 'https://ai-lawyer.up.railway.app  ИЛИ  /api',
+          validator: (x) =>
+            !!x && (x.startsWith('http://') || x.startsWith('https://') || x === '/api'),
         },
       };
   
