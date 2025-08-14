@@ -29,7 +29,6 @@
         </nav>
     </div>
 </header>
-
 <main>
     <div class="app-container">
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -52,7 +51,6 @@
                 <i class="fas fa-plus"></i> Новый чат
             </button>
         </aside>
-
         <div class="main-content-area">
             <!-- Блок начальных разделов (о проекте, форма вопроса, загрузка файла) -->
             <div id="initial-sections">
@@ -70,7 +68,6 @@
                        документы, такие как договоры, исковые заявления, нормативные
                        акты и многое другое.</p>
                 </section>
-
                 <!-- Приветствие и форма первого вопроса -->
                 <section id="hero-section" class="input-card">
                     <p class="greeting-message">Я ваш ИИ-юрист. Чем могу помочь?</p>
@@ -84,7 +81,6 @@
                         </button>
                     </form>
                 </section>
-
                 <!-- Загрузка документа -->
                 <section id="upload-section" class="upload-card">
                     <h2>Загрузите документ для анализа</h2>
@@ -99,13 +95,11 @@
                         </label>
                         <div id="file-list" class="file-list"></div>
                     </div>
-
                     <!-- Отображение имени файла и кнопки очистки -->
                     <div id="file-info" style="display:none;">
                         <span id="file-name">Файл не выбран</span>
                         <button id="clearFileBtn" type="button">Очистить</button>
                     </div>
-
                     <textarea id="file-question"
                               class="file-question-input"
                               placeholder="Задайте вопрос по документу (необязательно)"></textarea>
@@ -116,7 +110,6 @@
                         </button>
                     </div>
                 </section>
-
                 <!-- Как получить помощь -->
                 <section id="help-section">
                     <h2 id="help-link">✨ Как получить юридическую помощь?</h2>
@@ -136,7 +129,6 @@
                     </ul>
                 </section>
             </div>
-
             <!-- Контейнер активного чата (появляется после отправки первого вопроса) -->
             <div id="current-chat-container" style="display: none;">
                 <div id="chat-messages-display">
@@ -168,7 +160,6 @@
                     </button>
                 </div>
             </div>
-
             <!-- Секция обратной связи -->
             <section id="contact" style="margin-top: 2rem;">
                 <h2 id="contact-link">📬 Обратная связь</h2>
@@ -178,13 +169,18 @@
         </div> <!-- /.main-content-area -->
     </div> <!-- /.app-container -->
 </main>
-
 <footer>
     <div class="footer-content">
         <p>© 2025 Teg</p>
     </div>
 </footer>
+<<<<<<< HEAD
 
+=======
+<script src="env_validator.js"></script>
+<script src="enhanced-components.js"></script>
+<script src="connection-status.js"></script>
+>>>>>>> 163de9e (Consolidate multiple CSS files into a single stylesheet and update references)
 <script src="script.js"></script>
 </body>
 </html>
