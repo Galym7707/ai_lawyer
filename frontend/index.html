@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Teg — AI Юрист Казахстана</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="enhanced-styles.css" />
+    <link rel="stylesheet" href="error-styles.css" />
+    <link rel="stylesheet" href="responsive-system.css" />
+    <link rel="stylesheet" href="header-responsive.css" />
+    <link rel="stylesheet" href="connection-styles.css" />
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon"
@@ -29,6 +34,7 @@
         </nav>
     </div>
 </header>
+
 <main>
     <div class="app-container">
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -51,6 +57,7 @@
                 <i class="fas fa-plus"></i> Новый чат
             </button>
         </aside>
+
         <div class="main-content-area">
             <!-- Блок начальных разделов (о проекте, форма вопроса, загрузка файла) -->
             <div id="initial-sections">
@@ -68,6 +75,7 @@
                        документы, такие как договоры, исковые заявления, нормативные
                        акты и многое другое.</p>
                 </section>
+
                 <!-- Приветствие и форма первого вопроса -->
                 <section id="hero-section" class="input-card">
                     <p class="greeting-message">Я ваш ИИ-юрист. Чем могу помочь?</p>
@@ -81,6 +89,7 @@
                         </button>
                     </form>
                 </section>
+
                 <!-- Загрузка документа -->
                 <section id="upload-section" class="upload-card">
                     <h2>Загрузите документ для анализа</h2>
@@ -95,11 +104,13 @@
                         </label>
                         <div id="file-list" class="file-list"></div>
                     </div>
+
                     <!-- Отображение имени файла и кнопки очистки -->
                     <div id="file-info" style="display:none;">
                         <span id="file-name">Файл не выбран</span>
                         <button id="clearFileBtn" type="button">Очистить</button>
                     </div>
+
                     <textarea id="file-question"
                               class="file-question-input"
                               placeholder="Задайте вопрос по документу (необязательно)"></textarea>
@@ -110,6 +121,7 @@
                         </button>
                     </div>
                 </section>
+
                 <!-- Как получить помощь -->
                 <section id="help-section">
                     <h2 id="help-link">✨ Как получить юридическую помощь?</h2>
@@ -129,6 +141,7 @@
                     </ul>
                 </section>
             </div>
+
             <!-- Контейнер активного чата (появляется после отправки первого вопроса) -->
             <div id="current-chat-container" style="display: none;">
                 <div id="chat-messages-display">
@@ -160,6 +173,7 @@
                     </button>
                 </div>
             </div>
+
             <!-- Секция обратной связи -->
             <section id="contact" style="margin-top: 2rem;">
                 <h2 id="contact-link">📬 Обратная связь</h2>
@@ -168,19 +182,41 @@
             </section>
         </div> <!-- /.main-content-area -->
     </div> <!-- /.app-container -->
+    
+    <!-- Connection Status Container -->
+    <div id="connection-status-container"></div>
+    
+    <!-- Connection Health Indicator -->
+    <div id="connection-health-indicator" class="connection-health-indicator hidden">
+        <div class="connection-health-dot"></div>
+        <span class="connection-health-text">Проверка соединения...</span>
+    </div>
+    
+    <!-- Connection Overlay for Critical Issues -->
+    <div id="connection-overlay" class="connection-overlay">
+        <div class="connection-overlay-content">
+            <div class="connection-overlay-icon">🔌</div>
+            <div class="connection-overlay-title">Соединение потеряно</div>
+            <div class="connection-overlay-description">Не удается подключиться к серверу. Проверьте интернет-соединение.</div>
+            <div class="connection-overlay-actions">
+                <button class="connection-overlay-retry" onclick="window.connectionManager && window.connectionManager.retryConnection()">Повторить</button>
+                <button class="connection-overlay-cancel" onclick="window.connectionManager && window.connectionManager.dismissOverlay()">Отмена</button>
+            </div>
+        </div>
+    </div>
 </main>
+
 <footer>
     <div class="footer-content">
         <p>© 2025 Teg</p>
     </div>
 </footer>
-<<<<<<< HEAD
 
-=======
-<script src="env_validator.js"></script>
+<script src="connection-utils.js"></script>
+<script src="connection-manager.js"></script>
+<script src="connection-demo.js"></script>
 <script src="enhanced-components.js"></script>
-<script src="connection-status.js"></script>
->>>>>>> 163de9e (Consolidate multiple CSS files into a single stylesheet and update references)
 <script src="script.js"></script>
+<script src="responsive-menu.js"></script>
 </body>
 </html>
