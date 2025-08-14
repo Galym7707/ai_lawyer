@@ -1,0 +1,39 @@
+Структура папок
+Серийный номер тома: 4E92-4DD6
+C:.
+|   .gitignore
+|   DEPLOYMENT_TROUBLESHOOTING_GUIDE.md
+|   project_tree.txt
+|   TONKOTSU.md
+|   vercel.json
+|   
++---api
+|       proxy.js
+|       
++---backend
+|   |   .env
+|   |   env_validator.py
+|   |   helpers.py
+|   |   kaz_legal_web_api.py
+|   |   memory.py
+|   |   requirements.txt
+|   |   test_env_validator.py
+|   |   
+|   \---laws
+|           kazakh_laws.json
+|           
+\---frontend
+        connection-status.css
+        connection-status.js
+        enhanced-components.js
+        enhanced-styles.css
+        env_validator.js
+        error-styles.css
+        header-responsive.css
+        index.html
+        responsive-menu.js
+        responsive-system.css
+        script.js
+        styles.css
+        test_env_validation.html
+        
