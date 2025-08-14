@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E2E Tests - Kaz Legal Bot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .test-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #007bff;
+        }
+        .test-card.success {
+            border-left-color: #28a745;
+        }
+        .test-card.error {
+            border-left-color: #dc3545;
+        }
+        .test-card.running {
+            border-left-color: #ffc107;
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .test-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .badge-pending { background-color: #6c757d; }
+        .badge-running { background-color: #ffc107; color: #212529; }
+        .badge-success { background-color: #28a745; }
+        .badge-error { background-color: #dc3545; }
+        .test-description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        .test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .controls {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0 10px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .btn.btn-success {
+            background-color: #28a745;
+        }
+        .btn.btn-success:hover {
+            background-color: #218838;
+        }
+        .btn.btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .btn.btn-warning:hover {
+            background-color: #e0a800;
+        }
+        .status-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .indicator-connected { background-color: #28a745; }
+        .indicator-disconnected { background-color: #dc3545; }
+        .indicator-checking { 
+            background-color: #ffc107; 
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 End-to-End Testing Suite</h1>
+        <p>Comprehensive testing of frontend-backend connectivity through Vercel proxy</p>
+    </div>
+
+    <div class="status-panel">
+        <div class="status-row">
+            <div>
+                <span class="status-indicator indicator-disconnected" id="connection-indicator"></span>
+                <span id="connection-status">Initializing...</span>
+            </div>
+            <div id="test-progress">0/0 Tests Completed</div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="run-full-suite">🎯 Run Full Test Suite</button>
+        <button class="btn btn-success" id="run-critical">⚡ Critical Tests Only</button>
+        <button class="btn btn-warning" id="run-validation">🔍 Validation Tests</button>
+        <button class="btn" id="reset-tests">🔄 Reset All Tests</button>
+    </div>
+
+    <div class="test-grid">
+        <!-- Proxy Configuration Test -->
+        <div class="test-card" data-test="proxy-config">
+            <div class="test-title">
+                <span>🔧 Proxy Configuration</span>
+                <span class="test-badge badge-pending">PENDING</span>
+            </div>
+            <div class="test-description">
+                Validates Vercel proxy configuration and URL construction for Railway backend
+            </div>
+            <div class="test-output" id="proxy-config-output">Waiting to run...</div>
+        </div>
+
+        <!-- Health Check Reliability -->
+        <div class="test-card" data-test="health-reliability">
+            <div class="test-title">
+                <span>❤️ Health Check Reliability</span>
+                <span class="test-badge badge-pending">PENDING</span>
+            </div>
+            <div class="test-description">
+                Tests health endpoint reliability over multiple requests with timing analysis
+            </div>
+            <div class="test-output" id="health-reliability-output">Waiting to run...</div>
+        </div>
+
+        <!-- API Endpoint Coverage -->
+        <div class="test-card" data-test="api-coverage">
+            <div class="test-title">
+                <span>📡 API Endpoint Coverage</span>
+                <span class="test-badge badge-pending">PENDING</span>
+            </div>
+            <div class="test-description">
+                Comprehensive test of all API endpoints through the proxy
+            </div>
+            <div class="test-output" id="api-coverage-output">Waiting to run...</div>
+        </div>
+
+        <!-- Error Recovery -->
+        <div class="test-card" data-test="error-recovery">
+            <div class="test-title">
+                <span>🛠️ Error Recovery</span>
+                <span class="test-badge badge-pending">PENDING</span>
+            </div>
+            <div class="test-description">
+                Tests error handling, retry logic, and graceful degradation
+            </div>
+            <div class="test-output" id="error-recovery-output">Waiting to run...</div>
+        </div>
+
+        <!-- Connection Monitor -->
+        <div class="test-card" data-test="connection-monitor">
+            <div class="test-title">
+                <span>📊 Connection Monitor</span>
+                <span class="test-badge badge-pending">PENDING</span>
+            </div>
+            <div class="test-description">
+                Validates connection status monitoring and UI updates
+            </div>
+            <div class="test-output" id="connection-monitor-output">Waiting to run...</div>
+        </div>
+
+        <!-- Session Persistence -->
+        <div class="test-card" data-test="session-persistence">
+            <div class="test-title">
+                <span>💾 Session Persistence</span>
+                <span class="test-badge badge-pending">PENDING</span>
+            </div>
+            <div class="test-description">
+                Tests session management and conversation history persistence
+            </div>
+            <div class="test-output" id="session-persistence-output">Waiting to run...</div>
+        </div>
+
+        <!-- Streaming Response -->
+        <div class="test-card" data-test="streaming-response">
+            <div class="test-title">
+                <span>🌊 Streaming Response</span>
+                <span class="test-badge badge-pending">PENDING</span>
+            </div>
+            <div class="test-description">
+                Tests AI streaming response functionality through the proxy
+            </div>
+            <div class="test-output" id="streaming-response-output">Waiting to run...</div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="test-card" data-test="performance-metrics">
+            <div class="test-title">
+                <span>⚡ Performance Metrics</span>
+                <span class="test-badge badge-pending">PENDING</span>
+            </div>
+            <div class="test-description">
+                Measures response times, throughput, and performance benchmarks
+            </div>
+            <div class="test-output" id="performance-metrics-output">Waiting to run...</div>
+        </div>
+
+        <!-- File Upload -->
+        <div class="test-card" data-test="file-upload">
+            <div class="test-title">
+                <span>📎 File Upload</span>
+                <span class="test-badge badge-pending">PENDING</span>
+            </div>
+            <div class="test-description">
+                Tests document upload functionality through the proxy
+            </div>
+            <div class="test-output" id="file-upload-output">Waiting to run...</div>
+        </div>
+    </div>
+
+    <script src="e2e-tests.js"></script>
+</body>
+</html>

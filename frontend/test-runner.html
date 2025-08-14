@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Runner - Kaz Legal Bot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .nav-tab {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 20px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .nav-tab.active {
+            background: white;
+            color: #007bff;
+            border-bottom: 3px solid #007bff;
+        }
+        .nav-tab:hover {
+            background: #e9ecef;
+        }
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .test-suite-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .test-suite-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .test-suite-description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: background 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .status-panel {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .status-panel.warning {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #212529;
+        }
+        .status-panel.error {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+        }
+        .iframe-container {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            height: 600px;
+            overflow: hidden;
+        }
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .action-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+        .action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .action-icon {
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+        .results-summary {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Test Runner</h1>
+            <p>Comprehensive Integration Testing Suite for Kaz Legal Bot</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('overview')">📊 Overview</button>
+            <button class="nav-tab" onclick="showTab('integration')">🔗 Integration Tests</button>
+            <button class="nav-tab" onclick="showTab('e2e')">🚀 E2E Tests</button>
+            <button class="nav-tab" onclick="showTab('manual')">🛠️ Manual Testing</button>
+        </div>
+
+        <div class="tab-content active" id="overview">
+            <div class="status-panel" id="status-panel">
+                <h3>🔍 System Status</h3>
+                <p id="status-message">Checking backend connectivity...</p>
+            </div>
+
+            <div class="quick-actions">
+                <div class="action-card">
+                    <div class="action-icon">🩺</div>
+                    <h3>Health Check</h3>
+                    <p>Quick backend connectivity test</p>
+                    <button class="btn" onclick="quickHealthCheck()">Run Health Check</button>
+                </div>
+                <div class="action-card">
+                    <div class="action-icon">⚡</div>
+                    <h3>Critical Tests</h3>
+                    <p>Run essential connectivity tests</p>
+                    <button class="btn btn-warning" onclick="runCriticalTests()">Run Critical Tests</button>
+                </div>
+                <div class="action-card">
+                    <div class="action-icon">🎯</div>
+                    <h3>Full Test Suite</h3>
+                    <p>Complete integration testing</p>
+                    <button class="btn btn-success" onclick="runFullSuite()">Run Full Suite</button>
+                </div>
+            </div>
+
+            <div class="results-summary" id="results-summary" style="display: none;">
+                <h4>📋 Test Results Summary</h4>
+                <div id="summary-content"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="integration">
+            <div class="test-suite-card">
+                <div class="test-suite-title">🔗 Integration Tests</div>
+                <div class="test-suite-description">
+                    Tests the frontend-backend connectivity through the Vercel proxy, including health checks, 
+                    API endpoints, error handling, and connection status monitoring.
+                </div>
+                <a href="integration-test.html" target="_blank" class="btn">Open Integration Tests</a>
+                <button class="btn btn-success" onclick="runIntegrationTests()">Run in Iframe</button>
+            </div>
+
+            <div class="iframe-container" id="integration-iframe-container" style="display: none;">
+                <iframe id="integration-iframe" src=""></iframe>
+            </div>
+        </div>
+
+        <div class="tab-content" id="e2e">
+            <div class="test-suite-card">
+                <div class="test-suite-title">🚀 End-to-End Tests</div>
+                <div class="test-suite-description">
+                    Comprehensive end-to-end testing including proxy configuration validation, 
+                    performance metrics, streaming responses, and complete user workflows.
+                </div>
+                <a href="e2e-test.html" target="_blank" class="btn">Open E2E Tests</a>
+                <button class="btn btn-success" onclick="runE2ETests()">Run in Iframe</button>
+            </div>
+
+            <div class="iframe-container" id="e2e-iframe-container" style="display: none;">
+                <iframe id="e2e-iframe" src=""></iframe>
+            </div>
+        </div>
+
+        <div class="tab-content" id="manual">
+            <div class="test-suite-card">
+                <div class="test-suite-title">🛠️ Manual Testing Guidelines</div>
+                <div class="test-suite-description">
+                    Manual testing procedures for validating the complete application workflow.
+                </div>
+            </div>
+
+            <h3>🔍 Manual Test Checklist</h3>
+            
+            <h4>1. Basic Connectivity</h4>
+            <ul>
+                <li><input type="checkbox" id="manual-1"> Health endpoint accessible at <code>/api/health</code></li>
+                <li><input type="checkbox" id="manual-2"> Connection status indicator shows correct state</li>
+                <li><input type="checkbox" id="manual-3"> API calls resolve without 404 errors</li>
+            </ul>
+
+            <h4>2. User Interface</h4>
+            <ul>
+                <li><input type="checkbox" id="manual-4"> Main chat interface loads correctly</li>
+                <li><input type="checkbox" id="manual-5"> File upload functionality works</li>
+                <li><input type="checkbox" id="manual-6"> Chat history displays properly</li>
+                <li><input type="checkbox" id="manual-7"> Theme switching works</li>
+            </ul>
+
+            <h4>3. AI Functionality</h4>
+            <ul>
+                <li><input type="checkbox" id="manual-8"> Legal questions receive appropriate responses</li>
+                <li><input type="checkbox" id="manual-9"> Streaming responses display correctly</li>
+                <li><input type="checkbox" id="manual-10"> Session management works across page reloads</li>
+            </ul>
+
+            <h4>4. Error Handling</h4>
+            <ul>
+                <li><input type="checkbox" id="manual-11"> Network errors show appropriate messages</li>
+                <li><input type="checkbox" id="manual-12"> Large file uploads are handled properly</li>
+                <li><input type="checkbox" id="manual-13"> Invalid input validation works</li>
+            </ul>
+
+            <button class="btn" onclick="exportManualTestResults()">Export Test Results</button>
+            <button class="btn btn-warning" onclick="resetManualTests()">Reset Checklist</button>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // System status checking
+        async function checkSystemStatus() {
+            const statusPanel = document.getElementById('status-panel');
+            const statusMessage = document.getElementById('status-message');
+            
+            try {
+                const response = await fetch('/api/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    statusPanel.className = 'status-panel';
+                    statusMessage.textContent = '✅ Backend connected and healthy';
+                } else {
+                    statusPanel.className = 'status-panel warning';
+                    statusMessage.textContent = `⚠️ Backend returned status ${response.status}`;
+                }
+            } catch (error) {
+                statusPanel.className = 'status-panel error';
+                statusMessage.textContent = `❌ Backend connection failed: ${error.message}`;
+            }
+        }
+
+        // Quick health check
+        async function quickHealthCheck() {
+            const startTime = Date.now();
+            try {
+                const response = await fetch('/api/health');
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showResults(`✅ Health check passed (${responseTime}ms)\n${JSON.stringify(data, null, 2)}`);
+                } else {
+                    showResults(`❌ Health check failed: ${response.status} ${response.statusText}`);
+                }
+            } catch (error) {
+                showResults(`❌ Health check error: ${error.message}`);
+            }
+        }
+
+        // Run critical tests
+        function runCriticalTests() {
+            const iframe = document.createElement('iframe');
+            iframe.src = 'integration-test.html';
+            iframe.style.width = '100%';
+            iframe.style.height = '400px';
+            iframe.style.border = '1px solid #ccc';
+            iframe.style.borderRadius = '8px';
+            
+            showResults('Running critical tests...');
+            document.getElementById('summary-content').appendChild(iframe);
+            
+            // Auto-run critical tests after iframe loads
+            iframe.onload = function() {
+                setTimeout(() => {
+                    try {
+                        iframe.contentWindow.integrationTestRunner?.runSelectedTests();
+                    } catch (e) {
+                        console.log('Could not auto-run tests:', e);
+                    }
+                }, 1000);
+            };
+        }
+
+        // Run full test suite
+        function runFullSuite() {
+            window.open('e2e-test.html', '_blank');
+        }
+
+        // Run integration tests in iframe
+        function runIntegrationTests() {
+            const container = document.getElementById('integration-iframe-container');
+            const iframe = document.getElementById('integration-iframe');
+            
+            iframe.src = 'integration-test.html';
+            container.style.display = 'block';
+        }
+
+        // Run E2E tests in iframe
+        function runE2ETests() {
+            const container = document.getElementById('e2e-iframe-container');
+            const iframe = document.getElementById('e2e-iframe');
+            
+            iframe.src = 'e2e-test.html';
+            container.style.display = 'block';
+        }
+
+        // Show results
+        function showResults(content) {
+            const resultsDiv = document.getElementById('results-summary');
+            const contentDiv = document.getElementById('summary-content');
+            
+            contentDiv.innerHTML = `<pre style="background: white; padding: 15px; border-radius: 4px; overflow-x: auto;">${content}</pre>`;
+            resultsDiv.style.display = 'block';
+        }
+
+        // Manual test functions
+        function exportManualTestResults() {
+            const checkboxes = document.querySelectorAll('#manual input[type="checkbox"]');
+            const results = [];
+            
+            checkboxes.forEach((checkbox, index) => {
+                const label = checkbox.parentNode.textContent.trim();
+                results.push(`${checkbox.checked ? '✅' : '❌'} ${label}`);
+            });
+            
+            const blob = new Blob([results.join('\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `manual-test-results-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetManualTests() {
+            document.querySelectorAll('#manual input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSystemStatus();
+            
+            // Recheck status every 30 seconds
+            setInterval(checkSystemStatus, 30000);
+        });
+    </script>
+</body>
+</html>

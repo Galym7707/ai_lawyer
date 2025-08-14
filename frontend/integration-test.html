@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Tests - Kaz Legal Bot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .test-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+        }
+        .status-pending {
+            background-color: #6c757d;
+        }
+        .status-running {
+            background-color: #007bff;
+        }
+        .status-success {
+            background-color: #28a745;
+        }
+        .status-error {
+            background-color: #dc3545;
+        }
+        .test-description {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .summary {
+            background-color: #e9ecef;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .connection-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .connected { background-color: #28a745; }
+        .disconnected { background-color: #dc3545; }
+        .checking { background-color: #ffc107; animation: blink 1s infinite; }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Integration Tests - Frontend ↔ Backend Connectivity</h1>
+    
+    <div class="controls">
+        <button class="btn" id="run-all-btn">Run All Tests</button>
+        <button class="btn" id="run-selected-btn">Run Selected Tests</button>
+        <button class="btn" id="clear-results-btn">Clear Results</button>
+    </div>
+
+    <!-- Health Check Test -->
+    <div class="test-container" data-test="health-check">
+        <div class="test-header">
+            <div>
+                <input type="checkbox" checked>
+                <span class="test-title">🩺 Health Check Endpoint</span>
+            </div>
+            <div class="test-status status-pending">PENDING</div>
+        </div>
+        <div class="test-description">
+            Tests the /api/health endpoint to verify basic backend connectivity
+        </div>
+        <div class="test-output" id="health-check-output">Waiting to run...</div>
+    </div>
+
+    <!-- API Base Connectivity Test -->
+    <div class="test-container" data-test="api-base">
+        <div class="test-header">
+            <div>
+                <input type="checkbox" checked>
+                <span class="test-title">🔌 API Base Connectivity</span>
+            </div>
+            <div class="test-status status-pending">PENDING</div>
+        </div>
+        <div class="test-description">
+            Tests basic API connectivity through the Vercel proxy
+        </div>
+        <div class="test-output" id="api-base-output">Waiting to run...</div>
+    </div>
+
+    <!-- Session Management Test -->
+    <div class="test-container" data-test="session-management">
+        <div class="test-header">
+            <div>
+                <input type="checkbox" checked>
+                <span class="test-title">🗃️ Session Management</span>
+            </div>
+            <div class="test-status status-pending">PENDING</div>
+        </div>
+        <div class="test-description">
+            Tests session creation, retrieval, and management endpoints
+        </div>
+        <div class="test-output" id="session-management-output">Waiting to run...</div>
+    </div>
+
+    <!-- Error Handling Test -->
+    <div class="test-container" data-test="error-handling">
+        <div class="test-header">
+            <div>
+                <input type="checkbox" checked>
+                <span class="test-title">⚠️ Error Handling</span>
+            </div>
+            <div class="test-status status-pending">PENDING</div>
+        </div>
+        <div class="test-description">
+            Tests error handling for invalid endpoints and network failures
+        </div>
+        <div class="test-output" id="error-handling-output">Waiting to run...</div>
+    </div>
+
+    <!-- Connection Status Test -->
+    <div class="test-container" data-test="connection-status">
+        <div class="test-header">
+            <div>
+                <input type="checkbox" checked>
+                <span class="test-title">📊 Connection Status Monitor</span>
+            </div>
+            <div class="test-status status-pending">PENDING</div>
+        </div>
+        <div class="test-description">
+            Tests the connection status monitor functionality
+        </div>
+        <div class="test-output" id="connection-status-output">Waiting to run...</div>
+    </div>
+
+    <!-- AI Ask Endpoint Test -->
+    <div class="test-container" data-test="ai-ask">
+        <div class="test-header">
+            <div>
+                <input type="checkbox" checked>
+                <span class="test-title">🤖 AI Ask Endpoint</span>
+            </div>
+            <div class="test-status status-pending">PENDING</div>
+        </div>
+        <div class="test-description">
+            Tests the /api/ask endpoint with a simple legal question
+        </div>
+        <div class="test-output" id="ai-ask-output">Waiting to run...</div>
+    </div>
+
+    <!-- Performance Test -->
+    <div class="test-container" data-test="performance">
+        <div class="test-header">
+            <div>
+                <input type="checkbox" checked>
+                <span class="test-title">⚡ Performance Test</span>
+            </div>
+            <div class="test-status status-pending">PENDING</div>
+        </div>
+        <div class="test-description">
+            Tests API response times and performance metrics
+        </div>
+        <div class="test-output" id="performance-output">Waiting to run...</div>
+    </div>
+
+    <div class="summary">
+        <h3>Test Summary</h3>
+        <div id="test-summary">
+            <span class="connection-indicator disconnected"></span>
+            Ready to run tests...
+        </div>
+    </div>
+
+    <script src="integration-tests.js"></script>
+</body>
+</html>
